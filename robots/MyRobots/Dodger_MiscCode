@@ -1,3 +1,11 @@
+integrate bullet accuracy for robot behaviour
+BulletMissedEvent BulletHitBulletEvent BulletHitEvent
+
+
+getEnergy
+Fire
+
+
 /**
 * default stream printing segment obtained from sittingduck.java
 */		

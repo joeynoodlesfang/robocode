@@ -32,40 +32,29 @@ public class Tester_BasicRobot extends AdvancedRobot {
 		// Set colors
 		setBodyColor(Color.blue);
 		setGunColor(Color.blue);
-		setRadarColor(Color.black);
+		setRadarColor(Color.red);
 		setScanColor(Color.yellow);
+		
+		
+		learningLoop();
 
-		// Loop forever
-		while (true) {
-			// Tell the game that when we take move,
-			// we'll also want to turn right... a lot.
-//			setMaxVelocity(1);
-			setTurnRight(90);
-			// Limit our speed to 5
-			//setMaxVelocity(-5);
-			// Start moving (and turning)
-			back(200);
-			// Repeat.
-		}
 	}
 
 	/**
 	 * onScannedRobot: Fire hard!
 	 */
-//	public void onScannedRobot(ScannedRobotEvent e) {
-//		fire(3);
-//	}
+	public void onScannedRobot(ScannedRobotEvent e) {
+		fire(1);
+		learningLoop();
+	}
 
-	/**
-	 * onHitRobot:  If it's our fault, we'll stop turning and moving,
-	 * so we need to turn again to keep spinning.
-	 */
-//	public void onHitRobot(HitRobotEvent e) {
-//		if (e.getBearing() > -10 && e.getBearing() < 10) {
-//			fire(3);
-//		}
-//		if (e.isMyFault()) {
-//			turnRight(10);
-//		}
-//	}
+	public void learningLoop(){
+		while (true) {
+			turnGunRight(180);
+			back(100);
+			ahead(100);
+			out.println(getGunHeat());
+		}
+	}
+
 }
