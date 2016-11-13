@@ -1,0 +1,290 @@
+package babyBot;
+
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.Arrays;
+
+public class LUTNew implements LUTInterface{
+	static int x   = 3; 				//3 levels
+	static int y   = 3;					//3 levels
+	static int eM  = 3; 				//3 levels
+	static int eE  = 3; 				//3 levels
+	static int velocityM = 3; 			//3 power levels
+	static int velocityE = 3; 			//3 power levels
+	static int gunHeading = 4; 				//4 levels for scanning range. 
+	static int bodyHeading = 4; 				//4 levels
+	static int a = 6;		 			//5 actions
+	static int qVal = 1; 				//for qVal states or actions later on. 
+	static int numStateActions = x + y + eM + eE + gunHeading + bodyHeading + a + qVal;
+	private double[][][][][][][][][][] roboLUT = new double[x][y][eM][eE][velocityM][velocityE][gunHeading][bodyHeading][a][qVal];		//this is the look-up table. 
+	double alpha = 0.2; 				//to what extent the newly acquired information will override the old information.
+	double gamma = 0.8; 				//importance of future rewards
+	
+//	/* Constructor. You would call initialiseLUT() in here.
+//	 * @param argNumInputs The number of inputs in your input vector
+//	 * @paramargVariableFloor An array specifying the lowest value of each variable in the input vector.
+//	 * @paramargVariableCeiling An array specifying the highest value of each of the variables in the input vector.
+//	 */
+	public LUTNew(int numStateActions){
+		this.initialiseLUT();
+	}	
+	/* initialize LUT to all zeros
+	 */
+	public void initialiseLUT() {
+		for (int i = 0; i < x; i++){
+			for (int j = 0; j < y; j++){
+				for (int k = 0; k < eM; k++){
+					for (int m = 0; m < eE; m++){
+						for (int n = 0; n < velocityM; n++){
+							for (int p=0; p < velocityE; p++){
+								for (int q = 0; q < gunHeading; q++){
+									for (int r = 0; r < bodyHeading; r++){
+										for (int s = 0; s <a; s ++){
+											for (int t = 0; t < qVal; t++){
+												roboLUT[i][j][k][m][n][p][q][r][s][t] = 0.0; 
+												
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+//	System.out.println("robo " + Arrays.deepToString(roboLUT));	
+	}
+	
+	
+//	public static void main(String[] args) {
+//		//create new object
+//		LUTNew myLUT = new LUTNew(numStateActions);
+//		myLUT.initialiseLUT();
+//		double [] X = {600, 200, 30, 40, 2, 4, 300, 200, 010000, 0};
+//		myLUT.outputForward(X, true, 1); 
+//
+//	}
+
+	/**outputForward method
+	 *@param X The ACTUAL input vector given by the ROBOT 
+	 *@purpose: Discretize this input vector values. 
+	 * @return THE VALUE OF Q: Q(x, s) associated with the input vector. 
+	 * @purpose: Converts the values of X into discretized values and calls "indexFor" in order to map this new discretized set of values into an ordinal index. 
+	 */
+	
+	public double outputForward(double[] X, boolean flag, int numTrial) {
+		//ALL this method does is to produce an index. 
+/*		raw X[0] will be deltaX: it will be an integer from 0 - 800. First, we will divide by 100 to get int from 0 - 8. 
+ * 		then, we will divide that into 3 levels: 0-3, 3-6, 6-8
+ * 		raw X[1] will be deltaY: same discretization as above but from 0-600. So three levels are 0-2, 2-4, 4-6. 
+ * 		raw X[2] will be the energy of my enemy (from 0 - 100). Discretize to three levels. 0-25, 
+ * 		raw X[3] will be the energy of me. 
+ * 		raw X[4] will be the velocity of enemy (from 0 -8)
+ * 		raw X[5] will be the velocity of enemy (from 0 -8)
+ * 		raw X[6] is the gunHeading
+ * 		raw X[7] is the bodyHeading
+ * 		raw X[8] is the action set
+ * 		raw X[9] is blank for now. 
+ */
+		//deltaX
+		int i = (int) (X[0] / 100);
+		if (i >= 0 && i < 3){
+			i = 0;					//close 
+		}
+		else if (i >= 3 && i < 6){
+			i = 1; 					//midrange
+		}	
+		
+		else if (i >= 6 && i <= 8){
+			i = 2; 					//far
+		}
+
+		//deltaY
+		int j = (int) (X[1] / 100);
+		if (j >= 0 && j < 2){
+			j = 0;					//close 
+		}
+		else if (j >= 2 && j < 4){
+			j = 1; 					//midrange
+		}	
+		else if (j >= 4 && j <= 6){
+			j = 2; 					//far
+		}
+		//enemy energy
+		int k = (int) (X[2]);
+		if (k >= 0 && k < 29){
+			k = 0;					//low		
+		}
+		else if (k >= 20 && k < 59){
+			k = 1; 				//mid
+		}		
+		else if (k >= 60 && k < 99){
+			k = 2; 				//high				
+		}		
+		//my energy
+		int m = (int)(X[3]); 
+		if (m >= 0 && m < 29){
+			m = 0;					//low		
+		}
+		else if (m >= 20 && m < 59){
+			m = 1; 				//mid
+		}		
+		else if (m >= 60 && m < 99){
+			m = 2; 				//high				
+		}	
+		//enemy velocity
+		int n = (int)(X[4]); 
+		if (n >= 0 && n < 3){
+			n = 0;					//close 
+		}
+		else if (n >= 3 && n < 6){
+			n = 1; 					//midrange
+		}	
+		else if (n >= 6 && n <= 8){
+			n = 2; 					//far
+		}	
+		//my velocity
+		int p = (int)(X[5]); 
+		if (p >= 0 && p < 3){
+			p = 0;					//close 
+		}
+		else if (p >= 3 && p < 6){
+			p = 1; 					//midrange
+		}	
+		else if (p >= 6 && p <= 8){
+			p = 2; 					//far
+		}
+		//my gun heading
+		int q = (int)(X[6]); 
+		if (Math.cos(q) > 0 && Math.sin(q) > 0 ){
+			q = 0;					//both positive
+		}
+		else if (Math.cos(q) > 0 && Math.sin(q) < 0 ){
+			q = 1; 				//positive,negative
+		}		
+		else if (Math.cos(q) < 0 && Math.sin(q) > 0 ){
+			q = 2; 				//negative,negative
+		}	
+		else if (Math.cos(q) < 0 && Math.sin(q) < 0 ){
+			q = 3; 				//negative,negative
+		}
+		//my body heading
+		int r = (int)(X[7]); 
+		if (Math.cos(r) > 0 && Math.sin(r) > 0 ){
+			r = 0;					//both positive
+		}
+		else if (Math.cos(r) > 0 && Math.sin(r) < 0 ){
+			r = 1; 				//positive,negative
+		}		
+		else if (Math.cos(r) < 0 && Math.sin(r) > 0 ){
+			r = 2; 				//negative,negative
+		}	
+		else if (Math.cos(r) < 0 && Math.sin(r) < 0 ){
+			r = 3; 				//negative,negative
+		}
+		int s = 0; 
+		//X[7] are all the actions
+		if (X[7] == 1000000){
+			s = 0; 
+		}
+		else if (X[7] == 0100000){
+			s = 1; 
+		}
+		else if (X[7] == 0010000){
+			s = 2; 
+		}
+		else if (X[7] == 0001000){
+			s = 3; 
+		}
+		else if (X[7] == 0000100){
+			s = 4; 
+		}
+		else if (X[7] == 0000010){
+			s = 5; 
+		}
+		else if (X[7] == 0000001){
+			s = 6; 
+		}	
+		
+		//X[8] is qVal 
+		int t = 0; 
+		
+		int valToReturn = i + j + k + m + n + p + q + r + s + t; 
+		System.out.println("valToReturn " + valToReturn);
+		int rowOfTable  = indexFor(valToReturn); 
+		System.out.println("rowOfTable " + rowOfTable);
+//		System.out.println("ROBO " + roboLUT[i][j][k][m][n][p][q][r][s][t]);
+		return valToReturn; 
+	}
+	/* STUCK HERE!!! 
+	 * I thought that we could go through each row and map that to a row index, then search through each row for the maximum qValue. 
+	 * How else do we get the max q value?!!! 
+	 */
+	public int indexFor(int valToReturn) {
+		/*
+		 * In "indexFor", we take in an array of numbers i.e. [1023017]
+		 * Get the qValue of this row. 
+		 * Return the qValue   
+		 */
+		int rowIndex; 
+		if (valToReturn == 0000000000){
+			rowIndex = 0; 
+		}
+		else if (valToReturn == 0100000000){
+			rowIndex = 0; 
+		}		
+		
+		return 0;
+	}
+	
+	/**
+	 * Will replace the value currently stored in the location of the look up table
+	 * corresponding to the specified input vector, with the new value provided.
+	 * @param X The input vector
+	 * @param argValue The new value to store
+	 * @return Will always be 0 for an LUT.
+	 */
+	public double train (double [] X, double currValueToStore, double[] Ycalc, boolean flag, int numTrial) {
+//		int index = indexFor(X);				//indexFor(X) is the actual index, roboLUT[indexFor(X)] is the vaue
+//		roboLUT[i][j][k][m][n][p][q][r][s][t] = currValueToStore;
+		return 0.0; 
+	}
+
+	@Override
+	public void save(double error, int numTrial, PrintStream saveFile, boolean flag) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void load(String argFileName) throws IOException {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+
+
+	
+//	private void getMaxQ() {
+//		/* search through the last column of the q LUT array and find the greatest value */
+//		System.out.println("in get max Q " + roboLUT[:][j][k][m][n][p][q][r][s][t]);
+////		for (int i = 0; i < )
+//		
+//	}	
+	public void updateLUT(double newStateAction) {
+		/* 
+		 * First, I need to know the state current positions: i.e. x, y, cosine, sine
+		 * Then I need to know the action that was taken (fire at enemy, bump into enemy, got hit by enemy, hit wall)
+		 * Then I access the LUT at that index by calling outForward method. 
+		 * outForward will return the LUT aka: lut[2][3][3][2][1][0][3] which corresponds to a particular q-value. This is the current Q(s,a)
+		 * using formula: Q(S,a) = Q(S, a) + alpha[r + gamma * max{Q(S', a')} - Q(s, a)], 
+		 */
+		System.out.println("in update LUT ");
+//		getMaxQ(); 
+		
+	}
+
+
+}

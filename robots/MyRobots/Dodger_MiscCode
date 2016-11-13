@@ -1,0 +1,28 @@
+/**
+* default stream printing segment obtained from sittingduck.java
+*/		
+//		
+//		PrintStream w = null;
+//		try {
+//			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("DodgerQFile.dat")));
+//
+//			for (int i = 0; i < 3; i++) {
+//				for (int j = 0; j < 3; j++) {
+//					for (int k = 0; k < 3; k++) {
+//						w.println(testArray[i][j][k]);
+//					}
+//				}
+//			}
+//			// PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
+//			if (w.checkError()) {
+//				//Error 0x03: cannot write
+//				out.println("Something done fucked up (Error0x03 cannot write)");
+//			}
+//		} catch (IOException e) {
+//			out.println("IOException trying to write: ");
+//			e.printStackTrace(out); //Joey: lol no idea what this means
+//		} finally {
+//			if (w != null) {
+//				w.close();
+//			}
+//		}
