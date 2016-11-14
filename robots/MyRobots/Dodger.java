@@ -1,4 +1,4 @@
-//nothing's changed
+//Committing to gitHub.
 package MyRobots;
 import java.awt.Color;
 import java.io.BufferedReader;
