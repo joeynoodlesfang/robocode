@@ -142,8 +142,8 @@ public class LUTTrackfire extends AdvancedRobot{
     private boolean repeatFlag_importexportLUTData = false; 
     
     //Flag used if user desires to zero LUT at the next battle. 
-    static private boolean zeroLUT = false;
-//    static private boolean zeroLUT = true;
+    static private boolean zeroLUT = false; 
+    
 
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
@@ -167,7 +167,8 @@ public class LUTTrackfire extends AdvancedRobot{
         // Import dat.
         repeatFlag_importexportLUTData = importLUTData(repeatFlag_importexportLUTData);
         
-        learningLoop();  
+		learningLoop(); 
+         
     }
     /**
      * @name: 		onBattleEnded
@@ -192,7 +193,7 @@ public class LUTTrackfire extends AdvancedRobot{
     public void onDeath(DeathEvent event){
         repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
         
-        reward -=100; 
+//        reward -=100; 
         saveReward();
     }
     /**
@@ -205,7 +206,7 @@ public class LUTTrackfire extends AdvancedRobot{
      */    
 	public void onWin(WinEvent e) {
 		repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
-		reward +=100; 
+//		reward +=100; 
 		saveReward();
 	}
     /**
@@ -218,13 +219,7 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void onScannedRobot(ScannedRobotEvent event){
     	enemyBearingFromGun = normalRelativeAngleDegrees(event.getBearing() + getHeading() - getGunHeading());
-//    	out.println("enemyBearingFromGun" + enemyBearingFromGun);
-//    	enemyDistance = event.getDistance();
-//    	enemyEnergy = event.getEnergy();  	
-//    	//what about myEnergy?! 
-//    	if (enemyEnergy < 100 || enemyDistance < 100 || Math.abs(enemyBearingFromGun) > 3){
-//    		learningLoop();
-//    	}
+    	learningLoop();
     }
 
 //  /**
@@ -235,6 +230,7 @@ public class LUTTrackfire extends AdvancedRobot{
 //  * @return:		n
 //  */      
     public void onHitByBullet(HitByBulletEvent e){
+    	reward -= 10; 
     	enemyHeading = e.getHeading(); 
 		myHeading = getHeading(); 
 		myEnergy = getEnergy(); 
@@ -242,13 +238,13 @@ public class LUTTrackfire extends AdvancedRobot{
     	
     }
 
-//    /**
-//     * @name: 		onHitWall
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Invoke LearningLoop.
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
+    /**
+     * @name: 		onHitWall
+     * @purpose: 	1. Updates reward. -10
+     * 				2. Invoke LearningLoop.
+     * @param:		1. HitWallEvent class from Robot
+     * @return:		n
+     */   
 //    public void onHitWall(HitWallEvent e) {
 //    	if (debug) {
 //    		System.out.println("HIT WALL " + Arrays.toString(currentStateActionVector));
@@ -256,6 +252,7 @@ public class LUTTrackfire extends AdvancedRobot{
 //    	reward -= 10;	
 //        learningLoop();
 //    }
+//    
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
     /** 
@@ -508,29 +505,28 @@ public class LUTTrackfire extends AdvancedRobot{
     	
       //set gun and fire
       if (currentStateActionVector[0] == 0) {
-    	  setAdjustGunForRobotTurn(true); 
     	  turnGunRight(enemyBearingFromGun);
     	  fire(1); 
     	  execute(); 
       }
       //set gun turn and do not fire
       else if (currentStateActionVector[0] == 1) {
-    	  setAdjustGunForRobotTurn(true); 
     	  turnGunRight(enemyBearingFromGun);
     	  execute(); 
       }
       //dodge backwards
       else if (currentStateActionVector[0] == 2) {
-    	  setAdjustGunForRobotTurn(true); 
     	  turnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
           ahead(-100); 
+          reward += 10; 
       }      
       //dodge forward
       else if (currentStateActionVector[0] == 3) {
     	  turnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
           ahead(100); 
+          reward += 10; 
       }
-//      out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
+      out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
     }
     
 	/**
@@ -625,6 +621,7 @@ public class LUTTrackfire extends AdvancedRobot{
                     	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
                     		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
                     			w.println(roboLUT[p0][p1][p2][p3]);
+                    			
                     		}
                     	}
                     }
