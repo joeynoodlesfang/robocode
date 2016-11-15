@@ -1,9 +1,35 @@
 /** Plan of attack - have multiple battle plans. 
  *  Two states and one action [offensive - trackfire, defensive -moveLeft, adjustAngleGun, action]
-	Exploratory 	- (1) search for enemy, if find enemy give highest reward. That way, willways go back to this state
+	Exploratory 	- (1) search for enemy, if find enemy give highest reward. That way, go back to this state
 	Battle Plan 1.  - (1) Found enemy, attack . If hit enemy, award high reward. If miss enemy, award low reward. If get hit, negative reward
 	Battle Plan 2. 	- (1) Found enemy, check distance. If close, fire hard, if far, move closer. 
 	
+	Joey: What sort of inputs?
+	e.getBearing  - these two combine for bearingFromGun
+	getGunHeading -
+	getHeading
+	getDistance
+	
+	Worklog
+	2016-11-14
+		- currently working on mimicking TrackFire's attacking abilities
+		in particular, variables (done), onScannedRobot() (done), generateCurrentStateVector(), doAction()
+		
+		- implement reward system
+		
+		- implement simple defensive strategy (eg: Fire.java moves when hit)
+		
+	6:52 pm - Andy
+		- added two more discretized levels for energy and distance: generateCurrentStateVector() (done)
+		- added action for doAction()
+		
+	2016-11-15
+		- added rewards for dying and winning 
+		- added "onHitBullet" event and "Hit" event to give rewards and to let TF learn. 
+		- added two more actions... not sure if any of this makes sense though.. it feels very random. 
+		- if gets hit by bullet, it should move away! 
+	New updates
+		
  */
 
 package MyRobots;
@@ -19,9 +45,13 @@ import java.util.Arrays;
 
 import robocode.AdvancedRobot;
 import robocode.BattleEndedEvent;
+import robocode.BulletHitEvent;
 import robocode.DeathEvent;
+import robocode.HitByBulletEvent;
 import robocode.HitWallEvent;
 import robocode.RobocodeFileOutputStream;
+import robocode.ScannedRobotEvent;
+import robocode.WinEvent;
 
 public class LUTTrackfire extends AdvancedRobot{
 	/*
@@ -51,31 +81,36 @@ public class LUTTrackfire extends AdvancedRobot{
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 */
-    private static final int num_actions = 5; 
-    private static final int defensive_state = 5; 
-    private static final int offensive_state = 5; 
+    private static final int num_actions = 3; 
+//    private static final int defensive_states = 1; //Joey: trying to implement inputs that might make ur NN easier later
+//    private static final int offensive_states = 1; 
+    private static final int enemyBearingFromGun_states = 2; // bearingFromGun < 3, bearingFromGun > 3
+    private static final int enemyDistance_states = 3;		//distance < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
+    private static final int enemyEnergy_states = 3;		//energy < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
     
     // LUT table stored in memory.
-    private static double[][][] roboLUT 
+    private static double[][][][] roboLUT 
         = new double
         [num_actions]
-        [defensive_state]
-        [offensive_state];
+        [enemyBearingFromGun_states]
+        [enemyDistance_states]
+        [enemyEnergy_states];
     
     // Dimensions of LUT table, used for iterations.
     private static int[] roboLUTDimensions = {
             num_actions, 
-            defensive_state,
-            offensive_state};
+            enemyBearingFromGun_states,
+            enemyDistance_states,
+            enemyEnergy_states};
     
     // Stores current reward for action.
-    private double reward = 0.0;
+    private double reward = 0.0; //only one reward variable to brief offensive and defensive maneuvers
     
     // Stores current and previous stateAction vectors.
     private int currentStateActionVector[] = new int [roboLUTDimensions.length];
     private int prevStateActionVector[] = new int [roboLUTDimensions.length]; 
      
-    //variables used for getMax. qValMax
+    //variables used for getMax.
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
     private int actionChosenForQValMax = 0; //stores the chosen currSAV with maxqval before policy
     private double qValMax = 0.0; // stores the maximum currSAV QMax
@@ -83,18 +118,28 @@ public class LUTTrackfire extends AdvancedRobot{
     //chosen policy. greedy or exploratory.
     private static int policy = greedy;
     
+    //enemy information
+    private double enemyBearingFromGun = 0.0;
+    private double enemyDistance = 0.0;
+    private double enemyEnergy = 0.0;
+    
+    
     /**
      * FLAGS AND COUNTS
      */
     
-    //debug flag
-    static private boolean debug = false;
+    //debug flag.
+    static private boolean debug = false; 
     
     // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
     private boolean repeatFlag_importexportLUTData = false; 
     
     //Flag used if user desires to zero LUT at the next battle. 
     static private boolean zeroLUT = false;
+//    static private boolean zeroLUT = true;
+    
+
+    //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
     /**
      * @name: 		run
@@ -140,8 +185,71 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void onDeath(DeathEvent event){
         repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
+        
+//        reward -=100; 
+        saveReward();
     }
-    
+    /**
+     * @name: 		onWin
+     * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
+     * 				   	linearly. Exporting will occur only once per fight, either during 
+     * 				   	death or fight end.
+     * @param:		1.	WinEvent class from Robot
+     * @return:		n
+     */    
+	public void onWin(WinEvent e) {
+		// Victory dance
+		turnRight(36000);
+//		reward +=100; 
+		saveReward();
+	}
+    /**
+     * @name:		onScannedRobot
+     * @purpose:	1. determine enemy bearing and distance
+     * @param:		ScannedRobotEvent event
+     * @return:		none, but updates:
+     * 				1. getGunBearing
+     * 				2. enemyDistance
+     */
+    public void onScannedRobot(ScannedRobotEvent event){
+    	enemyBearingFromGun = normalRelativeAngleDegrees(event.getBearing() + getHeading() - getGunHeading());
+    	out.println("enemyBearingFromGun" + enemyBearingFromGun);
+    	enemyDistance = event.getDistance();
+    	enemyEnergy = event.getEnergy();  	
+    	//what about myEnergy?! 
+    	if (enemyEnergy < 100 || enemyDistance < 100 || Math.abs(enemyBearingFromGun) > 3){
+    		learningLoop();
+    	}
+    }
+//  /**
+//  * @name: 		onHitBullet
+//  * @purpose: 	1. Updates reward. +20 if hit bullet
+//  * 				2. Invoke LearningLoop.
+//  * @param:		1. HItBulletEvent class from Robot
+//  * @return:		n
+//  */      
+    public void HitByBullet(BulletHitEvent e){
+    	out.println("HIT TARGET"); 
+//    	reward +=20; 
+    	saveReward();
+    	learningLoop(); 
+    	
+    }
+
+//  /**
+//  * @name: 		onHitBullet
+//  * @purpose: 	1. Updates reward. +20 if hit bullet
+//  * 				2. Invoke LearningLoop.
+//  * @param:		1. HItBulletEvent class from Robot
+//  * @return:		n
+//  */      
+    public void onHitByBullet(HitByBulletEvent e){
+    	out.println("HIT BY TARGET"); 
+    	reward -=75; 
+    	saveReward();
+    	learningLoop(); 
+    	
+    }
 //    /**
 //     * @name: 		onHitWall
 //     * @purpose: 	1. Updates reward. -10
@@ -153,7 +261,6 @@ public class LUTTrackfire extends AdvancedRobot{
 //    	if (debug) {
 //    		System.out.println("HIT WALL " + Arrays.toString(currentStateActionVector));
 //    	}
-//        
 //    	reward -= 10;	
 //        learningLoop();
 //    }
@@ -190,7 +297,6 @@ public class LUTTrackfire extends AdvancedRobot{
     public void learningLoop(){
     	
     	while (true) {
-    		turnGunRight(1);
         	copyCurrentSAVIntoPrevSAV();
         	generateCurrentStateVector();
         	qFunction(); 
@@ -213,17 +319,42 @@ public class LUTTrackfire extends AdvancedRobot{
     }
     
     /**
-     * @name: 		generateCurrentStateVector
+     * @name: 		generateCurrentStateVector - discretize states here. 
      * @purpose: 	1. gets state values from battlefield. 
      * 				2. discretize. 
      * 				3. Update array of current stateAction vector.  
-     * @param: 		n, but updates:
-     * 				1. Array of current state vector
+     * @param: 		n, but uses:
+     * 				1. bearingFromGun
      * @return: 	none
      */
     public void generateCurrentStateVector(){
-        //Dimension 1: state
-        currentStateActionVector[1] = (int)(getHeading()/45);
+        //Dimension 1: input: bearingFromGun
+    	if (enemyBearingFromGun < 3) {
+    		currentStateActionVector[1] = 0;
+    	}
+    	else {
+    		currentStateActionVector[1] = 1;
+    	}
+    	//Dimension 2: input: enemyDistance 
+    	if (enemyDistance <= 33){
+    		currentStateActionVector[2] = 0;
+    	}
+    	else if (enemyDistance > 33 && enemyDistance <= 66 ){
+    		currentStateActionVector[2] = 1;
+    	}
+    	else if (enemyDistance > 66 && enemyDistance <= 100 ){
+    		currentStateActionVector[2] = 2;
+    	}   	
+    	//Dimension 3: input: enemyEnergy
+    	if (enemyEnergy <= 33){
+    		currentStateActionVector[3] = 0;
+    	}
+    	else if (enemyEnergy > 33 && enemyEnergy <= 66 ){
+    		currentStateActionVector[3] = 1;
+    	}
+    	else if (enemyEnergy > 66 && enemyEnergy <= 100 ){
+    		currentStateActionVector[3] = 2;
+    	}          
     }
     /**
      * @name:		qFunction
@@ -288,7 +419,7 @@ public class LUTTrackfire extends AdvancedRobot{
         }   
         
         for (int i = 0; i < num_actions; i++){
-            indexQVal = roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]];
+            indexQVal = roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]];
             
             if (indexQVal > currMax){
             	currMax = indexQVal;
@@ -332,7 +463,8 @@ public class LUTTrackfire extends AdvancedRobot{
 
         double prevQVal = roboLUT[prevStateActionVector[0]]
         						 [prevStateActionVector[1]]
-        						 [prevStateActionVector[1]]		 ;
+        						 [prevStateActionVector[2]]		 
+        						 [prevStateActionVector[3]];
         
         prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
         
@@ -353,11 +485,12 @@ public class LUTTrackfire extends AdvancedRobot{
         roboLUT[prevStateActionVector[0]]
          	   [prevStateActionVector[1]]
          	   [prevStateActionVector[2]]
+         	   [prevStateActionVector[3]]
          					  = prevQVal;
         
         if (debug) {
 	        out.println("prev " + Arrays.toString(prevStateActionVector));
-	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]]);
+	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]]);
         }
         
         //Choosing next action based on policy.
@@ -381,9 +514,20 @@ public class LUTTrackfire extends AdvancedRobot{
     public void doAction(){
     	
       if (currentStateActionVector[0] == 0) {
-          //
+          ahead(100); 
+          turnRight(45); 
+    	  fire(1); 
       }
-
+      else if (currentStateActionVector[0] == 1) {
+    	  out.println("IN 1");
+          ahead(-200); 
+          turnLeft(90); 
+          ahead(-40);
+      }
+      else if (currentStateActionVector[0] == 2) {
+          fire(2); 
+      }
+//      out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
     }
     
 	/**
@@ -410,20 +554,27 @@ public class LUTTrackfire extends AdvancedRobot{
             try {
                 BufferedReader reader = null;
                 try {
-                    reader = new BufferedReader(new FileReader(getDataFile("DodgerQFile.dat")));
-                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-                        		roboLUT[p0][p1][p2] = Double.parseDouble(reader.readLine());
-                        	}
-                        }
+                    reader = new BufferedReader(new FileReader(getDataFile("LUTTrackfire.dat")));
+                    if (!zeroLUT){
+	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
+	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
+	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
+	                        		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
+	                        		roboLUT[p0][p1][p2][p3] = Double.parseDouble(reader.readLine());
+	                        		}
+	                        	}
+	                        }
+	                    }
                     }
                     // zeroes the LUT.
-                    if (zeroLUT) {
+                    else if (zeroLUT) {
+                    	out.println("zeroLUT");
 	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
 	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
 	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
-	                        		roboLUT[p0][p1][p2] =0;
+	                        		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
+	                            		roboLUT[p0][p1][p2][p3] = 0;
+	                            	}
 	                        	}
 	                        }
 	                    }
@@ -464,12 +615,14 @@ public class LUTTrackfire extends AdvancedRobot{
             out.println("wewhat");
             PrintStream w = null;
             try {
-                w = new PrintStream(new RobocodeFileOutputStream(getDataFile("DodgerQFile.dat")));
+                w = new PrintStream(new RobocodeFileOutputStream(getDataFile("LUTTrackfire.dat")));
     
                 for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
                     for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
                     	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
-                    		w.println(roboLUT[p0][p1]);
+                    		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
+                    			w.println(roboLUT[p0][p1][p2][p3]);
+                    		}
                     	}
                     }
                 }
@@ -493,4 +646,25 @@ public class LUTTrackfire extends AdvancedRobot{
         return repeatFlag;
     }
     
+    public void saveReward(){
+    	PrintStream r = null;
+            try {
+				r = new PrintStream(new RobocodeFileOutputStream(getDataFile("Reward.txt")));
+	            for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
+	                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
+	                	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
+	                		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
+	                			r.println(reward);
+	                		}
+	                	}
+	                }
+	            } 
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+            if (r!= null) {
+                r.close();
+            }
+    }
 }
