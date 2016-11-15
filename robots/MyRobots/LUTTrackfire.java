@@ -26,7 +26,7 @@
  */
 
 package MyRobots;
-
+//what is up
 import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.Color;
