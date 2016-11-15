@@ -194,7 +194,6 @@ public class LUTTrackfire extends AdvancedRobot{
         repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
         
 //        reward -=100; 
-        saveReward();
     }
     /**
      * @name: 		onWin
@@ -207,7 +206,6 @@ public class LUTTrackfire extends AdvancedRobot{
 	public void onWin(WinEvent e) {
 		repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
 //		reward +=100; 
-		saveReward();
 	}
     /**
      * @name:		onScannedRobot
