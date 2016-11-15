@@ -219,6 +219,7 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void onScannedRobot(ScannedRobotEvent event){
     	enemyBearingFromGun = normalRelativeAngleDegrees(event.getBearing() + getHeading() - getGunHeading());
+    	enemyDistance = event.getDistance(); 
     	learningLoop();
     }
 
@@ -519,12 +520,14 @@ public class LUTTrackfire extends AdvancedRobot{
     	  turnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
           ahead(-100); 
           reward += 10; 
+          execute(); 
       }      
       //dodge forward
       else if (currentStateActionVector[0] == 3) {
     	  turnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
           ahead(100); 
           reward += 10; 
+          execute(); 
       }
       out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
     }
@@ -555,6 +558,7 @@ public class LUTTrackfire extends AdvancedRobot{
                 try {
                     reader = new BufferedReader(new FileReader(getDataFile("LUTTrackfire.dat")));
                     if (!zeroLUT){
+                    	reward = Double.parseDouble(reader.readLine());		//REWARD	
 	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
 	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
 	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
@@ -615,7 +619,7 @@ public class LUTTrackfire extends AdvancedRobot{
             PrintStream w = null;
             try {
                 w = new PrintStream(new RobocodeFileOutputStream(getDataFile("LUTTrackfire.dat")));
-    
+                w.println(reward);
                 for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
                     for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
                     	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
@@ -646,25 +650,5 @@ public class LUTTrackfire extends AdvancedRobot{
         return repeatFlag;
     }
     
-    public void saveReward(){
-    	PrintStream r = null;
-            try {
-				r = new PrintStream(new RobocodeFileOutputStream(getDataFile("Reward.txt")));
-	            for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-	                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-	                	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
-	                		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
-	                			r.println(reward);
-	                		}
-	                	}
-	                }
-	            } 
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-            if (r!= null) {
-                r.close();
-            }
-    }
+   
 }
