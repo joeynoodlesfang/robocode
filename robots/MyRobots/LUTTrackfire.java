@@ -29,11 +29,11 @@
 		- added two more actions... not sure if any of this makes sense though.. it feels very random. 
 		- if gets hit by bullet, it should move away! 
 	New updates
-		
+
  */
 
 package MyRobots;
-
+//what is up
 import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.Color;
@@ -137,7 +137,6 @@ public class LUTTrackfire extends AdvancedRobot{
     //Flag used if user desires to zero LUT at the next battle. 
     static private boolean zeroLUT = false;
 //    static private boolean zeroLUT = true;
-    
 
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
@@ -250,6 +249,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	learningLoop(); 
     	
     }
+
 //    /**
 //     * @name: 		onHitWall
 //     * @purpose: 	1. Updates reward. -10
