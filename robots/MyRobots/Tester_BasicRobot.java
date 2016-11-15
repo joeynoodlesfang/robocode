@@ -27,14 +27,18 @@ public class Tester_BasicRobot extends AdvancedRobot {
 
 	/**
 	 * SpinBot's run method - Circle
+	 * @return 
 	 */
+	
 	public void run() {
 		// Set colors
+		
 		setBodyColor(Color.blue);
 		setGunColor(Color.blue);
 		setRadarColor(Color.red);
 		setScanColor(Color.yellow);
 		
+		setAdjustGunForRobotTurn(true);
 		
 		learningLoop();
 
@@ -50,9 +54,10 @@ public class Tester_BasicRobot extends AdvancedRobot {
 
 	public void learningLoop(){
 		while (true) {
-			turnGunRight(180);
-			back(100);
-			ahead(100);
+			fire(1);
+			turnLeft(30);
+			back(50);
+			ahead(50);
 			out.println(getGunHeat());
 		}
 	}
