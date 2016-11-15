@@ -29,11 +29,16 @@
 		- added two more actions... not sure if any of this makes sense though.. it feels very random. 
 		- if gets hit by bullet, it should move away! 
 	New updates
+	2:33 pm 
+		- execute plan from LUTplan.xlsx
+		- update scannedRobot(); 
+		- update onHitBullet() event. 
+		- update actions
 
  */
 
 package MyRobots;
-//what is up
+
 import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.Color;
@@ -81,12 +86,12 @@ public class LUTTrackfire extends AdvancedRobot{
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 */
-    private static final int num_actions = 3; 
+    private static final int num_actions = 4; 
 //    private static final int defensive_states = 1; //Joey: trying to implement inputs that might make ur NN easier later
 //    private static final int offensive_states = 1; 
     private static final int enemyBearingFromGun_states = 2; // bearingFromGun < 3, bearingFromGun > 3
     private static final int enemyDistance_states = 3;		//distance < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
-    private static final int enemyEnergy_states = 3;		//energy < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
+    private static final int myEnergy_states = 3;		//energy < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
     
     // LUT table stored in memory.
     private static double[][][][] roboLUT 
@@ -94,14 +99,14 @@ public class LUTTrackfire extends AdvancedRobot{
         [num_actions]
         [enemyBearingFromGun_states]
         [enemyDistance_states]
-        [enemyEnergy_states];
+        [myEnergy_states];
     
     // Dimensions of LUT table, used for iterations.
     private static int[] roboLUTDimensions = {
             num_actions, 
             enemyBearingFromGun_states,
             enemyDistance_states,
-            enemyEnergy_states};
+            myEnergy_states};
     
     // Stores current reward for action.
     private double reward = 0.0; //only one reward variable to brief offensive and defensive maneuvers
@@ -121,9 +126,11 @@ public class LUTTrackfire extends AdvancedRobot{
     //enemy information
     private double enemyBearingFromGun = 0.0;
     private double enemyDistance = 0.0;
-    private double enemyEnergy = 0.0;
+    private double enemyHeading = 0.0; 
     
-    
+    //my information
+    private double myHeading = 0.0; 
+    private double myEnergy = 0.0;
     /**
      * FLAGS AND COUNTS
      */
@@ -185,7 +192,7 @@ public class LUTTrackfire extends AdvancedRobot{
     public void onDeath(DeathEvent event){
         repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
         
-//        reward -=100; 
+        reward -=100; 
         saveReward();
     }
     /**
@@ -197,9 +204,8 @@ public class LUTTrackfire extends AdvancedRobot{
      * @return:		n
      */    
 	public void onWin(WinEvent e) {
-		// Victory dance
-		turnRight(36000);
-//		reward +=100; 
+		repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
+		reward +=100; 
 		saveReward();
 	}
     /**
@@ -212,27 +218,13 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void onScannedRobot(ScannedRobotEvent event){
     	enemyBearingFromGun = normalRelativeAngleDegrees(event.getBearing() + getHeading() - getGunHeading());
-    	out.println("enemyBearingFromGun" + enemyBearingFromGun);
-    	enemyDistance = event.getDistance();
-    	enemyEnergy = event.getEnergy();  	
-    	//what about myEnergy?! 
-    	if (enemyEnergy < 100 || enemyDistance < 100 || Math.abs(enemyBearingFromGun) > 3){
-    		learningLoop();
-    	}
-    }
-//  /**
-//  * @name: 		onHitBullet
-//  * @purpose: 	1. Updates reward. +20 if hit bullet
-//  * 				2. Invoke LearningLoop.
-//  * @param:		1. HItBulletEvent class from Robot
-//  * @return:		n
-//  */      
-    public void HitByBullet(BulletHitEvent e){
-    	out.println("HIT TARGET"); 
-//    	reward +=20; 
-    	saveReward();
-    	learningLoop(); 
-    	
+//    	out.println("enemyBearingFromGun" + enemyBearingFromGun);
+//    	enemyDistance = event.getDistance();
+//    	enemyEnergy = event.getEnergy();  	
+//    	//what about myEnergy?! 
+//    	if (enemyEnergy < 100 || enemyDistance < 100 || Math.abs(enemyBearingFromGun) > 3){
+//    		learningLoop();
+//    	}
     }
 
 //  /**
@@ -243,9 +235,9 @@ public class LUTTrackfire extends AdvancedRobot{
 //  * @return:		n
 //  */      
     public void onHitByBullet(HitByBulletEvent e){
-    	out.println("HIT BY TARGET"); 
-    	reward -=75; 
-    	saveReward();
+    	enemyHeading = e.getHeading(); 
+		myHeading = getHeading(); 
+		myEnergy = getEnergy(); 
     	learningLoop(); 
     	
     }
@@ -345,14 +337,14 @@ public class LUTTrackfire extends AdvancedRobot{
     	else if (enemyDistance > 66 && enemyDistance <= 100 ){
     		currentStateActionVector[2] = 2;
     	}   	
-    	//Dimension 3: input: enemyEnergy
-    	if (enemyEnergy <= 33){
+    	//Dimension 3: input: myEnergy
+    	if (myEnergy <= 33){
     		currentStateActionVector[3] = 0;
     	}
-    	else if (enemyEnergy > 33 && enemyEnergy <= 66 ){
+    	else if (myEnergy > 33 && myEnergy <= 66 ){
     		currentStateActionVector[3] = 1;
     	}
-    	else if (enemyEnergy > 66 && enemyEnergy <= 100 ){
+    	else if (myEnergy > 66 && myEnergy <= 100 ){
     		currentStateActionVector[3] = 2;
     	}          
     }
@@ -504,6 +496,7 @@ public class LUTTrackfire extends AdvancedRobot{
         }
     }
     
+    
     /**
      * @name:		doAction
      * @purpose: 	Converts state Action vector into action by reading currentSAV[0]
@@ -513,19 +506,29 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void doAction(){
     	
+      //set gun and fire
       if (currentStateActionVector[0] == 0) {
-          ahead(100); 
-          turnRight(45); 
+    	  setAdjustGunForRobotTurn(true); 
+    	  turnGunRight(enemyBearingFromGun);
     	  fire(1); 
+    	  execute(); 
       }
+      //set gun turn and do not fire
       else if (currentStateActionVector[0] == 1) {
-    	  out.println("IN 1");
-          ahead(-200); 
-          turnLeft(90); 
-          ahead(-40);
+    	  setAdjustGunForRobotTurn(true); 
+    	  turnGunRight(enemyBearingFromGun);
+    	  execute(); 
       }
+      //dodge backwards
       else if (currentStateActionVector[0] == 2) {
-          fire(2); 
+    	  setAdjustGunForRobotTurn(true); 
+    	  turnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
+          ahead(-100); 
+      }      
+      //dodge forward
+      else if (currentStateActionVector[0] == 3) {
+    	  turnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
+          ahead(100); 
       }
 //      out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
     }
