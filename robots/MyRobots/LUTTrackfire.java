@@ -587,7 +587,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	  setFire(3);
       }
       
-      
+      scan();
       execute();
      
       if (debug) {
