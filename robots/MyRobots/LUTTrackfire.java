@@ -368,7 +368,6 @@ public class LUTTrackfire extends AdvancedRobot{
     		currentStateActionVector[1] = 0;
     	//Dimension 2: input: enemyDistance 
     		currentStateActionVector[2] = 0;
-    	
     	//Dimension 3: input: myEnergy
     		currentStateActionVector[3] = 0;
     }
