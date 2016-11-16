@@ -185,8 +185,10 @@ public class LUTTrackfire extends AdvancedRobot{
         setAdjustGunForRobotTurn(true);
     	setAdjustRadarForGunTurn(true);
     	setAdjustRadarForRobotTurn(true);
-        
-		learningLoop(); 
+        for(;;){
+        	setTurnRadarRight(45);
+    		execute();
+        }
          
     }
     /**
@@ -238,7 +240,6 @@ public class LUTTrackfire extends AdvancedRobot{
 	public void onScannedRobot(ScannedRobotEvent event){
 		enemyBearingFromRadar = getHeading() + event.getBearing() - getRadarHeading();
 		enemyBearingFromGun = getHeading() + event.getBearing() - getGunHeading();
-		setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
     	learningLoop();
     }
 
@@ -313,9 +314,6 @@ public class LUTTrackfire extends AdvancedRobot{
     public void learningLoop(){
     	
     	while (true) {
-    		setTurnRadarRight(45);
-//    		setTurnLeft(getHeading() % 90); 
-    		execute();
         	copyCurrentSAVIntoPrevSAV();
         	generateCurrentStateVector();
         	qFunction(); 
@@ -324,24 +322,24 @@ public class LUTTrackfire extends AdvancedRobot{
         }
     }
     
-	public void learningLoop2(ScannedRobotEvent e){
-		while (true) {
-			double bearingFromRadar = getHeading() + e.getBearing() - getRadarHeading();
-			double bearingFromGun = getHeading() + e.getBearing() - getGunHeading();
-			setTurnRadarRight(normalRelativeAngleDegrees(bearingFromRadar));
-			setTurnGunRight(normalRelativeAngleDegrees(bearingFromGun));
-			setAhead(50);
-			setTurnRight(-30);
-			scan();
-        	copyCurrentSAVIntoPrevSAV();
-        	generateCurrentStateVector();
-        	qFunction(); 
-        	doAction(); 
-        	resetReward();
-			
-			execute();
-		}
-	}   
+//	public void learningLoop2(ScannedRobotEvent e){
+//		while (true) {
+//			double bearingFromRadar = getHeading() + e.getBearing() - getRadarHeading();
+//			double bearingFromGun = getHeading() + e.getBearing() - getGunHeading();
+//			setTurnRadarRight(normalRelativeAngleDegrees(bearingFromRadar));
+//			setTurnGunRight(normalRelativeAngleDegrees(bearingFromGun));
+//			setAhead(50);
+//			setTurnRight(-30);
+//			scan();
+//        	copyCurrentSAVIntoPrevSAV();
+//        	generateCurrentStateVector();
+//        	qFunction(); 
+//        	doAction(); 
+//        	resetReward();
+//			
+//			execute();
+//		}
+//	}   
     /**
      * @name:		copyCurrentSAVIntoPrevSAV
      * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
@@ -537,42 +535,51 @@ public class LUTTrackfire extends AdvancedRobot{
     	
       //set gun and fire
       if (currentStateActionVector[0] == 0) {
+    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
     	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	  setFire(1);
       }
       //set gun turn and do not fire
       else if (currentStateActionVector[0] == 1) {
+    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
     	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	  setFire(1);
       }
       //dodge backwards
       else if (currentStateActionVector[0] == 2) {
+    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
     	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	  setFire(1);
       }      
       //dodge forward
       else if (currentStateActionVector[0] == 3) {
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
+    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	  setFire(2);
       }
       else if (currentStateActionVector[0] == 4) {
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
+    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	  setFire(2);
       }
       else if (currentStateActionVector[0] == 5) {
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
+    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	  setFire(2);
       }
       else if (currentStateActionVector[0] == 6) {
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
+    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	  setFire(3);
       }
       else if (currentStateActionVector[0] == 7) {
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
+    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	  setFire(3);
       }
       else if (currentStateActionVector[0] == 8) {
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
+    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	  setFire(3);
       }
       
