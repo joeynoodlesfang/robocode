@@ -144,6 +144,8 @@ public class LUTTrackfire extends AdvancedRobot{
     //my information
     private double myHeading = 0.0; 
     private double myEnergy = 0.0;
+    
+	
     /**
      * FLAGS AND COUNTS
      */
@@ -179,6 +181,10 @@ public class LUTTrackfire extends AdvancedRobot{
         
         // Import data.
         repeatFlag_importexportLUTData = importLUTData(repeatFlag_importexportLUTData);
+        
+        setAdjustGunForRobotTurn(true);
+    	setAdjustRadarForGunTurn(true);
+    	setAdjustRadarForRobotTurn(true);
         
 		learningLoop(); 
          
