@@ -152,6 +152,7 @@ public class LUTTrackfire extends AdvancedRobot{
     
     //debug flag.
     static private boolean debug = false; 
+    static private boolean debug_doAction = true;
     
     // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
     private boolean repeatFlag_importexportLUTData = false; 
@@ -255,14 +256,12 @@ public class LUTTrackfire extends AdvancedRobot{
     	enemyHeading = e.getHeading(); 
 		myHeading = getHeading(); 
 		myEnergy = getEnergy(); 
-    	learningLoop(); 
     }
     
     public void onBulletHit(BulletHitEvent e){
     	reward += 10; 
 		myHeading = getHeading(); 
 		myEnergy = getEnergy(); 
-    	learningLoop(); 
     }
     /**
      * @name: 		onHitWall
@@ -278,7 +277,6 @@ public class LUTTrackfire extends AdvancedRobot{
     	reward -= 10;	
     	myHeading = getHeading(); 
     	myEnergy = getEnergy(); 
-        learningLoop();
     }
     
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
@@ -318,7 +316,7 @@ public class LUTTrackfire extends AdvancedRobot{
         	generateCurrentStateVector();
         	qFunction(); 
         	doAction(); 
-        	resetReward();
+  //      	resetReward();
         }
     }
     
@@ -370,6 +368,9 @@ public class LUTTrackfire extends AdvancedRobot{
     	
     	//Dimension 3: input: myEnergy
     		currentStateActionVector[3] = 0;
+    		currentStateActionVector[4] = 0;
+    		currentStateActionVector[5] = 0;
+    		
     }
     /**
      * @name:		qFunction
@@ -586,7 +587,7 @@ public class LUTTrackfire extends AdvancedRobot{
       scan();
       execute();
      
-      if (debug) {
+      if (debug_doAction || debug) {
     	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
       }
     }
