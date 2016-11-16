@@ -308,7 +308,6 @@ public class LUTTrackfire extends AdvancedRobot{
     	
     	while (true) {
     		setTurnRadarRight(45);
-//    		setTurnLeft(getHeading() % 90); 
     		execute();
         	copyCurrentSAVIntoPrevSAV();
         	generateCurrentStateVector();
