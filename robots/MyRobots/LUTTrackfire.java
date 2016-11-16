@@ -50,6 +50,7 @@ import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.Color;
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -58,6 +59,7 @@ import java.util.Arrays;
 import robocode.AdvancedRobot;
 import robocode.BattleEndedEvent;
 import robocode.BulletHitEvent;
+import robocode.BulletMissedEvent;
 import robocode.DeathEvent;
 import robocode.HitByBulletEvent;
 import robocode.HitWallEvent;
@@ -85,10 +87,13 @@ public class LUTTrackfire extends AdvancedRobot{
 	 //variables for the q-function. Robot will NOT change learning pattern midfight.
     private static final double alpha = 0.1;                 //to what extent the newly acquired information will override the old information.
     private static final double gamma = 0.8;                 //importance of future rewards
+    private static final double epsilon = 0.2; 
     
     //policy: Greedy if == 1, Exploratory if 0.
     private static final int greedy = 0;
     private static final int exploratory = 1;
+    
+    private static final int SARSA = 2;
     
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
@@ -133,7 +138,8 @@ public class LUTTrackfire extends AdvancedRobot{
     private double qValMax = 0.0; // stores the maximum currSAV QMax
 
     //chosen policy. greedy or exploratory.
-    private static int policy = greedy;
+    private static int policy = exploratory;
+//    private static int policy = exploratory;
     
     //enemy information
     private double enemyDistance = 0.0;
@@ -145,6 +151,8 @@ public class LUTTrackfire extends AdvancedRobot{
     private double myHeading = 0.0; 
     private double myEnergy = 0.0;
     
+    private int totalFights = 0;
+    private int[] battleResults = new int [20000];
 	
     /**
      * FLAGS AND COUNTS
@@ -158,9 +166,9 @@ public class LUTTrackfire extends AdvancedRobot{
     private boolean repeatFlag_importexportLUTData = false; 
     
     //Flag used if user desires to zero LUT at the next battle. 
-    static private boolean zeroLUT = true; 
+    static private boolean zeroLUT = false; 
     
-
+    
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
     /**
@@ -182,7 +190,7 @@ public class LUTTrackfire extends AdvancedRobot{
         
         // Import data.
         repeatFlag_importexportLUTData = importLUTData(repeatFlag_importexportLUTData);
-        
+        importWinLose();
         setAdjustGunForRobotTurn(true);
     	setAdjustRadarForGunTurn(true);	
     	setAdjustRadarForRobotTurn(true);
@@ -216,7 +224,9 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void onDeath(DeathEvent event){
         repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
+        exportWinLose(0);
         reward -=100; 
+        learningLoop(); 
     }
     /**
      * @name: 		onWin
@@ -228,7 +238,9 @@ public class LUTTrackfire extends AdvancedRobot{
      */    
 	public void onWin(WinEvent e) {
 		repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
+		exportWinLose(1);
 		reward +=100; 
+		learningLoop(); 
 	}
     /**
      * @name:		onScannedRobot
@@ -252,15 +264,15 @@ public class LUTTrackfire extends AdvancedRobot{
 	* @param:		1. HItBulletEvent class from Robot
 	* @return:		n
 	*/      
-    public void onHitByBullet(HitByBulletEvent e){
-    	reward -= 30; 
-    	enemyHeading = e.getHeading(); 
-		myHeading = getHeading(); 
-		myEnergy = getEnergy(); 
+    public void onBulletMissed(BulletMissedEvent event){
+//    	reward -= 30; 
+//    	enemyHeading = e.getHeading(); 
+//		myHeading = getHeading(); 
+//		myEnergy = getEnergy(); 
     }
     
     public void onBulletHit(BulletHitEvent e){
-    	reward += 30; 
+//    	reward += 30; 
 		myHeading = getHeading(); 
 		myEnergy = getEnergy(); 
     }
@@ -500,6 +512,8 @@ public class LUTTrackfire extends AdvancedRobot{
     public void updateLUT(double prevQVal){
         int valueRandom = 0;
         
+        double selectRandom = 0;
+        
         roboLUT[prevStateActionVector[0]]
          	   [prevStateActionVector[1]]
          	   [prevStateActionVector[2]]
@@ -516,9 +530,14 @@ public class LUTTrackfire extends AdvancedRobot{
         //Choosing next action based on policy.
         valueRandom = (int)(Math.random()*(num_actions));
      
-        if (policy == exploratory) {
+        if (policy == SARSA) {
         	currentStateActionVector[0] = valueRandom;
         }
+        
+        else if(policy == exploratory) {
+        	currentStateActionVector[0] = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
+        }
+        
         else{ 
         	currentStateActionVector[0] = actionChosenForQValMax;
         }
@@ -555,32 +574,32 @@ public class LUTTrackfire extends AdvancedRobot{
       //dodge forward
       else if (currentStateActionVector[0] == 3) {
     	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
     	  setFire(2);
       }
       else if (currentStateActionVector[0] == 4) {
     	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
     	  setFire(2);
       }
       else if (currentStateActionVector[0] == 5) {
     	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
     	  setFire(2);
       }
       else if (currentStateActionVector[0] == 6) {
     	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
     	  setFire(3);
       }
       else if (currentStateActionVector[0] == 7) {
     	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
     	  setFire(3);
       }
       else if (currentStateActionVector[0] == 8) {
     	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
     	  setFire(3);
       }
       
@@ -687,7 +706,6 @@ public class LUTTrackfire extends AdvancedRobot{
             PrintStream w = null;
             try {
                 w = new PrintStream(new RobocodeFileOutputStream(getDataFile("LUTTrackfire.dat")));
-                w.println(reward);
                 for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
                     for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
                     	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
@@ -720,6 +738,57 @@ public class LUTTrackfire extends AdvancedRobot{
         repeatFlag = false;
         return repeatFlag;
     }
-    
-   
+    /* 
+     * Function to import and export win/lose data
+     */
+    public void importWinLose(){
+    	try {
+            BufferedReader reader = null;
+            try {
+            	reader = new BufferedReader(new FileReader(getDataFile("winlose.dat")));
+            	totalFights = Integer.parseInt(reader.readLine());
+            	for (int i = 0; i < battleResults.length; i++){
+            		if (i < totalFights) {
+            			battleResults[i] = Integer.parseInt(reader.readLine());
+            		}
+            		else {
+            			battleResults[i] = 0;
+            		}
+            	}
+            } finally {
+                if (reader != null) {
+                    reader.close();
+                }
+            }
+        } 
+        catch (IOException e) {
+            // Error0x01: error in file reading
+            out.println("Something done fucked up (Error0x01 error in file reading)");
+        } 
+        catch (NumberFormatException e) {
+            // Error0x02: error in int conversion
+            out.println("Something done fucked up (Error0x02 error in int conversion)");
+        }
+    }
+    	
+    public void exportWinLose(int winLose){  
+    	PrintStream w = null;
+    	try {
+			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("winlose.dat")));
+			w.println(totalFights+1);
+        	for (int i = 0; i < totalFights; i++){
+    			w.println(battleResults[i]);
+        	}
+    			w.println(winLose);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+            if (w != null) {
+                w.close();
+            }
+		}
+    	
+    	
+    }
 }
