@@ -244,14 +244,14 @@ public class LUTTrackfire extends AdvancedRobot{
      * @param:		1. HitWallEvent class from Robot
      * @return:		n
      */   
-//    public void onHitWall(HitWallEvent e) {
-//    	if (debug) {
-//    		System.out.println("HIT WALL " + Arrays.toString(currentStateActionVector));
-//    	}
-//    	reward -= 10;	
-//        learningLoop();
-//    }
-//    
+    public void onHitWall(HitWallEvent e) {
+    	if (debug) {
+    		System.out.println("HIT WALL " + Arrays.toString(currentStateActionVector));
+    	}
+    	reward -= 10;	
+        learningLoop();
+    }
+    
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
     /** 

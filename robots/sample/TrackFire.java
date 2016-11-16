@@ -39,7 +39,7 @@ public class TrackFire extends Robot {
 
 		// Loop forever
 		while (true) {
-			turnGunRight(1); // Scans automatically
+			turnGunRight(20); // Scans automatically
 		}
 	}
 

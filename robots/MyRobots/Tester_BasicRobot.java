@@ -12,6 +12,8 @@ import robocode.AdvancedRobot;
 import robocode.HitRobotEvent;
 import robocode.ScannedRobotEvent;
 
+import static robocode.util.Utils.normalRelativeAngleDegrees;
+
 import java.awt.*;
 
 
@@ -39,6 +41,8 @@ public class Tester_BasicRobot extends AdvancedRobot {
 		setScanColor(Color.yellow);
 		
 		setAdjustGunForRobotTurn(true);
+		setAdjustRadarForGunTurn(true);
+		setAdjustRadarForRobotTurn(true);
 		
 		learningLoop();
 
@@ -48,18 +52,43 @@ public class Tester_BasicRobot extends AdvancedRobot {
 	 * onScannedRobot: Fire hard!
 	 */
 	public void onScannedRobot(ScannedRobotEvent e) {
-		fire(1);
-		learningLoop();
+		
+		learningLoop2(e);
 	}
 
 	public void learningLoop(){
 		while (true) {
-			fire(1);
-			turnLeft(30);
-			back(50);
-			ahead(50);
+		
+		setTurnRadarRight(45);
+		execute();
+			
+//			fire(1);
+//			turnLeft(30);
+//			ahead(50);
+
 			out.println(getGunHeat());
 		}
 	}
 
+	public void learningLoop2(ScannedRobotEvent e){
+		while (true) {
+			double bearingFromRadar = getHeading() + e.getBearing() - getRadarHeading();
+			double bearingFromGun = getHeading() + e.getBearing() - getGunHeading();
+			setTurnRadarRight(normalRelativeAngleDegrees(bearingFromRadar));
+			setTurnGunRight(normalRelativeAngleDegrees(bearingFromGun));
+			setAhead(50);
+			setTurnRight(-30);
+			
+			scan();
+//			
+
+			
+			execute();
+		}
+	}
+
+	public void learningLoop3(){
+		
+	}
+	
 }
