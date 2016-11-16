@@ -98,7 +98,7 @@ public class LUTTrackfire extends AdvancedRobot{
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 */
-    private static final int num_actions = 9; 
+    private static final int num_actions = 36; 
     private static final int enemyBearingFromGun_states = 2; // bearingFromGun < 3, bearingFromGun > 3
     private static final int offensiveFiringDirectionalBehaviour_actions = 3;
     private static final int offensiveFiringStrengthBehaviour_actions = 3;
@@ -146,6 +146,7 @@ public class LUTTrackfire extends AdvancedRobot{
     private double enemyHeading = 0.0; 
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
+    private double enemyBearingFromHeading = 0.0;
     
     //my information
     private double myHeading = 0.0; 
@@ -254,6 +255,7 @@ public class LUTTrackfire extends AdvancedRobot{
 	public void onScannedRobot(ScannedRobotEvent event){
 		enemyBearingFromRadar = getHeading() + event.getBearing() - getRadarHeading();
 		enemyBearingFromGun = getHeading() + event.getBearing() - getGunHeading();
+		enemyBearingFromHeading = event.getBearing();
     	learningLoop();
     }
 
@@ -553,58 +555,51 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void doAction(){
     	
-      //set gun and fire
-      if (currentStateActionVector[0] == 0) {
-    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-    	  setFire(1);
-      }
-      //set gun turn and do not fire
-      else if (currentStateActionVector[0] == 1) {
-    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-    	  setFire(1);
-      }
-      //dodge backwards
-      else if (currentStateActionVector[0] == 2) {
-    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-    	  setFire(1);
-      }      
-      //dodge forward
-      else if (currentStateActionVector[0] == 3) {
-    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
-    	  setFire(2);
-      }
-      else if (currentStateActionVector[0] == 4) {
-    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
-    	  setFire(2);
-      }
-      else if (currentStateActionVector[0] == 5) {
-    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
-    	  setFire(2);
-      }
-      else if (currentStateActionVector[0] == 6) {
-    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
-    	  setFire(3);
-      }
-      else if (currentStateActionVector[0] == 7) {
-    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
-    	  setFire(3);
-      }
-      else if (currentStateActionVector[0] == 8) {
-    	  setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
-    	  setFire(3);
-      }
+    	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	
       
-      scan();
-      execute();
+    	if ((currentStateActionVector[0])%4 == 0) {
+    		setTurnRight(enemyBearingFromHeading);
+    		setAhead(50);
+    	}
+    	else if((currentStateActionVector[0])%4 == 1){
+    		setTurnRight(enemyBearingFromHeading);
+    		setAhead(-50);
+    	}
+    	else if((currentStateActionVector[0])%4 == 2){
+    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
+    		setAhead(50);
+    	}
+    	else if((currentStateActionVector[0])%4 == 3){
+    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
+    		setAhead(-50);
+    	}
+    	
+    	if ( ((currentStateActionVector[0])/4) %3 == 0){
+    		setFire(1);
+    	}
+    	else if ( ((currentStateActionVector[0])/4) %3 == 1){
+    		setFire(2);
+    	}
+    	else if ( ((currentStateActionVector[0])/4) %3 == 2){
+    		setFire(3);
+    	}
+    	
+    	if ((currentStateActionVector[0])/12 == 0){
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	}
+    	
+    	else if ((currentStateActionVector[0])/12 == 1){
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 20));
+    	}
+    	
+    	else if ((currentStateActionVector[0])/12 == 2){
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 20));
+    	}
+      
+      
+    	scan();
+    	execute();
      
       if (debug_doAction || debug) {
     	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
