@@ -75,7 +75,7 @@ public class Tester_BasicRobot extends AdvancedRobot {
 			double bearingFromRadar = getHeading() + e.getBearing() - getRadarHeading();
 			double bearingFromGun = getHeading() + e.getBearing() - getGunHeading();
 			setTurnRadarRight(normalRelativeAngleDegrees(bearingFromRadar));
-			setTurnGunRight(normalRelativeAngleDegrees(bearingFromGun));
+			setTurnGunRight(normalRelativeAngleDegrees(bearingFromGun+20));
 			setAhead(50);
 			setTurnRight(-30);
 			

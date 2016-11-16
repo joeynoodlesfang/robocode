@@ -93,27 +93,34 @@ public class LUTTrackfire extends AdvancedRobot{
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 */
-    private static final int num_actions = 4; 
+    private static final int num_actions = 9; 
 //    private static final int defensive_states = 1; //Joey: trying to implement inputs that might make ur NN easier later
 //    private static final int offensive_states = 1; 
     private static final int enemyBearingFromGun_states = 2; // bearingFromGun < 3, bearingFromGun > 3
+    private static final int offensiveFiringDirectionalBehaviour_actions = 3;
+    private static final int offensiveFiringStrengthBehaviour_actions = 3;
     private static final int enemyDistance_states = 3;		//distance < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
     private static final int myEnergy_states = 3;		//energy < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
+   
     
     // LUT table stored in memory.
-    private static double[][][][] roboLUT 
+    private static double [][][][][][] roboLUT 
         = new double
         [num_actions]
         [enemyBearingFromGun_states]
+        [1]
+        [1]
         [enemyDistance_states]
         [myEnergy_states];
     
     // Dimensions of LUT table, used for iterations.
     private static int[] roboLUTDimensions = {
-            num_actions, 
-            enemyBearingFromGun_states,
-            enemyDistance_states,
-            myEnergy_states};
+        num_actions, 
+        enemyBearingFromGun_states,
+        1,
+        1,
+        enemyDistance_states,
+        myEnergy_states};
     
     // Stores current reward for action.
     private double reward = 0.0; //only one reward variable to brief offensive and defensive maneuvers
@@ -131,9 +138,10 @@ public class LUTTrackfire extends AdvancedRobot{
     private static int policy = greedy;
     
     //enemy information
-    private double enemyBearingFromGun = 0.0;
     private double enemyDistance = 0.0;
     private double enemyHeading = 0.0; 
+    private double enemyBearingFromRadar = 0.0;
+    private double enemyBearingFromGun = 0.0;
     
     //my information
     private double myHeading = 0.0; 
@@ -222,19 +230,21 @@ public class LUTTrackfire extends AdvancedRobot{
      * 				1. getGunBearing
      * 				2. enemyDistance
      */
-    public void onScannedRobot(ScannedRobotEvent event){
-    	enemyBearingFromGun = normalRelativeAngleDegrees(event.getBearing() + getHeading() - getGunHeading());
-    	enemyDistance = event.getDistance(); 
-    	learningLoop2(event);
+    
+	public void onScannedRobot(ScannedRobotEvent event){
+		enemyBearingFromRadar = getHeading() + event.getBearing() - getRadarHeading();
+		enemyBearingFromGun = getHeading() + event.getBearing() - getGunHeading();
+		setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	learningLoop();
     }
 
-//  /**
-//  * @name: 		onHitBullet
-//  * @purpose: 	1. Updates reward. +20 if hit bullet
-//  * 				2. Invoke LearningLoop.
-//  * @param:		1. HItBulletEvent class from Robot
-//  * @return:		n
-//  */      
+	/**
+	* @name: 		onHitBullet
+	* @purpose: 	1. Updates reward. +20 if hit bullet
+	* 				2. Invoke LearningLoop.
+	* @param:		1. HItBulletEvent class from Robot
+	* @return:		n
+	*/      
     public void onHitByBullet(HitByBulletEvent e){
     	reward -= 30; 
     	enemyHeading = e.getHeading(); 
@@ -352,12 +362,7 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void generateCurrentStateVector(){
         //Dimension 1: input: bearingFromGun
-    	if (enemyBearingFromGun < 3) {
     		currentStateActionVector[1] = 0;
-    	}
-    	else {
-    		currentStateActionVector[1] = 1;
-    	}
     	//Dimension 2: input: enemyDistance 
     	if (enemyDistance <= 33){
     		currentStateActionVector[2] = 0;
@@ -442,7 +447,7 @@ public class LUTTrackfire extends AdvancedRobot{
         }   
         
         for (int i = 0; i < num_actions; i++){
-            indexQVal = roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]];
+            indexQVal = roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]];
             
             if (indexQVal > currMax){
             	currMax = indexQVal;
@@ -487,7 +492,9 @@ public class LUTTrackfire extends AdvancedRobot{
         double prevQVal = roboLUT[prevStateActionVector[0]]
         						 [prevStateActionVector[1]]
         						 [prevStateActionVector[2]]		 
-        						 [prevStateActionVector[3]];
+        						 [prevStateActionVector[3]]
+        						 [prevStateActionVector[4]]
+        						 [prevStateActionVector[5]];
         
         prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
         
@@ -509,11 +516,13 @@ public class LUTTrackfire extends AdvancedRobot{
          	   [prevStateActionVector[1]]
          	   [prevStateActionVector[2]]
          	   [prevStateActionVector[3]]
+         	   [prevStateActionVector[4]]
+         	   [prevStateActionVector[5]]
          					  = prevQVal;
         
         if (debug) {
 	        out.println("prev " + Arrays.toString(prevStateActionVector));
-	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]]);
+	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]][prevStateActionVector[4]][prevStateActionVector[5]]);
         }
         
         //Choosing next action based on policy.
@@ -539,31 +548,51 @@ public class LUTTrackfire extends AdvancedRobot{
     	
       //set gun and fire
       if (currentStateActionVector[0] == 0) {
-    	  setTurnGunRight(enemyBearingFromGun);
-    	  setFire(1); 
-    	  execute(); 
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	  setFire(1);
       }
       //set gun turn and do not fire
       else if (currentStateActionVector[0] == 1) {
-    	  setTurnLeft(getHeading() % 90);
-    	  fire(1); 
-    	  execute(); 
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	  setFire(1);
       }
       //dodge backwards
       else if (currentStateActionVector[0] == 2) {
-    	  setTurnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
-          setAhead(-100); 
-          execute(); 
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	  setFire(1);
       }      
       //dodge forward
       else if (currentStateActionVector[0] == 3) {
-//    	  setTurnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
-    	  setTurnLeft(getHeading() % 90);
-          setAhead(100);
-          
-          execute(); 
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
+    	  setFire(2);
       }
-      out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
+      else if (currentStateActionVector[0] == 4) {
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
+    	  setFire(2);
+      }
+      else if (currentStateActionVector[0] == 5) {
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun+20));
+    	  setFire(2);
+      }
+      else if (currentStateActionVector[0] == 6) {
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
+    	  setFire(3);
+      }
+      else if (currentStateActionVector[0] == 7) {
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
+    	  setFire(3);
+      }
+      else if (currentStateActionVector[0] == 8) {
+    	  setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun-20));
+    	  setFire(3);
+      }
+      
+      
+      execute();
+     
+      if (debug) {
+    	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
+      }
     }
     
 	/**
@@ -597,7 +626,11 @@ public class LUTTrackfire extends AdvancedRobot{
 	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
 	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
 	                        		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
-	                        		roboLUT[p0][p1][p2][p3] = Double.parseDouble(reader.readLine());
+	                        			for (int p4 = 0; p4 < roboLUTDimensions[2]; p4++) {
+	                        				for (int p5 = 0; p5 < roboLUTDimensions[2]; p5++) {
+	                        					roboLUT[p0][p1][p2][p3][p4][p5] = Double.parseDouble(reader.readLine());
+	                        				}
+	                        			}
 	                        		}
 	                        	}
 	                        }
@@ -610,8 +643,12 @@ public class LUTTrackfire extends AdvancedRobot{
 	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
 	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
 	                        		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
-	                            		roboLUT[p0][p1][p2][p3] = 0;
-	                            	}
+		                        		for (int p4 = 0; p4 < roboLUTDimensions[2]; p4++) {
+	                        				for (int p5 = 0; p5 < roboLUTDimensions[2]; p5++) {
+	                        					roboLUT[p0][p1][p2][p3][p4][p5] = 0;
+	                        				}
+                        				}
+                        			}
 	                        	}
 	                        }
 	                    }
@@ -658,8 +695,11 @@ public class LUTTrackfire extends AdvancedRobot{
                     for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
                     	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
                     		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
-                    			w.println(roboLUT[p0][p1][p2][p3]);
-                    			
+                    			for (int p4 = 0; p4 < roboLUTDimensions[2]; p4++) {
+                    				for (int p5 = 0; p5 < roboLUTDimensions[2]; p5++) {
+                    					w.println(roboLUT[p0][p1][p2][p3][p4][p5]);
+                    				}
+                				}
                     		}
                     	}
                     }
