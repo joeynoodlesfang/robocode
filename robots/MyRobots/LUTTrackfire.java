@@ -99,7 +99,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 */
     private static final int num_actions = 36; 
-    private static final int enemyBearingFromGun_states = 2; 					// bearingFromGun < 3, bearingFromGun > 3
+    private static final int enemyBearingFromGun_states = 3; 					// bearingFromGun < 3, bearingFromGun > 3
     private static final int offensiveFiringDirectionalBehaviour_actions = 1;	// not implemented yet
     private static final int offensiveFiringStrengthBehaviour_actions = 1;		// not implemented yet
     private static final int enemyDistance_states = 3;							//distance < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
@@ -141,14 +141,14 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     
     //enemy information
     private double enemyDistance = 0.0;
-    private double enemyHeading = 0.0; 
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
+    private double enemyEnergy = 0.0;
     
     //my information
     private double myHeading = 0.0; 
-    private double myEnergy = 0.0;
+    
     
     private int totalFights = 0;
     private int[] battleResults = new int [20000];
@@ -158,14 +158,14 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
     
     //debug flag.
-    static private boolean debug = false; 
+    static private boolean debug = false;  
     static private boolean debug_doAction = true;
     
     // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
     private boolean repeatFlag_importexportLUTData = false; 
     
     //Flag used if user desires to zero LUT at the next battle. 
-    static private boolean zeroLUT = false;     
+    static private boolean zeroLUT = false;      
     
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
@@ -260,6 +260,8 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 		enemyBearingFromGun = getHeading() + event.getBearing() - getGunHeading();
 		enemyBearingFromHeading = event.getBearing();
 		enemyDistance = event.getDistance(); 
+//		out.println("enemyDistance " + enemyDistance);
+		enemyEnergy = event.getEnergy(); 
     	learningLoop();
     }
 
@@ -283,7 +285,8 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     public void onBulletHit(BulletHitEvent e){
     	reward += 50; 
 		myHeading = getHeading(); 
-		myEnergy = getEnergy(); 
+		enemyEnergy = e.getEnergy(); 
+		learningLoop();
     }
     
     /**
@@ -296,7 +299,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     public void onHitWall(HitWallEvent e) {
     	reward -= 10;	
     	myHeading = getHeading(); 
-    	myEnergy = getEnergy(); 
     }
     
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
@@ -382,38 +384,44 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
 
     public void generateCurrentStateVector(){
+        if (debug_doAction || debug) {
+      	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
+        }
         //Dimension 1: input: bearingFromGun
-    		currentStateActionVector[1] = 0;
+    		currentStateActionVector[1] = (int)(getHeading() / 45);
     		if (currentStateActionVector[1] < 3){
-    			currentStateActionVector[1] = 0; 
+    			currentStateActionVector[1] = 0;     		
     		}
     		else if (currentStateActionVector[1] > 3){
     			currentStateActionVector[1] = 1; 
     		}
+    		else{
+    			currentStateActionVector[1] = 2; 
+    		}
     	//Dimension 2: input: offensiveFiringDirectionalBehaviour_actions
-    		currentStateActionVector[2] = 0;
+    		currentStateActionVector[2] = 0; 
     	//Dimension 3: input: offensiveFiringStrengthBehaviour_actions
-    		currentStateActionVector[3] = 0;
+    		currentStateActionVector[3] = 0  ;
     	//Dimension 4: input: enemyDistance_states
-    		currentStateActionVector[4] = 0;
+    		currentStateActionVector[4] = (int) enemyDistance;
     		if (currentStateActionVector[4] < 33){
     			currentStateActionVector[4] = 0; 
     		}
     		else if (currentStateActionVector[4] >= 33 && currentStateActionVector[4]  < 66){
     			currentStateActionVector[4] = 1; 
     		}
-    		else if (currentStateActionVector[4] > 66 && currentStateActionVector[4] <= 100){
+    		else if (currentStateActionVector[4] > 66){
     			currentStateActionVector[4] = 2; 
     		}
-    		//Dimension 5: input: myEnergy_states
-    		currentStateActionVector[5] = 0;
+    		//Dimension 5: input: Energy_states
+    		currentStateActionVector[5] = (int) enemyEnergy;
     		if (currentStateActionVector[5] < 33){
     			currentStateActionVector[5] = 0; 
     		}
     		else if (currentStateActionVector[5] >= 33 && currentStateActionVector[5]  < 66){
     			currentStateActionVector[5] = 1; 
     		}
-    		else if (currentStateActionVector[5] > 66 && currentStateActionVector[5] <= 100){
+    		else if (currentStateActionVector[5] > 66){
     			currentStateActionVector[5] = 2; 
     		}  		
     }
