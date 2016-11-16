@@ -183,9 +183,10 @@ public class LUTTrackfire extends AdvancedRobot{
         repeatFlag_importexportLUTData = importLUTData(repeatFlag_importexportLUTData);
         
         setAdjustGunForRobotTurn(true);
-    	setAdjustRadarForGunTurn(true);
+    	setAdjustRadarForGunTurn(true);	
     	setAdjustRadarForRobotTurn(true);
         
+
 		learningLoop(); 
          
     }
@@ -258,7 +259,7 @@ public class LUTTrackfire extends AdvancedRobot{
     }
     
     public void onBulletHit(BulletHitEvent e){
-    	reward += 10; 
+    	reward += 30; 
 		myHeading = getHeading(); 
 		myEnergy = getEnergy(); 
     	learningLoop(); 
