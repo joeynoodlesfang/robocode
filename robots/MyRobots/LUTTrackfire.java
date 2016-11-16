@@ -94,8 +94,6 @@ public class LUTTrackfire extends AdvancedRobot{
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 */
     private static final int num_actions = 9; 
-//    private static final int defensive_states = 1; //Joey: trying to implement inputs that might make ur NN easier later
-//    private static final int offensive_states = 1; 
     private static final int enemyBearingFromGun_states = 2; // bearingFromGun < 3, bearingFromGun > 3
     private static final int offensiveFiringDirectionalBehaviour_actions = 3;
     private static final int offensiveFiringStrengthBehaviour_actions = 3;
@@ -157,7 +155,7 @@ public class LUTTrackfire extends AdvancedRobot{
     private boolean repeatFlag_importexportLUTData = false; 
     
     //Flag used if user desires to zero LUT at the next battle. 
-    static private boolean zeroLUT = false; 
+    static private boolean zeroLUT = true; 
     
 
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
@@ -179,7 +177,7 @@ public class LUTTrackfire extends AdvancedRobot{
         	out.println("I have been a dodger duck (robot entered run)"); 
         }
         
-        // Import dat.
+        // Import data.
         repeatFlag_importexportLUTData = importLUTData(repeatFlag_importexportLUTData);
         
 		learningLoop(); 
@@ -364,25 +362,10 @@ public class LUTTrackfire extends AdvancedRobot{
         //Dimension 1: input: bearingFromGun
     		currentStateActionVector[1] = 0;
     	//Dimension 2: input: enemyDistance 
-    	if (enemyDistance <= 33){
     		currentStateActionVector[2] = 0;
-    	}
-    	else if (enemyDistance > 33 && enemyDistance <= 66 ){
-    		currentStateActionVector[2] = 1;
-    	}
-    	else if (enemyDistance > 66 && enemyDistance <= 100 ){
-    		currentStateActionVector[2] = 2;
-    	}   	
+    	
     	//Dimension 3: input: myEnergy
-    	if (myEnergy <= 33){
     		currentStateActionVector[3] = 0;
-    	}
-    	else if (myEnergy > 33 && myEnergy <= 66 ){
-    		currentStateActionVector[3] = 1;
-    	}
-    	else if (myEnergy > 66 && myEnergy <= 100 ){
-    		currentStateActionVector[3] = 2;
-    	}          
     }
     /**
      * @name:		qFunction
@@ -625,9 +608,9 @@ public class LUTTrackfire extends AdvancedRobot{
 	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
 	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
 	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-	                        		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
-	                        			for (int p4 = 0; p4 < roboLUTDimensions[2]; p4++) {
-	                        				for (int p5 = 0; p5 < roboLUTDimensions[2]; p5++) {
+	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
+	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
+	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
 	                        					roboLUT[p0][p1][p2][p3][p4][p5] = Double.parseDouble(reader.readLine());
 	                        				}
 	                        			}
@@ -642,9 +625,9 @@ public class LUTTrackfire extends AdvancedRobot{
 	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
 	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
 	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
-	                        		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
-		                        		for (int p4 = 0; p4 < roboLUTDimensions[2]; p4++) {
-	                        				for (int p5 = 0; p5 < roboLUTDimensions[2]; p5++) {
+	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
+		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
+	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
 	                        					roboLUT[p0][p1][p2][p3][p4][p5] = 0;
 	                        				}
                         				}
@@ -694,9 +677,9 @@ public class LUTTrackfire extends AdvancedRobot{
                 for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
                     for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
                     	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
-                    		for (int p3 = 0; p3 < roboLUTDimensions[2]; p3++) {
-                    			for (int p4 = 0; p4 < roboLUTDimensions[2]; p4++) {
-                    				for (int p5 = 0; p5 < roboLUTDimensions[2]; p5++) {
+                    		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
+                    			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
+                    				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
                     					w.println(roboLUT[p0][p1][p2][p3][p4][p5]);
                     				}
                 				}
