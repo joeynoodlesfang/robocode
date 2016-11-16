@@ -212,7 +212,7 @@ public class LUTTrackfire extends AdvancedRobot{
      */    
 	public void onWin(WinEvent e) {
 		repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
-//		reward +=100; 
+		reward +=100; 
 	}
     /**
      * @name:		onScannedRobot
@@ -225,7 +225,7 @@ public class LUTTrackfire extends AdvancedRobot{
     public void onScannedRobot(ScannedRobotEvent event){
     	enemyBearingFromGun = normalRelativeAngleDegrees(event.getBearing() + getHeading() - getGunHeading());
     	enemyDistance = event.getDistance(); 
-    	learningLoop();
+    	learningLoop2(event);
     }
 
 //  /**
@@ -236,7 +236,7 @@ public class LUTTrackfire extends AdvancedRobot{
 //  * @return:		n
 //  */      
     public void onHitByBullet(HitByBulletEvent e){
-    	reward -= 10; 
+    	reward -= 30; 
     	enemyHeading = e.getHeading(); 
 		myHeading = getHeading(); 
 		myEnergy = getEnergy(); 
@@ -257,10 +257,12 @@ public class LUTTrackfire extends AdvancedRobot{
      * @return:		n
      */   
     public void onHitWall(HitWallEvent e) {
-    	if (debug) {
-    		System.out.println("HIT WALL " + Arrays.toString(currentStateActionVector));
-    	}
+//    	if (debug) {
+//    		System.out.println("HIT WALL " + Arrays.toString(currentStateActionVector));
+//    	}
     	reward -= 10;	
+    	myHeading = getHeading(); 
+    	myEnergy = getEnergy(); 
         learningLoop();
     }
     
@@ -297,6 +299,9 @@ public class LUTTrackfire extends AdvancedRobot{
     public void learningLoop(){
     	
     	while (true) {
+    		setTurnRadarRight(45);
+//    		setTurnLeft(getHeading() % 90); 
+    		execute();
         	copyCurrentSAVIntoPrevSAV();
         	generateCurrentStateVector();
         	qFunction(); 
@@ -305,6 +310,24 @@ public class LUTTrackfire extends AdvancedRobot{
         }
     }
     
+	public void learningLoop2(ScannedRobotEvent e){
+		while (true) {
+			double bearingFromRadar = getHeading() + e.getBearing() - getRadarHeading();
+			double bearingFromGun = getHeading() + e.getBearing() - getGunHeading();
+			setTurnRadarRight(normalRelativeAngleDegrees(bearingFromRadar));
+			setTurnGunRight(normalRelativeAngleDegrees(bearingFromGun));
+			setAhead(50);
+			setTurnRight(-30);
+			scan();
+        	copyCurrentSAVIntoPrevSAV();
+        	generateCurrentStateVector();
+        	qFunction(); 
+        	doAction(); 
+        	resetReward();
+			
+			execute();
+		}
+	}   
     /**
      * @name:		copyCurrentSAVIntoPrevSAV
      * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
@@ -522,7 +545,8 @@ public class LUTTrackfire extends AdvancedRobot{
       }
       //set gun turn and do not fire
       else if (currentStateActionVector[0] == 1) {
-    	  turnGunRight(enemyBearingFromGun);
+    	  setTurnLeft(getHeading() % 90);
+    	  fire(1); 
     	  execute(); 
       }
       //dodge backwards
@@ -533,8 +557,10 @@ public class LUTTrackfire extends AdvancedRobot{
       }      
       //dodge forward
       else if (currentStateActionVector[0] == 3) {
-    	  setTurnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
-          setAhead(100); 
+//    	  setTurnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
+    	  setTurnLeft(getHeading() % 90);
+          setAhead(100);
+          
           execute(); 
       }
       out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
