@@ -29,12 +29,19 @@
 		- added two more actions... not sure if any of this makes sense though.. it feels very random. 
 		- if gets hit by bullet, it should move away! 
 	New updates
+	
 	2:33 pm 
 		- execute plan from LUTplan.xlsx
 		- update scannedRobot(); 
 		- update onHitBullet() event. 
 		- update actions
-
+		
+	3:51 pm. 
+		- reward system 
+			-positiveReward for hitting an enemy
+			-negativeReward for getting hit. 
+			-negativeTerminalReward
+			-positiveTerminalReward
  */
 
 package MyRobots;
@@ -180,6 +187,7 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void onBattleEnded(BattleEndedEvent event){
         repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
+        
     }
     
     /**
@@ -192,8 +200,7 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void onDeath(DeathEvent event){
         repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
-        
-//        reward -=100; 
+        reward -=100; 
     }
     /**
      * @name: 		onWin
@@ -234,9 +241,14 @@ public class LUTTrackfire extends AdvancedRobot{
 		myHeading = getHeading(); 
 		myEnergy = getEnergy(); 
     	learningLoop(); 
-    	
     }
-
+    
+    public void onBulletHit(BulletHitEvent e){
+    	reward += 10; 
+		myHeading = getHeading(); 
+		myEnergy = getEnergy(); 
+    	learningLoop(); 
+    }
     /**
      * @name: 		onHitWall
      * @purpose: 	1. Updates reward. -10
@@ -244,14 +256,14 @@ public class LUTTrackfire extends AdvancedRobot{
      * @param:		1. HitWallEvent class from Robot
      * @return:		n
      */   
-//    public void onHitWall(HitWallEvent e) {
-//    	if (debug) {
-//    		System.out.println("HIT WALL " + Arrays.toString(currentStateActionVector));
-//    	}
-//    	reward -= 10;	
-//        learningLoop();
-//    }
-//    
+    public void onHitWall(HitWallEvent e) {
+    	if (debug) {
+    		System.out.println("HIT WALL " + Arrays.toString(currentStateActionVector));
+    	}
+    	reward -= 10;	
+        learningLoop();
+    }
+    
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
     /** 
@@ -504,8 +516,8 @@ public class LUTTrackfire extends AdvancedRobot{
     	
       //set gun and fire
       if (currentStateActionVector[0] == 0) {
-    	  turnGunRight(enemyBearingFromGun);
-    	  fire(1); 
+    	  setTurnGunRight(enemyBearingFromGun);
+    	  setFire(1); 
     	  execute(); 
       }
       //set gun turn and do not fire
@@ -515,16 +527,14 @@ public class LUTTrackfire extends AdvancedRobot{
       }
       //dodge backwards
       else if (currentStateActionVector[0] == 2) {
-    	  turnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
-          ahead(-100); 
-          reward += 10; 
+    	  setTurnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
+          setAhead(-100); 
           execute(); 
       }      
       //dodge forward
       else if (currentStateActionVector[0] == 3) {
-    	  turnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
-          ahead(100); 
-          reward += 10; 
+    	  setTurnRight(normalRelativeAngleDegrees(90 - (myHeading - enemyHeading)));
+          setAhead(100); 
           execute(); 
       }
       out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
@@ -556,7 +566,7 @@ public class LUTTrackfire extends AdvancedRobot{
                 try {
                     reader = new BufferedReader(new FileReader(getDataFile("LUTTrackfire.dat")));
                     if (!zeroLUT){
-                    	reward = Double.parseDouble(reader.readLine());		//REWARD	
+//                    	reward = Double.parseDouble(reader.readLine());		//REWARD	
 	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
 	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
 	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
