@@ -17,18 +17,8 @@ public interface LUTInterface extends CommonInterface{
  * int [] argVariableCeiling );
 */
 
-	
 /**
 ** Initialize the look up table to all zeros.  
 **/
 public void initialiseLUT(); 
-
-
-/*
-** Helper method to translate vector used to index look up table into an ordinal to access associated look up table element. 
-** @param X - the state action vector used to index the LUT 
-** @return  - the index where this vector maps to.  
-*/
-public int indexFor(double [] X); 
-
 }
