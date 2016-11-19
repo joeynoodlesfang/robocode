@@ -44,6 +44,9 @@
 			-positiveTerminalReward
 	1:51 am
 		- added states  not really working. 
+		
+	2016-11-18
+		- Implementing some weird useless shit to reminicse about embedded 
  */
 
 package MyRobots;
@@ -96,13 +99,26 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private static final int exploratory = 1;
     private static final int SARSA = 2;
     
+    private static final short CONFIGMASK_ZEROLUT  = 				0x0001;
+    private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 	0x4000;
+    private static final short CONFIGMASK_FILE_LUTTrackfire =		0x0010;
+    private static final short CONFIGMASK_FILE_WinLose = 			0x0020;
+    
+    private static final int importDATA_SUCCESS = 					0x00;
+    private static final int importDATA_ERROR_0x01 = 				0x01;
+    private static final int importDATA_ERROR_0x02 = 				0x02;
+    private static final int importDATA_ERROR_0x03 = 				0x03;
+    private static final int importLUTDATA_ERROR_0x04 =				0x04;
+    private static final int importWINLOSE_ERROR_0x05 =				0x05;
+    
+    String strLUT = "LUTTrackfire.dat";
+    String strWinLose = "winlose.dat";
+    String strTest = "stringTest.dat";
+    
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 */
     private static final int num_actions = 36; 
-    
-
-    
 
     private static final int enemyBearingFromGun_states = 3; 					// bearingFromGun < 3, bearingFromGun > 3
     private static final int offensiveFiringDirectionalBehaviour_actions = 1;	// not implemented yet
@@ -110,11 +126,8 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private static final int enemyDistance_states = 3;							//distance < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
     private static final int myEnergy_states = 3;								//energy < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
    
-    private static final int ZEROLUTTRUE = 1;
-    private static final int ZEROLUTFALSE = 0;
-   
     // LUT table configuration information, stored in the first line of .dat
-    private static int datFileConfig = 0; //######## figure out int size
+    private static short configDatFile = 0; 
     
     
     // LUT table stored in memory.
@@ -138,7 +151,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     
     // Stores current reward for action.
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
-
     
     // Stores current and previous stateAction vectors.
     private int currentStateActionVector[] = new int [roboLUTDimensions.length];
@@ -162,10 +174,10 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     //my information
     private double myHeading = 0.0; 
     
-    
     private int totalFights = 0;
     private int[] battleResults = new int [20000];
 	
+    
     /**
      * FLAGS AND COUNTS
      */
@@ -175,12 +187,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     static private boolean debug_doAction = true;
     
     // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
-    private boolean repeatFlag_importexportLUTData = false; 
+    static private boolean flag_preventMultipleLUTDataImports = false; 
 
 //    //Flag used if user desires to zero LUT at the next battle. 
 //    static private boolean zeroLUT = false; 
 
-    
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
@@ -202,7 +213,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         }
         
         // Import data.
-        repeatFlag_importexportLUTData = importLUTData(repeatFlag_importexportLUTData);
+        if(importData("strTest.dat") != importDATA_SUCCESS) {
+        }
+        
         importWinLose();
         
         //set gun and radar for robot turn
@@ -217,6 +230,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         }
          
     }
+    
     /**
      * @name: 		onBattleEnded
      * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
@@ -226,8 +240,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-        repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
-        
+        flag_preventMultipleLUTDataImports = exportLUTData(flag_preventMultipleLUTDataImports);    
     }
     
     /**
@@ -240,11 +253,12 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */
     public void onDeath(DeathEvent event){
-        repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
+        flag_preventMultipleLUTDataImports = exportLUTData(flag_preventMultipleLUTDataImports);
         exportWinLose(0);
         reward -=100; 
-        learningLoop(); 
+        learningLoop(); //?Joey: why is learningLOop called here? for terminal reward?
     }
+    
     /**
      * @name: 		onWin
      * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
@@ -255,11 +269,12 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */    
 	public void onWin(WinEvent e) {
-		repeatFlag_importexportLUTData = exportLUTData(repeatFlag_importexportLUTData);
+		flag_preventMultipleLUTDataImports = exportLUTData(flag_preventMultipleLUTDataImports);
 		exportWinLose(1);
 		reward +=100; 
-		learningLoop(); 
+		learningLoop(); //?Joey: why is learningLoop called here?
 	}
+	
     /**
      * @name:		onScannedRobot
      * @purpose:	1. determine enemy bearing and distance
@@ -267,8 +282,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		none, but updates:
      * 				1. getGunBearing
      * 				2. enemyDistance
-     */
-    
+     */  
 	public void onScannedRobot(ScannedRobotEvent event){
 		enemyBearingFromRadar = getHeading() + event.getBearing() - getRadarHeading();
 		enemyBearingFromGun = getHeading() + event.getBearing() - getGunHeading();
@@ -286,9 +300,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @return:		n
 	*/      
     public void onBulletMissed(BulletMissedEvent event){
-    	reward -= 5; 
-    	
+    	reward -= 5;    	
     }
+    
 	/**
 	* @name: 		onBulletHit
 	* @purpose: 	1. Updates reward. +30 if bullet hits enemy
@@ -300,7 +314,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     	reward += 50; 
 		myHeading = getHeading(); 
 		enemyEnergy = e.getEnergy(); 
-		learningLoop();
+		learningLoop(); //?Joey: why is learningLoop called here
     }
     
     /**
@@ -355,25 +369,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
   //      	resetReward();
         }
     }
-    
-//	public void learningLoop2(ScannedRobotEvent e){
-//		while (true) {
-//			double bearingFromRadar = getHeading() + e.getBearing() - getRadarHeading();
-//			double bearingFromGun = getHeading() + e.getBearing() - getGunHeading();
-//			setTurnRadarRight(normalRelativeAngleDegrees(bearingFromRadar));
-//			setTurnGunRight(normalRelativeAngleDegrees(bearingFromGun));
-//			setAhead(50);
-//			setTurnRight(-30);
-//			scan();
-//        	copyCurrentSAVIntoPrevSAV();
-//        	generateCurrentStateVector();
-//        	qFunction(); 
-//        	doAction(); 
-//        	resetReward();
-//			
-//			execute();
-//		}
-//	}   
+     
     /**
      * @name:		copyCurrentSAVIntoPrevSAV
      * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
@@ -396,7 +392,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * 				1. bearingFromGun
      * @return: 	none
      */
-
     public void generateCurrentStateVector(){
         if (debug_doAction || debug) {
       	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
@@ -439,6 +434,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     			currentStateActionVector[5] = 2; 
     		}  		
     }
+ 
     /**
      * @name:		qFunction
      * @purpose: 	1. Obtain the action in current state with the highest q-value, 
@@ -606,7 +602,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         }
     }
     
-    
     /**
      * @name:		doAction
      * @purpose: 	Converts state Action vector into action by reading currentSAV[0]
@@ -680,55 +675,95 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         reward = 0;
         
     }
+
+
+
     /**
-     * @name:		importLUTData
-     * @author:		95% sittingduckbot
-     * @purpose: 	1. Imports LUT data from .dat file. 
-     * @param: 		1. repeatFlag
-     * @return:		1. repeatFlag
+     * @name:		importData
+     * @author:		partly written in sittingduckbot
+     * @purpose: 	1. Imports data from .dat file. 
+     * @param: 		1. stringname of file desired to be written
+     * 				also uses:
+     * 				static flag for preventing multiple imports by multiple instances of robot (hopefully?).
+     * @return:		1. int importLUTDATA success/error;
      */
-    public boolean importLUTData(boolean repeatFlag){
-        if (repeatFlag == false) {
+    public int importData(String strImported){
+        if (flag_preventMultipleLUTDataImports == false) {
             try {
                 BufferedReader reader = null;
                 try {
-                    reader = new BufferedReader(new FileReader(getDataFile("LUTTrackfire.dat")));
-                    
-                    if (!zeroLUT){
-//                    	reward = Double.parseDouble(reader.readLine());		//REWARD	
-	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-	                        					roboLUT[p0][p1][p2][p3][p4][p5] = Double.parseDouble(reader.readLine());
-	                        				}
-	                        			}
-	                        		}
-	                        	}
-	                        }
-	                    }
+                    reader = new BufferedReader(new FileReader(getDataFile(strImported)));
+                    configDatFile = (short)Integer.parseInt(reader.readLine());
+                    if ((configDatFile & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
+                    	
+                    	out.println("Import aborted (file not configured properly)");
+                    	
+                    	return importDATA_ERROR_0x03;
                     }
-                    // zeroes the LUT.
-                    else if (zeroLUT) {
-                    	out.println("zeroLUT");
-	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
-	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-	                        					roboLUT[p0][p1][p2][p3][p4][p5] = 0;
-	                        				}
-                        				}
-                        			}
-	                        	}
-	                        }
-	                    }
-                    }
-                    if (debug) {
-                    	out.println("Imported LUT data");
+                    else {
+                    	// different commands between files
+                    	if ((configDatFile & CONFIGMASK_FILE_LUTTrackfire) == CONFIGMASK_FILE_LUTTrackfire) {
+                    		if (strImported != "LUTTrackfire.dat") {
+                    				if (debug) {
+                    					out.println ("Import aborted (Imported wrong file - file was labelled LUTTrackfire.dat)");
+                    				}
+                    			return importLUTDATA_ERROR_0x04;
+                    		}
+	                    	if ((configDatFile & CONFIGMASK_ZEROLUT) == CONFIGMASK_ZEROLUT) {
+	                    		out.println("zeroLUT");
+	    	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
+	    	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
+	    	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
+	    	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
+	    		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
+	    	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
+	    	                        					roboLUT[p0][p1][p2][p3][p4][p5] = 0;
+	    	                        				}
+	                            				}
+	                            			}
+	    	                        	}
+	    	                        }
+	    	                    }
+	                    	} // end of configmask_zeroLUT for LUTTrackfire
+	                    	else {
+	                    		for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
+	    	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
+	    	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
+	    	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
+	    	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
+	    	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
+	    	                        					roboLUT[p0][p1][p2][p3][p4][p5] = Double.parseDouble(reader.readLine());
+	    	                        				}
+	    	                        			}
+	    	                        		}
+	    	                        	}
+	    	                        }
+	    	                    } // end of data extraction for LUTTrackfire
+	                    		if (debug) {
+	                            	out.println("Imported LUT data");
+	                            }
+	                    	}
+                    	} // end of LUTTrackfire
+                    	else if((configDatFile & CONFIGMASK_FILE_WinLose) == CONFIGMASK_FILE_WinLose) {
+                    		if (strImported != "winlose.dat") {
+                    			if (debug) {
+                    				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
+                    			}
+                    			return importWINLOSE_ERROR_0x05;
+                    		}
+                    		totalFights = Integer.parseInt(reader.readLine());
+                        	for (int i = 0; i < battleResults.length; i++){
+                        		if (i < totalFights) {
+                        			battleResults[i] = Integer.parseInt(reader.readLine());
+                        		}
+                        		else {
+                        			battleResults[i] = 0;
+                        		}
+                        	}
+                    	} // end of WinLose
+                    	
+                    	//write code for new file uses here.
+                    	else{}
                     }
                 } finally {
                     if (reader != null) {
@@ -737,20 +772,25 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                 }
             } 
             catch (IOException e) {
-                // Error0x01: error in file reading
-                out.println("Something done fucked up (Error0x01 error in file reading)");
+            	if (debug) {
+            		out.println("Something done fucked up (Error0x01 error in file reading)");
+            	}
+                return importDATA_ERROR_0x01;
             } 
             catch (NumberFormatException e) {
-                // Error0x02: error in int conversion
-                out.println("Something done fucked up (Error0x02 error in int conversion)");
+                if (debug) {
+                	out.println("Something done fucked up (Error0x02 error in int conversion)");
+                }
+                return importDATA_ERROR_0x02;
             }
         }
-        
-        repeatFlag = true;
-        return repeatFlag;
+       
+        flag_preventMultipleLUTDataImports = true; //sets flag to prevent multiple instances of robot importing(and exporting) from same .dat (and causing weird interactions(?)).
+        return importDATA_SUCCESS;
     }
     
     /**
+     * @deprecated - use exportData
      * @name:		exportLUTData
      * @author:		Mostly from sittingduckbot
      * @purpose: 	1. Exports local LUT from memory to .dat file.
@@ -760,7 +800,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
     public boolean exportLUTData(boolean repeatFlag){
         
-        if (repeatFlag == true) {
+        if (flag_preventMultipleLUTDataImports == true) {
             out.println("wewhat");
             PrintStream w = null;
             try {
@@ -794,11 +834,13 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
             }
         }      
         
-        repeatFlag = false;
+        flag_preventMultipleLUTDataImports = false;
         return repeatFlag;
     }
-    /* 
-     * Function to import and export win/lose data
+    
+    /**
+     * @deprecated - use importData
+     * @name: importWinLose
      */
     public void importWinLose(){
     	try {
