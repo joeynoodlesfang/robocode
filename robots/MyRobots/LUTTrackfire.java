@@ -45,8 +45,10 @@
 	1:51 am
 		- added states  not really working. 
 		
-	2016-11-18
-		- Implementing some weird useless shit to reminicse about embedded 
+	2016-11-18 - j
+		- Implementing some weird useless shit to reminicse about embedded - read at ur own peril
+		- write exports, add config lines in current txt
+		- change run fxn
  */
 
 package MyRobots;
@@ -126,12 +128,33 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private static final int enemyDistance_states = 3;							//distance < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
     private static final int myEnergy_states = 3;								//energy < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
    
-    // LUT table configuration information, stored in the first line of .dat
-    private static short configDatFile = 0; 
+    /**
+     * FLAGS AND COUNTS
+     */
     
+    //debug flag.
+    static private boolean debug = false;  
+    static private boolean debug_doAction = true;
+    
+    // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
+    static private boolean flag_preventMultipleLUTDataImports = false; 
+    
+    // printout error flag
+    static private int flag_error = 0;
+
+//    //Flag used if user desires to zero LUT at the next battle. 
+//    static private boolean zeroLUT = false; 
+    
+    /**
+     *  OTHER GLOBALS
+     */
+    
+
+    // LUT table configuration information, stored in the first line of .dat
+    static private short configDatFile = 0; 
     
     // LUT table stored in memory.
-    private static double [][][][][][] roboLUT 
+    private static double [][][][][][] roboLUT //?Joey: should these be static private? is there a difference? 
         = new double
         [num_actions]
         [enemyBearingFromGun_states]
@@ -178,19 +201,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private int[] battleResults = new int [20000];
 	
     
-    /**
-     * FLAGS AND COUNTS
-     */
     
-    //debug flag.
-    static private boolean debug = false;  
-    static private boolean debug_doAction = true;
-    
-    // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
-    static private boolean flag_preventMultipleLUTDataImports = false; 
-
-//    //Flag used if user desires to zero LUT at the next battle. 
-//    static private boolean zeroLUT = false; 
 
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
@@ -212,8 +223,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         	out.println("I have been a dodger duck (robot entered run)"); 
         }
         
-        // Import data.
-        if(importData("strTest.dat") != importDATA_SUCCESS) {
+        // Import data. ->Change imported filename here<-
+        
+        flag_error = importData("strTest.dat");
+        if( flag_error != importDATA_SUCCESS) {
+        	out.println("ERROR: " + flag_error);
         }
         
         importWinLose();
@@ -684,7 +698,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @purpose: 	1. Imports data from .dat file. 
      * @param: 		1. stringname of file desired to be written
      * 				also uses:
-     * 				static flag for preventing multiple imports by multiple instances of robot (hopefully?).
+     * 				1. bool flag_preventMultipleLUTDataImports, static flag for preventing multiple imports by multiple instances of robot (hopefully?).
      * @return:		1. int importLUTDATA success/error;
      */
     public int importData(String strImported){
@@ -762,7 +776,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                         	}
                     	} // end of WinLose
                     	
-                    	//write code for new file uses here.
+                    	//write code for new file uses here. 
+                    	//also change the string being called 
+                    	//ctr+f: Import data. ->Change imported filename here<- 
                     	else{}
                     }
                 } finally {
@@ -789,6 +805,17 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         return importDATA_SUCCESS;
     }
     
+    /**
+     * @name: 		exportData()
+     * @author: 	partially written in robocode's sittingduckbot
+     * @param: 		uses:
+     * 				1. bool flag_preventMultipleLUTDataImports, static flag for preventing multiple imports
+     * 				
+     */
+
+    public void exportData() {
+    	return;
+    }
     /**
      * @deprecated - use exportData
      * @name:		exportLUTData
