@@ -107,11 +107,19 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private static final short CONFIGMASK_FILE_WinLose = 			0x0020;
     
     private static final int importDATA_SUCCESS = 					0x00;
+    private static final int exportDATA_SUCCESS = 					0x00;
+    
     private static final int importDATA_ERROR_0x01 = 				0x01;
     private static final int importDATA_ERROR_0x02 = 				0x02;
     private static final int importDATA_ERROR_0x03 = 				0x03;
     private static final int importLUTDATA_ERROR_0x04 =				0x04;
     private static final int importWINLOSE_ERROR_0x05 =				0x05;
+    private static final int exportDATA_ERROR_0x06 =				0x06;
+    private static final int exportDATA_ERROR_0x07 =				0x07;
+    private static final int importDATA_ERROR_0x08 =				0x08;
+    private static final int exportDATA_ERROR_0x09 =				0X09;
+    private static final int exportLUTDATA_ERROR_0x0A =				0X0A;
+    
     
     String strLUT = "LUTTrackfire.dat";
     String strWinLose = "winlose.dat";
@@ -136,10 +144,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     static private boolean debug = false;  
     static private boolean debug_doAction = true;
     
-    // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
-    static private boolean flag_preventMultipleLUTDataImports = false; 
+    // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite, and protection against wrong file entries.
+    // False == inaccessible to write-to-file commands.
+    static private boolean flag_preventIncorrectLUTDataImports = false; 
     
-    // printout error flag
+    // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
 //    //Flag used if user desires to zero LUT at the next battle. 
@@ -254,7 +263,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-        flag_preventMultipleLUTDataImports = exportLUTData(flag_preventMultipleLUTDataImports);    
+        flag_preventIncorrectLUTDataImports = exportLUTData(flag_preventIncorrectLUTDataImports);    
     }
     
     /**
@@ -267,7 +276,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */
     public void onDeath(DeathEvent event){
-        flag_preventMultipleLUTDataImports = exportLUTData(flag_preventMultipleLUTDataImports);
+        flag_preventIncorrectLUTDataImports = exportLUTData(flag_preventIncorrectLUTDataImports);
         exportWinLose(0);
         reward -=100; 
         learningLoop(); //?Joey: why is learningLOop called here? for terminal reward?
@@ -283,7 +292,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */    
 	public void onWin(WinEvent e) {
-		flag_preventMultipleLUTDataImports = exportLUTData(flag_preventMultipleLUTDataImports);
+		flag_preventIncorrectLUTDataImports = exportLUTData(flag_preventIncorrectLUTDataImports);
 		exportWinLose(1);
 		reward +=100; 
 		learningLoop(); //?Joey: why is learningLoop called here?
@@ -698,29 +707,30 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @purpose: 	1. Imports data from .dat file. 
      * @param: 		1. stringname of file desired to be written
      * 				also uses:
-     * 				1. bool flag_preventMultipleLUTDataImports, static flag for preventing multiple imports by multiple instances of robot (hopefully?).
+     * 				1. bool flag_preventIncorrectLUTDataImports, static flag for preventing multiple imports by multiple instances of robot (hopefully?).
      * @return:		1. int importLUTDATA success/error;
      */
-    public int importData(String strImported){
-        if (flag_preventMultipleLUTDataImports == false) {
+    public int importData(String strName){
+        if (flag_preventIncorrectLUTDataImports == false) {
             try {
                 BufferedReader reader = null;
                 try {
-                    reader = new BufferedReader(new FileReader(getDataFile(strImported)));
+                    reader = new BufferedReader(new FileReader(getDataFile(strName)));
                     configDatFile = (short)Integer.parseInt(reader.readLine());
                     if ((configDatFile & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
-                    	
-                    	out.println("Import aborted (file not configured properly)");
+                    	if (debug) {
+                    		out.println("Import aborted (file not configured properly)");
+                    	}
                     	
                     	return importDATA_ERROR_0x03;
                     }
                     else {
                     	// different commands between files
                     	if ((configDatFile & CONFIGMASK_FILE_LUTTrackfire) == CONFIGMASK_FILE_LUTTrackfire) {
-                    		if (strImported != "LUTTrackfire.dat") {
-                    				if (debug) {
-                    					out.println ("Import aborted (Imported wrong file - file was labelled LUTTrackfire.dat)");
-                    				}
+                    		if (strName != "LUTTrackfire.dat") {
+                				if (debug) {
+                					out.println ("Import aborted (Imported wrong file - file was labelled LUTTrackfire.dat)");
+                				}
                     			return importLUTDATA_ERROR_0x04;
                     		}
 	                    	if ((configDatFile & CONFIGMASK_ZEROLUT) == CONFIGMASK_ZEROLUT) {
@@ -759,7 +769,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	                    	}
                     	} // end of LUTTrackfire
                     	else if((configDatFile & CONFIGMASK_FILE_WinLose) == CONFIGMASK_FILE_WinLose) {
-                    		if (strImported != "winlose.dat") {
+                    		if (strName != "winlose.dat") {
                     			if (debug) {
                     				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
                     			}
@@ -779,7 +789,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                     	//write code for new file uses here. 
                     	//also change the string being called 
                     	//ctr+f: Import data. ->Change imported filename here<- 
-                    	else{}
+                    	else{
+                    		return importDATA_ERROR_0x08;
+                    	}
                     }
                 } finally {
                     if (reader != null) {
@@ -801,7 +813,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
             }
         }
        
-        flag_preventMultipleLUTDataImports = true; //sets flag to prevent multiple instances of robot importing(and exporting) from same .dat (and causing weird interactions(?)).
+        flag_preventIncorrectLUTDataImports = true; //sets flag to prevent multiple instances of robot importing(and exporting) from same .dat (and causing weird interactions(?)).
         return importDATA_SUCCESS;
     }
     
@@ -809,12 +821,81 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @name: 		exportData()
      * @author: 	partially written in robocode's sittingduckbot
      * @param: 		uses:
-     * 				1. bool flag_preventMultipleLUTDataImports, static flag for preventing multiple imports
+     * 				1. bool flag_preventIncorrectLUTDataImports, static flag for preventing multiple imports
      * 				
      */
 
-    public void exportData() {
-    	return;
+    public int exportData(String strName) {
+    	
+    	if (flag_preventIncorrectLUTDataImports == true) {
+            // out.println("wewhat");
+            PrintStream w = null;
+            
+            try {
+                w = new PrintStream(new RobocodeFileOutputStream(getDataFile(strName)));
+                
+                if ((configDatFile & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
+                	
+                	out.println("Export aborted (file not configured properly) - THIS ERROR SHOULD NOT BE OCCURRING");
+                	return exportDATA_ERROR_0x09;
+                	       
+                }
+                else {
+                	// different commands between files
+                	if ((configDatFile & CONFIGMASK_FILE_LUTTrackfire) == CONFIGMASK_FILE_LUTTrackfire) {
+                		if (strName != "LUTTrackfire.dat") {
+            				if (debug) {
+            					out.println ("Eport aborted (exported wrong file - file was labelled LUTTrackfire.dat) - THIS ERROR SHOULD NOT BE OCCURRING");
+            				}
+                			return exportLUTDATA_ERROR_0x0A;
+                		}
+                		//both zeroLUT and correct LUT will be written here
+                		if ((configDatFile & CONFIGMASK_ZEROLUT) == CONFIGMASK_ZEROLUT) {
+                			out.println("configDatFile before zeroing:" + configDatFile);
+                			configDatFile = (short) (configDatFile^CONFIGMASK_ZEROLUT);
+                			out.println("configDatFile after zeroing:" + configDatFile);
+                		}
+		                for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
+		                    for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
+		                    	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
+		                    		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
+		                    			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
+		                    				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
+		                    					w.println(roboLUT[p0][p1][p2][p3][p4][p5]);
+		                    				}
+		                				}
+		                    		}
+		                    	}
+		                    }
+		                }
+                	} //endof trackfire - stopped here, continue writing for winlose
+                }
+                
+                // PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
+                if (w.checkError()) {
+                    //Error 0x03: cannot write
+                	if (debug) {
+                		out.println("Something done fucked up (Error0x06 cannot write)");
+                	}
+                	return exportDATA_ERROR_0x06;
+                }
+            } 
+            catch (IOException e) {
+        		if (debug) {
+        			out.println("IOException trying to write: ");
+        		}
+                e.printStackTrace(out); //Joey: lol no idea what this means
+                return exportDATA_ERROR_0x07;
+            } 
+            finally {
+                if (w != null) {
+                    w.close();
+                }
+            }
+        }      
+        
+        flag_preventIncorrectLUTDataImports = false;
+        return exportDATA_SUCCESS;
     }
     /**
      * @deprecated - use exportData
@@ -827,7 +908,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
     public boolean exportLUTData(boolean repeatFlag){
         
-        if (flag_preventMultipleLUTDataImports == true) {
+        if (flag_preventIncorrectLUTDataImports == true) {
             out.println("wewhat");
             PrintStream w = null;
             try {
@@ -861,7 +942,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
             }
         }      
         
-        flag_preventMultipleLUTDataImports = false;
+        flag_preventIncorrectLUTDataImports = false;
         return repeatFlag;
     }
     
