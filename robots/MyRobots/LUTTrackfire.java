@@ -70,7 +70,7 @@ import robocode.WinEvent;
 public class LUTTrackfire extends AdvancedRobot{
 	/*
 	 * SAV Change Rules:
-	 * 1. update STATEACTION VARIABLE
+	 * 1. update STATEACTION VARIABLES
 	 * 2. update roboLUT initialization
 	 * 3. update roboLUTDimensions
 	 * 4. If adding or deleting states: Change for loops in import and export functions 
@@ -81,6 +81,7 @@ public class LUTTrackfire extends AdvancedRobot{
 	 * 8. if adding or deleting states: In updateLUT(), update roboLUT access as well as debug
 	 * 9. if adding or deleting actions: In doAction(), edit accordingly.
 	 */
+	
 	/**
 	 * FINALS (defines)
 	 */
@@ -104,7 +105,12 @@ public class LUTTrackfire extends AdvancedRobot{
     private static final int offensiveFiringStrengthBehaviour_actions = 3;
     private static final int enemyDistance_states = 3;		//distance < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
     private static final int myEnergy_states = 3;		//energy < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
+    
+    private static final int ZEROLUTTRUE = 1;
+    private static final int ZEROLUTFALSE = 0;
    
+    // LUT table configuration information, stored in the first line of .dat
+    private static int datFileConfig = 0; //######## figure out int size
     
     // LUT table stored in memory.
     private static double [][][][][][] roboLUT 
@@ -126,20 +132,19 @@ public class LUTTrackfire extends AdvancedRobot{
         myEnergy_states};
     
     // Stores current reward for action.
-    private double reward = 0.0; //only one reward variable to brief offensive and defensive maneuvers
+    private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
     
     // Stores current and previous stateAction vectors.
     private int currentStateActionVector[] = new int [roboLUTDimensions.length];
-    private int prevStateActionVector[] = new int [roboLUTDimensions.length]; 
+    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
      
     //variables used for getMax.
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
     private int actionChosenForQValMax = 0; //stores the chosen currSAV with maxqval before policy
     private double qValMax = 0.0; // stores the maximum currSAV QMax
 
-    //chosen policy. greedy or exploratory.
+    //chosen policy. greedy or exploratory (or SARSA). 
     private static int policy = exploratory;
-//    private static int policy = exploratory;
     
     //enemy information
     private double enemyDistance = 0.0;
@@ -166,8 +171,8 @@ public class LUTTrackfire extends AdvancedRobot{
     // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
     private boolean repeatFlag_importexportLUTData = false; 
     
-    //Flag used if user desires to zero LUT at the next battle. 
-    static private boolean zeroLUT = false; 
+//    //Flag used if user desires to zero LUT at the next battle. 
+//    static private boolean zeroLUT = false; 
     
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
@@ -557,7 +562,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	
     	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
     	
-      
+    	//maneuver behaviour (chase-offensive/defensive)
     	if ((currentStateActionVector[0])%4 == 0) {
     		setTurnRight(enemyBearingFromHeading);
     		setAhead(50);
@@ -585,6 +590,7 @@ public class LUTTrackfire extends AdvancedRobot{
     		setFire(3);
     	}
     	
+    	//firing behaviour (to counter defensive behaviour)
     	if ((currentStateActionVector[0])/12 == 0){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	}
@@ -631,6 +637,7 @@ public class LUTTrackfire extends AdvancedRobot{
                 BufferedReader reader = null;
                 try {
                     reader = new BufferedReader(new FileReader(getDataFile("LUTTrackfire.dat")));
+                    
                     if (!zeroLUT){
 //                    	reward = Double.parseDouble(reader.readLine());		//REWARD	
 	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
@@ -689,8 +696,9 @@ public class LUTTrackfire extends AdvancedRobot{
     
     /**
      * @name:		exportLUTData
-     * @author:		99% sittingduckbot
-     * @purpose: 	1. Exports local LUT from memory to .dat file. 
+     * @author:		Mostly from sittingduckbot
+     * @purpose: 	1. Exports local LUT from memory to .dat file.
+     * 					A. Configuration of the .dat file is written in the first line 
      * @param: 		1. repeatFlag
      * @return:		1. repeatFlag
      */
