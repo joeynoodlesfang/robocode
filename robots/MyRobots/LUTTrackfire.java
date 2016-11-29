@@ -184,21 +184,13 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	 * Currently 518400 state/actions
 	 */
     private static final int num_actions = 36; 
-<<<<<<< HEAD
     private static final int enemyBearingFromGun_sine = 2; 						// 360 degrees / 4 for sine 
     private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine
     private static final int enemyFiringAction = 3;  							//fire close, mid, far. 
     private static final int enemyVelocity = 3; 								//velocitiy is close, mid, far 
     private static final int enemyDistance_states = 10;							//discretize distance into 10 
     private static final int myEnergy_states = 10;								//discretize energy into 10 
-=======
 
-    private static final int enemyBearingFromGun_states = 3; 					// bearingFromGun < 3, bearingFromGun > 3
-    private static final int offensiveFiringDirectionalBehaviour_actions = 1;	// not implemented yet
-    private static final int offensiveFiringStrengthBehaviour_actions = 1;		// not implemented yet
-    private static final int enemyDistance_states = 3;							//distance < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
-    private static final int myEnergy_states = 3;								//energy < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
    
     /**
      * FLAGS AND COUNTS
@@ -236,11 +228,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private short fileSettings_WL = 0;
     
     // LUT table stored in memory.
-<<<<<<< HEAD
     private static double [][][][][][][] roboLUT 
-=======
-    private static double [][][][][][] roboLUT //?Joey: do these need to be static
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
         = new double
         [num_actions]
         [enemyBearingFromGun_sine]
@@ -272,13 +260,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private int actionChosenForQValMax = 0; //stores the chosen currSAV with maxqval before policy
     private double qValMax = 0.0; // stores the maximum currSAV QMax
 
-<<<<<<< HEAD
     //chosen policy. greedy or exploratory or SARSA 
     private static int policy = greedy; 
-=======
-    //chosen policy. greedy or exploratory (or SARSA). 
-    private static int policy = exploratory;
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
+
     
     //enemy information
     private double enemyDistance = 0.0;
@@ -286,34 +270,17 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
+    private double enemyEnergy = 0.0;
     
     //my information
     private double myHeading = 0.0; 
-<<<<<<< HEAD
     private double myEnergy = 0.0;
+    
     
     private int totalFights = 0;
     private int[] battleResults = new int [520000];
-	
-    /**
-     * FLAGS AND COUNTS
-     */
-    
-    //debug flag.
-    static private boolean debug = false; 
-    static private boolean debug_doAction = true;
-    
-    // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
-    private boolean repeatFlag_importexportLUTData = false; 
-=======
-    
-    //WinLose data storage
-    private int totalFights = 0;
-    private int[] battleResults = new int [20000];
     private int currentBattleResult = 0;
 	
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
-    
     
 
     
@@ -444,11 +411,8 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		none, but updates:
      * 				1. getGunBearing
      * 				2. enemyDistance
-<<<<<<< HEAD
      */
-=======
-     */  
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
+
 	public void onScannedRobot(ScannedRobotEvent event){
 		enemyBearingFromRadar = getHeading() + event.getBearing() - getRadarHeading();
 		enemyBearingFromGun = getHeading() + event.getBearing() - getGunHeading();
@@ -464,12 +428,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @return:		n
 	*/      
     public void onBulletMissed(BulletMissedEvent event){
-<<<<<<< HEAD
-    	reward -= 3; 
-    	
-=======
     	reward -= 5;    	
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
     }
     
 	/**
@@ -482,12 +441,10 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     public void onBulletHit(BulletHitEvent e){
     	reward += 5; 
 		myHeading = getHeading(); 
-<<<<<<< HEAD
 		myEnergy = getEnergy(); 
-=======
-		enemyEnergy = e.getEnergy(); 
-		learningLoop(); //?Joey: why is learningLoop called here
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
+		enemyEnergy = e.getEnergy();
+		//Joey: commented out from masters for now
+		// learningLoop(); //?Joey: why is learningLoop called here
     }
     
     /**
@@ -567,10 +524,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
   //      	resetReward();
         }
     }
-<<<<<<< HEAD
-=======
-     
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
+
     /**
      * @name:		copyCurrentSAVIntoPrevSAV
      * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
@@ -593,7 +547,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * 				1. bearingFromGun
      * @return: 	none
      */
-<<<<<<< HEAD
 //    private static final int num_actions = 36; 
 //    private static final int enemyBearingFromGun_sine = 4; 						// 360 degrees / 4 for sine 
 //    private static final int enemyBearingFromGun_cosine = 4; 					// 360 degrees / 4 for cosine
@@ -613,9 +566,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 //        [enemyDistance_states]
 //        [myEnergy_states];
     
-    
-=======
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
+
     public void generateCurrentStateVector(){
         //Dimension 1: input: bearingFromGun_sine
     		currentStateActionVector[1] = (int) (Math.sin(Math.toRadians(enemyBearingFromGun)));
@@ -950,57 +901,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         try {
         	BufferedReader reader = null;
             try {
-<<<<<<< HEAD
-                BufferedReader reader = null;
-                try {
-                    reader = new BufferedReader(new FileReader(getDataFile("LUTTrackfire.dat")));
-                    if (!zeroLUT){
-//                    	reward = Double.parseDouble(reader.readLine());		//REWARD	
-	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-		                        					
-		                        					roboLUT[p0][p1][p2][p3][p4][p5][p6] = Double.parseDouble(reader.readLine());
-		                        				}	
-	                        					
-	                        				}
-	                        			}
-	                        		}
-	                        	}
-	                        }
-	                    }
-                    }
-                    // zeroes the LUT.
-                    else if (zeroLUT) {
-                    	out.println("zeroLUT");
-	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
-	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-		                        				for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-		                        					roboLUT[p0][p1][p2][p3][p4][p5][p6] = 0;
-		                        				}
-	                        				}
-                        				}
-                        			}
-	                        	}
-	                        }
-	                    }
-                    }
-                    if (debug) {
-                    	out.println("Imported LUT data");
-                    }
-                } finally {
-                    if (reader != null) {
-                        reader.close();
-                    }
-=======
                 reader = new BufferedReader(new FileReader(getDataFile(strName)));
                 fileSettings_default = (short)Integer.parseInt(reader.readLine());
                 if (debug_import || debug) {
@@ -1054,7 +954,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
     		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
     	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-    	                        					roboLUT[p0][p1][p2][p3][p4][p5] = 0;
+    	                        					for (int p6 = 0; p5 < roboLUTDimensions[6]; p6++) {
+    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = 0;
+    	                        					}
     	                        				}
                             				}
                             			}
@@ -1069,7 +971,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
     	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
     	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-    	                        					roboLUT[p0][p1][p2][p3][p4][p5] = Double.parseDouble(reader.readLine());
+    	                        					for (int p6 = 0; p6 < roboLUTDimensions[5]; p6++) {
+    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = Double.parseDouble(reader.readLine());
+    	                        					}
     	                        				}
     	                        			}
     	                        		}
@@ -1122,7 +1026,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                     	}
                 		return ERROR_8_import_dump; //error 8 - missed settings/file dump.
                 	}
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
                 }
             } 
             finally {
