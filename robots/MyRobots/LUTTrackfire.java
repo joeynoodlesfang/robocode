@@ -1,4 +1,5 @@
 /** Plan of attack - have multiple battle plans. 
+ *	THIS IS THE ROBOT TO TRAIN. 
  *  Two states and one action [offensive - trackfire, defensive -moveLeft, adjustAngleGun, action]
 	Exploratory 	- (1) search for enemy, if find enemy give highest reward. That way, go back to this state
 	Battle Plan 1.  - (1) Found enemy, attack . If hit enemy, award high reward. If miss enemy, award low reward. If get hit, negative reward
@@ -44,6 +45,15 @@
 			-positiveTerminalReward
 	1:51 am
 		- added states  not really working. 
+		
+	November 27, 2016. 
+	Fuck. 
+	
+	November 28, 2016. 4:03 pm. 
+	implementing new state-action pairs. 
+	hope to train NN by tonight 
+	okay.. don't know how to implement states for the velocity and for the firing action.. not sure what this is
+	
  */
 
 package MyRobots;
@@ -63,6 +73,8 @@ import robocode.BattleEndedEvent;
 import robocode.BulletHitEvent;
 import robocode.BulletMissedEvent;
 import robocode.DeathEvent;
+import robocode.HitByBulletEvent;
+import robocode.HitRobotEvent;
 import robocode.HitWallEvent;
 import robocode.RobocodeFileOutputStream;
 import robocode.ScannedRobotEvent;
@@ -87,7 +99,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	 */
 	 //variables for the q-function. Robot will NOT change learning pattern midfight.
     private static final double alpha = 0.2;                //to what extent the newly acquired information will override the old information.
-    private static final double gamma = 0.8;                //importance of future rewards
+    private static final double gamma = 0.2;                //importance of future rewards
     private static final double epsilon = 0.0; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
@@ -97,30 +109,34 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
+	 * Currently 518400 state/actions
 	 */
     private static final int num_actions = 36; 
-    private static final int enemyBearingFromGun_states = 3; 					// bearingFromGun < 3, bearingFromGun > 3
-    private static final int offensiveFiringDirectionalBehaviour_actions = 1;	// not implemented yet
-    private static final int offensiveFiringStrengthBehaviour_actions = 1;		// not implemented yet
-    private static final int enemyDistance_states = 3;							//distance < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
-    private static final int myEnergy_states = 3;								//energy < 33, 33 < distance < 66, 66 < distance < 75, 75 < distance < 100
+    private static final int enemyBearingFromGun_sine = 2; 						// 360 degrees / 4 for sine 
+    private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine
+    private static final int enemyFiringAction = 3;  							//fire close, mid, far. 
+    private static final int enemyVelocity = 3; 								//velocitiy is close, mid, far 
+    private static final int enemyDistance_states = 10;							//discretize distance into 10 
+    private static final int myEnergy_states = 10;								//discretize energy into 10 
    
     // LUT table stored in memory.
-    private static double [][][][][][] roboLUT 
+    private static double [][][][][][][] roboLUT 
         = new double
         [num_actions]
-        [enemyBearingFromGun_states]
-        [offensiveFiringDirectionalBehaviour_actions]
-        [offensiveFiringStrengthBehaviour_actions]
+        [enemyBearingFromGun_sine]
+        [enemyBearingFromGun_cosine]		
+        [enemyFiringAction]
+        [enemyVelocity]
         [enemyDistance_states]
         [myEnergy_states];
     
     // Dimensions of LUT table, used for iterations.
     private static int[] roboLUTDimensions = {
         num_actions, 
-        enemyBearingFromGun_states,
-        offensiveFiringDirectionalBehaviour_actions,
-        offensiveFiringStrengthBehaviour_actions,
+        enemyBearingFromGun_sine,
+        enemyBearingFromGun_cosine,
+        enemyFiringAction,
+        enemyVelocity,
         enemyDistance_states,
         myEnergy_states};
     
@@ -137,28 +153,28 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private double qValMax = 0.0; // stores the maximum currSAV QMax
 
     //chosen policy. greedy or exploratory or SARSA 
-    private static int policy = exploratory; 
+    private static int policy = greedy; 
     
     //enemy information
     private double enemyDistance = 0.0;
+    private double enemyHeading = 0.0; 
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
-    private double enemyEnergy = 0.0;
     
     //my information
     private double myHeading = 0.0; 
-    
+    private double myEnergy = 0.0;
     
     private int totalFights = 0;
-    private int[] battleResults = new int [20000];
+    private int[] battleResults = new int [520000];
 	
     /**
      * FLAGS AND COUNTS
      */
     
     //debug flag.
-    static private boolean debug = false;  
+    static private boolean debug = false; 
     static private boolean debug_doAction = true;
     
     // Flag used for functions importLUTData and exportLUTData. Assists in preventing overwrite.
@@ -254,14 +270,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * 				1. getGunBearing
      * 				2. enemyDistance
      */
-    
 	public void onScannedRobot(ScannedRobotEvent event){
 		enemyBearingFromRadar = getHeading() + event.getBearing() - getRadarHeading();
 		enemyBearingFromGun = getHeading() + event.getBearing() - getGunHeading();
 		enemyBearingFromHeading = event.getBearing();
 		enemyDistance = event.getDistance(); 
-//		out.println("enemyDistance " + enemyDistance);
-		enemyEnergy = event.getEnergy(); 
     	learningLoop();
     }
 
@@ -272,7 +285,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @return:		n
 	*/      
     public void onBulletMissed(BulletMissedEvent event){
-    	reward -= 5; 
+    	reward -= 3; 
     	
     }
 	/**
@@ -283,10 +296,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @return:		n
 	*/     
     public void onBulletHit(BulletHitEvent e){
-    	reward += 50; 
+    	reward += 5; 
 		myHeading = getHeading(); 
-		enemyEnergy = e.getEnergy(); 
-		learningLoop();
+		myEnergy = getEnergy(); 
     }
     
     /**
@@ -297,10 +309,35 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */   
     public void onHitWall(HitWallEvent e) {
-    	reward -= 10;	
+    	reward -= 2;	
     	myHeading = getHeading(); 
+    	myEnergy = getEnergy(); 
+    	learningLoop();
     }
     
+    /**
+     * @name: 		onHitByBullet
+     * @purpose: 	1. Updates reward. -10
+     * 				2. Updates heading and energy levels. 
+     * @param:		1. HitWallEvent class from Robot
+     * @return:		n
+     */   
+    public void onHitByBullet(HitByBulletEvent e) {
+    	reward = -5;
+    	learningLoop();
+    }   
+    
+    /**
+     * @name: 		onHitRobot
+     * @purpose: 	1. Updates reward. -10
+     * 				2. Updates heading and energy levels. 
+     * @param:		1. HitWallEvent class from Robot
+     * @return:		n
+     */   
+    public void onHitRobot(HitRobotEvent e) {
+    	reward = -1;
+    	learningLoop();
+    }  
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
     /** 
@@ -341,25 +378,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
   //      	resetReward();
         }
     }
-    
-//	public void learningLoop2(ScannedRobotEvent e){
-//		while (true) {
-//			double bearingFromRadar = getHeading() + e.getBearing() - getRadarHeading();
-//			double bearingFromGun = getHeading() + e.getBearing() - getGunHeading();
-//			setTurnRadarRight(normalRelativeAngleDegrees(bearingFromRadar));
-//			setTurnGunRight(normalRelativeAngleDegrees(bearingFromGun));
-//			setAhead(50);
-//			setTurnRight(-30);
-//			scan();
-//        	copyCurrentSAVIntoPrevSAV();
-//        	generateCurrentStateVector();
-//        	qFunction(); 
-//        	doAction(); 
-//        	resetReward();
-//			
-//			execute();
-//		}
-//	}   
     /**
      * @name:		copyCurrentSAVIntoPrevSAV
      * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
@@ -382,48 +400,76 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * 				1. bearingFromGun
      * @return: 	none
      */
-
+//    private static final int num_actions = 36; 
+//    private static final int enemyBearingFromGun_sine = 4; 						// 360 degrees / 4 for sine 
+//    private static final int enemyBearingFromGun_cosine = 4; 					// 360 degrees / 4 for cosine
+//    private static final int enemyFiringAction = 3;  							//fire close, mid, far. 
+//    private static final int enemyVelocity = 3; 								//velocitiy is close, mid, far 
+//    private static final int enemyDistance_states = 10;							//discretize distance into 10 
+//    private static final int myEnergy_states = 10;								//discretize energy into 10 
+//   
+//    // LUT table stored in memory.
+//    private static double [][][][][][][] roboLUT 
+//        = new double
+//        [num_actions]
+//        [enemyBearingFromGun_sine]
+//        [enemyBearingFromGun_cosine]		
+//        [enemyFiringAction]
+//        [enemyVelocity]
+//        [enemyDistance_states]
+//        [myEnergy_states];
+    
+    
     public void generateCurrentStateVector(){
-        if (debug_doAction || debug) {
-      	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
-        }
-        //Dimension 1: input: bearingFromGun
-    		currentStateActionVector[1] = (int)(getHeading() / 45);
-    		if (currentStateActionVector[1] < 3){
-    			currentStateActionVector[1] = 0;     		
-    		}
-    		else if (currentStateActionVector[1] > 3){
+        //Dimension 1: input: bearingFromGun_sine
+    		currentStateActionVector[1] = (int) (Math.sin(Math.toRadians(enemyBearingFromGun)));
+    		if (currentStateActionVector[1] >= 0 && currentStateActionVector[1] < (Math.PI)/2){
     			currentStateActionVector[1] = 1; 
     		}
-    		else{
+    		else if (currentStateActionVector[1] >= (Math.PI)/2 && currentStateActionVector[1] < Math.PI){
     			currentStateActionVector[1] = 2; 
     		}
-    	//Dimension 2: input: offensiveFiringDirectionalBehaviour_actions
-    		currentStateActionVector[2] = 0; 
-    	//Dimension 3: input: offensiveFiringStrengthBehaviour_actions
-    		currentStateActionVector[3] = 0  ;
-    	//Dimension 4: input: enemyDistance_states
-    		currentStateActionVector[4] = (int) enemyDistance;
+    	//Dimension 2: input: bearingFromGun_cosine
+    		currentStateActionVector[2] = (int)(Math.cos(Math.toRadians(enemyBearingFromGun)));
+    		if (currentStateActionVector[2] >= 0 && currentStateActionVector[2] < (Math.PI)/2){
+    			currentStateActionVector[2] = 1; 
+    		}
+    		else if (currentStateActionVector[2] >= (Math.PI)/2 && currentStateActionVector[2] < Math.PI){
+    			currentStateActionVector[2] = 2; 
+    		}
+    	//Dimension 3: input: enemyFiringAction?!?!?!?! what the heck is this? 
+    		currentStateActionVector[3] = (int) enemyBearingFromRadar;
+    		if (currentStateActionVector[3] < 33){
+    			currentStateActionVector[3] = 1; 
+    		}
+    		else if (currentStateActionVector[3] < 66){
+    			currentStateActionVector[3] = 2; 
+    		}
+    	//Dimension 4: input: enemyVelocity
+    		currentStateActionVector[4] = 0;
     		if (currentStateActionVector[4] < 33){
     			currentStateActionVector[4] = 0; 
     		}
     		else if (currentStateActionVector[4] >= 33 && currentStateActionVector[4]  < 66){
     			currentStateActionVector[4] = 1; 
     		}
-    		else if (currentStateActionVector[4] > 66){
+    		else if (currentStateActionVector[4] > 66 && currentStateActionVector[4] <= 100){
     			currentStateActionVector[4] = 2; 
     		}
-    		//Dimension 5: input: Energy_states
-    		currentStateActionVector[5] = (int) enemyEnergy;
-    		if (currentStateActionVector[5] < 33){
-    			currentStateActionVector[5] = 0; 
+    		//Dimension 5: input: myEnergy_states
+    		currentStateActionVector[6] = 0;
+    		if (currentStateActionVector[6] < 33){
+    			currentStateActionVector[6] = 0; 
     		}
-    		else if (currentStateActionVector[5] >= 33 && currentStateActionVector[5]  < 66){
-    			currentStateActionVector[5] = 1; 
+    		else if (currentStateActionVector[6] >= 33 && currentStateActionVector[6]  < 66){
+    			currentStateActionVector[6] = 1; 
     		}
-    		else if (currentStateActionVector[5] > 66){
-    			currentStateActionVector[5] = 2; 
-    		}  		
+    		else if (currentStateActionVector[6] > 66 && currentStateActionVector[6] <= 100){
+    			currentStateActionVector[6] = 2; 
+    		}  
+    		
+    		
+    		
     }
     /**
      * @name:		qFunction
@@ -486,7 +532,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         }   
         
         for (int i = 0; i < num_actions; i++){
-            indexQVal = roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]];
+            indexQVal = roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]];
             
             if (indexQVal > currMax){
             	currMax = indexQVal;
@@ -533,7 +579,8 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         						 [prevStateActionVector[2]]		 
         						 [prevStateActionVector[3]]
         						 [prevStateActionVector[4]]
-        						 [prevStateActionVector[5]];
+        						 [prevStateActionVector[5]]
+        						 [prevStateActionVector[6]];
         
         prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
         return prevQVal;
@@ -558,11 +605,12 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
          	   [prevStateActionVector[3]]
          	   [prevStateActionVector[4]]
          	   [prevStateActionVector[5]]
+         	   [prevStateActionVector[6]]	   
          					  = prevQVal;
         
         if (debug) {
 	        out.println("prev " + Arrays.toString(prevStateActionVector));
-	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]][prevStateActionVector[4]][prevStateActionVector[5]]);
+	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]][prevStateActionVector[4]][prevStateActionVector[5]][prevStateActionVector[6]]);
         }
         
         //Choosing next action based on policy.
@@ -600,6 +648,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * 				1. Array currentSAV.
      * @return:		n
      */
+    	
     public void doAction(){
     	
     	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
@@ -686,7 +735,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
 	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
 	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-	                        					roboLUT[p0][p1][p2][p3][p4][p5] = Double.parseDouble(reader.readLine());
+	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
+		                        					
+		                        					roboLUT[p0][p1][p2][p3][p4][p5][p6] = Double.parseDouble(reader.readLine());
+		                        				}	
+	                        					
 	                        				}
 	                        			}
 	                        		}
@@ -703,7 +756,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
 		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
 	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-	                        					roboLUT[p0][p1][p2][p3][p4][p5] = 0;
+		                        				for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
+		                        					roboLUT[p0][p1][p2][p3][p4][p5][p6] = 0;
+		                        				}
 	                        				}
                         				}
                         			}
