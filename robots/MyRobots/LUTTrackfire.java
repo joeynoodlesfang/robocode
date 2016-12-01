@@ -48,16 +48,8 @@
 	1:51 am
 		- added states  not really working. 
 		
-<<<<<<< HEAD
-	November 27, 2016. 
-	Fuck. 
-	
-	November 28, 2016. 4:03 pm. 
-	implementing new state-action pairs. 
-	hope to train NN by tonight 
-	okay.. don't know how to implement states for the velocity and for the firing action.. not sure what this is
-	
-=======
+
+
 	2016-11-18 - j
 		- [done] rewrite imports
 		- [done] rewrite exports
@@ -88,8 +80,17 @@
 		- `consider: static flag_error
 		- `test out zeroLUT
 		- tested out import export for LUT, zerolut, WL, all work.
-		- `consider onBattleEnds to export import data. 
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
+		
+	November 27, 2016. 
+		Fuck. 
+	
+	November 28, 2016. 4:03 pm. 
+		implementing new state-action pairs. 
+		hope to train NN by tonight 
+		okay.. don't know how to implement states for the velocity and for the firing action.. not sure what this is
+	
+	december 1, 2016
+
  */
 
 package MyRobots;
