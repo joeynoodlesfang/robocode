@@ -92,7 +92,7 @@
 	
 	2016-12-01 -j
 		- implement integrative reward system.
-		- learn proper branch techniques
+		- learn proper branch techniques the idea of integrative reward, which is to remember periods of reward/punishment and carry that out for longer, does not fit the design idea of punishing/rewarding groups of behaviours for their results
 		
  */
 
