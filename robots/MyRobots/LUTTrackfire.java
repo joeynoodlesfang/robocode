@@ -48,16 +48,8 @@
 	1:51 am
 		- added states  not really working. 
 		
-<<<<<<< HEAD
-	November 27, 2016. 
-	Fuck. 
+
 	
-	November 28, 2016. 4:03 pm. 
-	implementing new state-action pairs. 
-	hope to train NN by tonight 
-	okay.. don't know how to implement states for the velocity and for the firing action.. not sure what this is
-	
-=======
 	2016-11-18 - j
 		- [done] rewrite imports
 		- [done] rewrite exports
@@ -89,7 +81,19 @@
 		- `test out zeroLUT
 		- tested out import export for LUT, zerolut, WL, all work.
 		- `consider onBattleEnds to export import data. 
->>>>>>> 53c5fd5e4643cf0945a8d4150f500732d243c59b
+	
+	November 27, 2016. -a
+		Fuck. 
+	
+	November 28, 2016. 4:03 pm. -a 
+		implementing new state-action pairs. 
+		hope to train NN by tonight 
+		okay.. don't know how to implement states for the velocity and for the firing action.. not sure what this is
+	
+	2016-12-01 -j
+		- implement integrative reward system.
+		- learn proper branch techniques
+		
  */
 
 package MyRobots;
@@ -173,6 +177,15 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private static final int ERROR_10_export_mismatchedStringName =		10;
     private static final int ERROR_11_import_wrongFileName_LUT = 		11;
     
+    
+    //rewards 
+    //Joey: might need correction here
+    private static final int reward_hitByBullet = -5;
+    private static final int reward_bulletHit = 5;
+    private static final int reward_bulletMissed = -5;
+    private static final int reward_hitRobot = -1;
+    private static final int reward_hitWall = -2;
+    
     //strings used for importing or extracting files 
     String strStringTest = "stringTest.dat";    
     String strLUT = "LUTTrackfire.dat";
@@ -249,6 +262,8 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         myEnergy_states};
     
     // Stores current reward for action.
+    // Q-value calculation takes into account the reward a previou action gets based on the 
+    private double reward_currentPeriod = 0.0; //stores the current period's 
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
     
     // Stores current and previous stateAction vectors.
@@ -362,7 +377,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
     public void onDeath(DeathEvent event){
     	currentBattleResult = 0;
-    	reward -=100; 
+//    	reward_currentPeriod -=100; //Joey: commented out as not doing terminal rewards (methinks) 
 //        learningLoop(); //?Joey: why is learningLOop called here? for terminal reward? causes export errors
     	
         flag_error = exportData(strLUT);
@@ -387,7 +402,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */    
 	public void onWin(WinEvent e) {
     	currentBattleResult = 1;
-    	reward +=100; 
+//    	reward_currentPeriod +=100; //Joey: commented out as not doing terminal rewards (methinks)
 //       learningLoop(); //?Joey: why is learningLOop called here? for terminal reward? causes export errors
     	
         flag_error = exportData(strLUT);
@@ -428,7 +443,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @return:		n
 	*/      
     public void onBulletMissed(BulletMissedEvent event){
-    	reward -= 5;    	
+    	reward_currentPeriod += reward_bulletMissed;    	
     }
     
 	/**
@@ -439,7 +454,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @return:		n
 	*/     
     public void onBulletHit(BulletHitEvent e){
-    	reward += 5; 
+    	reward_currentPeriod += reward_bulletHit; 
 		myHeading = getHeading(); 
 		myEnergy = getEnergy(); 
 		enemyEnergy = e.getEnergy();
@@ -455,7 +470,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */   
     public void onHitWall(HitWallEvent e) {
-    	reward -= 2;	
+    	reward_currentPeriod += reward_hitWall;	
     	myHeading = getHeading(); 
     	myEnergy = getEnergy(); 
     	learningLoop();
@@ -469,7 +484,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */   
     public void onHitByBullet(HitByBulletEvent e) {
-    	reward = -5;
+    	reward_currentPeriod += reward_hitByBullet;
     	learningLoop();
     }   
     
@@ -481,7 +496,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */   
     public void onHitRobot(HitRobotEvent e) {
-    	reward = -1;
+    	reward += reward_hitRobot;
     	learningLoop();
     }  
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
@@ -1322,9 +1337,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                 w.close();
             }
 		}
-    	
-    	
     }
+ 
+    
+    
+    
     /* Methods in LUTInterface not being used */
 	@Override
 	public double[] outputForward(double[] X, boolean flag, int numTrial) {
