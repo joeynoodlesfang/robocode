@@ -90,6 +90,7 @@
 		okay.. don't know how to implement states for the velocity and for the firing action.. not sure what this is
 	
 	december 1, 2016
+		zeroLUT blah
 
  */
 
