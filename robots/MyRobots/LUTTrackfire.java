@@ -263,7 +263,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private double qValMax = 0.0; // stores the maximum currSAV QMax
 
     //chosen policy. greedy or exploratory or SARSA 
-    private static int policy = greedy; 
+    private static int policy = exploratory; 
 
     
     //enemy information
@@ -331,7 +331,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 
     	// infinite loop
         for(;;){
-        	setTurnRadarRight(45);
+        	setTurnRadarRight(20);
     		execute();
         }
          
@@ -430,7 +430,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @return:		n
 	*/      
     public void onBulletMissed(BulletMissedEvent event){
-    	reward -= 5;    	
+    	reward += -5;    	
     }
     
 	/**
@@ -457,7 +457,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */   
     public void onHitWall(HitWallEvent e) {
-    	reward -= 2;	
+  //  	reward -= 2;	
   //  	myHeading = getHeading(); 
   //  	myEnergy = getEnergy(); 
   //  	learningLoop();
@@ -471,7 +471,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */   
     public void onHitByBullet(HitByBulletEvent e) {
-    	reward = -5;
+    	reward += -5;
     //	learningLoop();
     }   
     
@@ -523,7 +523,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         	generateCurrentStateVector();
         	qFunction(); 
         	doAction(); 
-  //      	resetReward();
+//        	resetReward();
         }
     }
 
@@ -550,12 +550,12 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return: 	none
      */
 //    private static final int num_actions = 36; 
-//    private static final int enemyBearingFromGun_sine = 4; 						// 360 degrees / 4 for sine 
-//    private static final int enemyBearingFromGun_cosine = 4; 					// 360 degrees / 4 for cosine
+//    private static final int enemyBearingFromGun_sine = 2; 						// 360 degrees / 4 for sine 
+//    private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine
 //    private static final int enemyFiringAction = 3;  							//fire close, mid, far. 
 //    private static final int enemyVelocity = 3; 								//velocitiy is close, mid, far 
-//    private static final int enemyDistance_states = 10;							//discretize distance into 10 
-//    private static final int myEnergy_states = 10;								//discretize energy into 10 
+//    private static final int enemyDistance_states = 3;							//discretize distance into 10 
+//    private static final int myEnergy_states = 2;								//discretize energy into 10 
 //   
 //    // LUT table stored in memory.
 //    private static double [][][][][][][] roboLUT 
@@ -570,54 +570,68 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     
 
     public void generateCurrentStateVector(){
-        //Dimension 1: input: bearingFromGun_sine
-    		currentStateActionVector[1] = (int) (Math.sin(Math.toRadians(enemyBearingFromGun)));
-    		if (currentStateActionVector[1] >= 0 && currentStateActionVector[1] < (Math.PI)/2){
-    			currentStateActionVector[1] = 1; 
-    		}
-    		else if (currentStateActionVector[1] >= (Math.PI)/2 && currentStateActionVector[1] < Math.PI){
-    			currentStateActionVector[1] = 2; 
-    		}
-    	//Dimension 2: input: bearingFromGun_cosine
-    		currentStateActionVector[2] = (int)(Math.cos(Math.toRadians(enemyBearingFromGun)));
-    		if (currentStateActionVector[2] >= 0 && currentStateActionVector[2] < (Math.PI)/2){
-    			currentStateActionVector[2] = 1; 
-    		}
-    		else if (currentStateActionVector[2] >= (Math.PI)/2 && currentStateActionVector[2] < Math.PI){
-    			currentStateActionVector[2] = 2; 
-    		}
-    	//Dimension 3: input: enemyFiringAction
-    		currentStateActionVector[3] = (int) enemyBearingFromRadar;
-    		if (currentStateActionVector[3] < 33){
-    			currentStateActionVector[3] = 1; 
-    		}
-    		else if (currentStateActionVector[3] < 66){
-    			currentStateActionVector[3] = 2; 
-    		}
-    	//Dimension 4: input: enemyVelocity
-    		currentStateActionVector[4] = 0;
-    		if (currentStateActionVector[4] < 33){
-    			currentStateActionVector[4] = 0; 
-    		}
-    		else if (currentStateActionVector[4] >= 33 && currentStateActionVector[4]  < 66){
-    			currentStateActionVector[4] = 1; 
-    		}
-    		else if (currentStateActionVector[4] > 66 && currentStateActionVector[4] <= 100){
-    			currentStateActionVector[4] = 2; 
-    		}
-    		//Dimension 5: input: myEnergy_states
-    		currentStateActionVector[6] = 0;
-    		if (currentStateActionVector[6] < 33){
-    			currentStateActionVector[6] = 0; 
-    		}
-    		else if (currentStateActionVector[6] >= 33 && currentStateActionVector[6]  < 66){
-    			currentStateActionVector[6] = 1; 
-    		}
-    		else if (currentStateActionVector[6] > 66 && currentStateActionVector[6] <= 100){
-    			currentStateActionVector[6] = 2; 
-    		}  
-    		
-    		
+    	
+        //Dimension 1: input: bearingFromGun_sine: 0-1
+		currentStateActionVector[1] = (int) (Math.sin(Math.toRadians(enemyBearingFromGun)));
+		if (currentStateActionVector[1] >= 0 && currentStateActionVector[1] < (Math.PI)/2){
+			currentStateActionVector[1] = 0; 
+		}
+		else if (currentStateActionVector[1] >= (Math.PI)/2 && currentStateActionVector[1] < Math.PI){
+			currentStateActionVector[1] = 1; 
+		}
+		else {
+			currentStateActionVector[1] = 1;
+		}
+		//Dimension 2: input: bearingFromGun_cosine: 0-1
+		currentStateActionVector[2] = (int)(Math.cos(Math.toRadians(enemyBearingFromGun)));
+		if (currentStateActionVector[2] >= 0 && currentStateActionVector[2] < (Math.PI)/2){
+			currentStateActionVector[2] = 0; 
+		}
+		else if (currentStateActionVector[2] >= (Math.PI)/2 && currentStateActionVector[2] < Math.PI){
+			currentStateActionVector[2] = 1; 
+		}
+		else {
+			currentStateActionVector[2] = 1;
+		}
+		//Dimension 3: input: enemyFiringAction: 0-2
+		if (enemyBearingFromRadar < 33){
+			currentStateActionVector[3] = 0; 
+		}
+		else if (enemyBearingFromRadar < 66){
+			currentStateActionVector[3] = 1; 
+		}
+		else {
+			currentStateActionVector[3] = 2;
+		}
+		
+		//Dimension 4: input: enemyVelocity: 0-2
+		currentStateActionVector[4] = 0;
+		if (currentStateActionVector[4] < 33){
+			currentStateActionVector[4] = 0; 
+		}
+		else if (currentStateActionVector[4] >= 33 && currentStateActionVector[4]  < 66){
+			currentStateActionVector[4] = 1; 
+		}
+		else if (currentStateActionVector[4] > 66 && currentStateActionVector[4] <= 100){
+			currentStateActionVector[4] = 2; 
+		}
+		
+		//Dimension 5: input: enemyDistance: 0-2
+		currentStateActionVector[5] = 0;
+		
+		//Dimension 6: input: myEnergy_states: 0-2
+		currentStateActionVector[6] = 0;
+		if (currentStateActionVector[6] < 33){
+			currentStateActionVector[6] = 0; 
+		}
+		else if (currentStateActionVector[6] >= 33 && currentStateActionVector[6]  < 66){
+			currentStateActionVector[6] = 1; 
+		}
+		else if (currentStateActionVector[6] > 66 && currentStateActionVector[6] <= 100){
+			currentStateActionVector[6] = 1; 
+		}  
+		
+		
     		
     }
  
@@ -765,29 +779,29 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         
         //Choosing next action based on policy.
         valueRandom = (int)(Math.random()*(num_actions));
-        //
-//        /* used for exploratory */
-//        if (policy == SARSA) {
-//        	currentStateActionVector[0] = valueRandom;
-//        }
-//        
-//        else if(policy == exploratory) {
-//        	currentStateActionVector[0] = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
-//        }
-//        
-//        else{ 
-//        	currentStateActionVector[0] = actionChosenForQValMax;
-//        }
         
-        //Choosing next action based on policy.
-        valueRandom = (int)(Math.random()*(num_actions));
-     
-        if (policy == exploratory) {
+        /* used for exploratory */
+        if (policy == SARSA) {
         	currentStateActionVector[0] = valueRandom;
         }
-        else if (policy == SARSA){ 
+        
+        else if(policy == exploratory) {
+        	currentStateActionVector[0] = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
+        }
+        
+        else{ 
         	currentStateActionVector[0] = actionChosenForQValMax;
         }
+        
+        //Choosing next action based on policy.
+//        valueRandom = (int)(Math.random()*(num_actions));
+//     
+//        if (policy == exploratory) {
+//        	currentStateActionVector[0] = valueRandom;
+//        }
+//        else if (policy == SARSA){ 
+//        	currentStateActionVector[0] = actionChosenForQValMax;
+//        }
     }
     
     /**
