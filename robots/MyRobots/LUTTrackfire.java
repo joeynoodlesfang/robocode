@@ -586,7 +586,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     		else if (currentStateActionVector[2] >= (Math.PI)/2 && currentStateActionVector[2] < Math.PI){
     			currentStateActionVector[2] = 2; 
     		}
-    	//Dimension 3: input: enemyFiringAction?!?!?!?! what the heck is this? 
+    	//Dimension 3: input: enemyFiringAction
     		currentStateActionVector[3] = (int) enemyBearingFromRadar;
     		if (currentStateActionVector[3] < 33){
     			currentStateActionVector[3] = 1; 
