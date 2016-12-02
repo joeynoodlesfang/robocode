@@ -90,7 +90,12 @@
 		okay.. don't know how to implement states for the velocity and for the firing action.. not sure what this is
 	
 	december 1, 2016
-		zeroLUT blah testest
+		hotfixed zeroLUT bug and an oob bug.
+	
+	december 2, 2016
+		working on new states branch.
+		- `figure out sine/cosine enemy angle
+		- `consider implementing reward system based on "change in health difference"
 
  */
 
@@ -139,7 +144,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	 //variables for the q-function. Robot will NOT change learning pattern midfight.
     private static final double alpha = 0.2;                //to what extent the newly acquired information will override the old information.
     private static final double gamma = 0.2;                //importance of future rewards
-    private static final double epsilon = 0.0; 				//degree of exploration 
+    private static final double epsilon = 0.1; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
     private static final int greedy = 0;
@@ -156,9 +161,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     //     				WL:			16448 (0x4040)
     private static final short CONFIGMASK_ZEROLUT  = 				0x0001;
     private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 	0x4000;
-    private static final short CONFIGMASK_FILE_stringTest =			0x0010;
-    private static final short CONFIGMASK_FILE_LUTTrackfire =		0x0020;
-    private static final short CONFIGMASK_FILE_WinLose = 			0x0040;
+    private static final short CONFIGMASK_FILETYPE_stringTest =		0x0010;
+    private static final short CONFIGMASK_FILETYPE_LUTTrackfire =	0x0020;
+    private static final short CONFIGMASK_FILETYPE_WinLose = 		0x0040;
     
     private static final int SUCCESS_importData = 					0x00;
     private static final int SUCCESS_exportData = 					0x00;
@@ -185,13 +190,17 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 * Currently 518400 state/actions
 	 */
-    private static final int num_actions = 36; 
+    private static final int num_actions = 24; 
+    private static final int enemyBearingFromGun_states = 4;
+    private static final int myPositionDiscretized_states = 5;
+    private static final int myHeadingDiscretized_states = 4;
     private static final int enemyBearingFromGun_sine = 2; 						// 360 degrees / 4 for sine 
     private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine
     private static final int enemyFiringAction = 3;  							//fire close, mid, far. 
     private static final int enemyVelocity = 3; 								//velocitiy is close, mid, far 
-    private static final int enemyDistance_states = 3;							//discretize distance into 10 
-    private static final int myEnergy_states = 2;								//discretize energy into 10 
+    private static final int enemyDistance_states = 4;							//<100, 100-200, 200-400, 400+
+    private static final int enemyEnergy_states = 2;							//low(<30) or other
+    private static final int myEnergy_states = 2;								//low(<30) or other 
 
    
     /**
@@ -218,6 +227,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 //    //Flag used if user desires to zero LUT at the next battle. 
 //    static private boolean zeroLUT = false; 
     
+    
+    
+    
+    
+    
     /**
      *  OTHER GLOBALS
      */
@@ -233,25 +247,27 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private static int [][][][][][][] roboLUT 
         = new int
         [num_actions]
-        [enemyBearingFromGun_sine]
-        [enemyBearingFromGun_cosine]		
-        [enemyFiringAction]
-        [enemyVelocity]
+        [myPositionDiscretized_states]
+        [myHeadingDiscretized_states]		
+        [1]
+        [enemyEnergy_states]
         [enemyDistance_states]
-        [myEnergy_states];
+        [1];
     
     // Dimensions of LUT table, used for iterations.
     private static int[] roboLUTDimensions = {
         num_actions, 
-        enemyBearingFromGun_sine,
-        enemyBearingFromGun_cosine,
-        enemyFiringAction,
-        enemyVelocity,
+        myPositionDiscretized_states,
+        myHeadingDiscretized_states,
+        1,
+        enemyEnergy_states,
         enemyDistance_states,
-        myEnergy_states};
+        1};
     
     // Stores current reward for action.
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
+    private int energyDiffCurr = 0;
+    private int energyDiffPrev = 0;
     
     // Stores current and previous stateAction vectors.
     private int currentStateActionVector[] = new int [roboLUTDimensions.length];
@@ -267,16 +283,18 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 
     
     //enemy information
-    private double enemyDistance = 0.0;
+    private int enemyDistance = 0;
     private double enemyHeading = 0.0; 
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
-    private double enemyEnergy = 0.0;
+    private int enemyEnergy = 0;
     
     //my information
-    private double myHeading = 0.0; 
-    private double myEnergy = 0.0;
+    private int myHeading = 0; 
+    private int myEnergy = 0;
+    private int myPosX = 0;
+    private int myPosY = 0;
     
     
     private int totalFights = 0;
@@ -416,10 +434,15 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
 
 	public void onScannedRobot(ScannedRobotEvent event){
-		enemyBearingFromRadar = getHeading() + event.getBearing() - getRadarHeading();
-		enemyBearingFromGun = getHeading() + event.getBearing() - getGunHeading();
+		myHeading = (int)getHeading();
+		myPosX = (int)getX();
+		myPosY = (int)getY();
+		enemyBearingFromRadar = (double)myHeading + event.getBearing() - getRadarHeading();
+		enemyBearingFromGun = (double)myHeading + event.getBearing() - getGunHeading();
 		enemyBearingFromHeading = event.getBearing();
-		enemyDistance = event.getDistance(); 
+		enemyDistance = (int)event.getDistance(); 
+		enemyEnergy = (int)event.getEnergy();
+		myEnergy = (int)getEnergy();
     	learningLoop();
     }
 
@@ -429,9 +452,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @param:		1. HItBulletEvent class from Robot
 	* @return:		n
 	*/      
-    public void onBulletMissed(BulletMissedEvent event){
-    	reward += -5;    	
-    }
+//    public void onBulletMissed(BulletMissedEvent event){
+//    	reward += -5;    	
+//    }
     
 	/**
 	* @name: 		onBulletHit
@@ -440,14 +463,14 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @param:		1. HItBulletEvent class from Robot
 	* @return:		n
 	*/     
-    public void onBulletHit(BulletHitEvent e){
-    	reward += 5; 
-//		myHeading = getHeading(); 
-//		myEnergy = getEnergy(); 
-//		enemyEnergy = e.getEnergy();
-		//Joey: commented out from masters for now
-		// learningLoop(); //?Joey: why is learningLoop called here
-    }
+//    public void onBulletHit(BulletHitEvent e){
+//    	reward += 5; 
+////		myHeading = getHeading(); 
+////		myEnergy = getEnergy(); 
+////		enemyEnergy = e.getEnergy();
+//		//Joey: commented out from masters for now
+//		// learningLoop(); //?Joey: why is learningLoop called here
+//    }
     
     /**
      * @name: 		onHitWall
@@ -456,12 +479,12 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @param:		1. HitWallEvent class from Robot
      * @return:		n
      */   
-    public void onHitWall(HitWallEvent e) {
-  //  	reward -= 2;	
-  //  	myHeading = getHeading(); 
-  //  	myEnergy = getEnergy(); 
-  //  	learningLoop();
-    }
+//    public void onHitWall(HitWallEvent e) {
+//  //  	reward -= 2;	
+//  //  	myHeading = getHeading(); 
+//  //  	myEnergy = getEnergy(); 
+//  //  	learningLoop();
+//    }
     
     /**
      * @name: 		onHitByBullet
@@ -470,10 +493,10 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @param:		1. HitWallEvent class from Robot
      * @return:		n
      */   
-    public void onHitByBullet(HitByBulletEvent e) {
-    	reward += -5;
-    //	learningLoop();
-    }   
+//    public void onHitByBullet(HitByBulletEvent e) {
+//    	reward += -5;
+//    //	learningLoop();
+//    }   
     
     /**
      * @name: 		onHitRobot
@@ -482,10 +505,10 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @param:		1. HitWallEvent class from Robot
      * @return:		n
      */   
-    public void onHitRobot(HitRobotEvent e) {
-    	reward = -1;
-    //	learningLoop();
-    }  
+//    public void onHitRobot(HitRobotEvent e) {
+//    	reward = -1;
+//    //	learningLoop();
+//    }  
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
     /** 
@@ -519,14 +542,27 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     public void learningLoop(){
     	
     	while (true) {
+    		calculateReward();
         	copyCurrentSAVIntoPrevSAV();
         	generateCurrentStateVector();
         	qFunction(); 
         	doAction(); 
-//        	resetReward();
+        	resetReward(); //can try divide by 2 instead of = 0.
         }
     }
 
+    /**
+     * @name:		calculateReward
+     * @purpose:	calculates reward based on change in energy difference of robots.
+     * @param:		none
+     * @return:		none
+     */
+    public void calculateReward(){
+    	energyDiffPrev = energyDiffCurr;
+    	energyDiffCurr = myEnergy - enemyEnergy;
+    	reward += energyDiffCurr - energyDiffPrev;  	
+    }
+    
     /**
      * @name:		copyCurrentSAVIntoPrevSAV
      * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
@@ -549,87 +585,89 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * 				1. bearingFromGun
      * @return: 	none
      */
-//    private static final int num_actions = 36; 
-//    private static final int enemyBearingFromGun_sine = 2; 						// 360 degrees / 4 for sine 
-//    private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine
-//    private static final int enemyFiringAction = 3;  							//fire close, mid, far. 
-//    private static final int enemyVelocity = 3; 								//velocitiy is close, mid, far 
-//    private static final int enemyDistance_states = 3;							//discretize distance into 10 
-//    private static final int myEnergy_states = 2;								//discretize energy into 10 
-//   
-//    // LUT table stored in memory.
-//    private static double [][][][][][][] roboLUT 
-//        = new double
-//        [num_actions]
-//        [enemyBearingFromGun_sine]
-//        [enemyBearingFromGun_cosine]		
-//        [enemyFiringAction]
-//        [enemyVelocity]
-//        [enemyDistance_states]
-//        [myEnergy_states];
-    
+
 
     public void generateCurrentStateVector(){
+
+    	//Dimension 1: input: myPositionDiscretized = 0-4: center, left, top, right, bot
+    	if ( (myPosX<100) && ((myPosX > myPosY) || (myPosX) < (600-myPosY)) ) {
+    		currentStateActionVector[1] = 1;
+    	}
+    	else if (1) {
+    		currentStateActionVector[1] = 2;
+    	}
+    	else if (1) {
+    		currentStateActionVector[1] = 3;
+    	}
+    	else if (1) {
+    		currentStateActionVector[1] = 4;
+    	}
+    	else {
+    		currentStateActionVector[1] = 0;
+    	}
     	
-        //Dimension 1: input: bearingFromGun_sine: 0-1
-		currentStateActionVector[1] = (int) (Math.sin(Math.toRadians(enemyBearingFromGun)));
-		if (currentStateActionVector[1] >= 0 && currentStateActionVector[1] < (Math.PI)/2){
-			currentStateActionVector[1] = 0; 
-		}
-		else if (currentStateActionVector[1] >= (Math.PI)/2 && currentStateActionVector[1] < Math.PI){
-			currentStateActionVector[1] = 1; 
+    	//Dimension 2: input: myHeading = 0-3: 0-89, 90-179, 180-269, 270-359
+    	if (myHeading < 90) {
+    		currentStateActionVector[2] = 0;
+    	}
+    	else if (myHeading < 180) {
+    		currentStateActionVector[2] = 1;
+    	}
+    	else if (myHeading < 270) {
+    		currentStateActionVector[2] = 2;
+    	}
+    	else {
+    		currentStateActionVector[2] = 3;
+    	}
+//        //Dimension 1: input: bearingFromGun_sine: 0-1
+//		currentStateActionVector[1] = (int) (Math.sin(Math.toRadians(enemyBearingFromGun)));
+//		if (currentStateActionVector[1] >= 0 && currentStateActionVector[1] < (Math.PI)/2){
+//			currentStateActionVector[1] = 0; 
+//		}
+//		else if (currentStateActionVector[1] >= (Math.PI)/2 && currentStateActionVector[1] < Math.PI){
+//			currentStateActionVector[1] = 1; 
+//		}
+//		else {
+//			currentStateActionVector[1] = 1;
+//		}
+//		//Dimension 2: input: bearingFromGun_cosine: 0-1
+//		currentStateActionVector[2] = (int)(Math.cos(Math.toRadians(enemyBearingFromGun)));
+//		if (currentStateActionVector[2] >= 0 && currentStateActionVector[2] < (Math.PI)/2){
+//			currentStateActionVector[2] = 0; 
+//		}
+//		else if (currentStateActionVector[2] >= (Math.PI)/2 && currentStateActionVector[2] < Math.PI){
+//			currentStateActionVector[2] = 1; 
+//		}
+//		else {
+//			currentStateActionVector[2] = 1;
+//		}
+		//Dimension 3: input: enemyFiringAction: not sure if useful
+		currentStateActionVector[3] = 0;
+		
+		//Dimension 4: input: enemyEnergy: 0-1
+		if (myEnergy > 30) {
+			currentStateActionVector[4] = 0;
 		}
 		else {
-			currentStateActionVector[1] = 1;
+			currentStateActionVector[4] = 1;
 		}
-		//Dimension 2: input: bearingFromGun_cosine: 0-1
-		currentStateActionVector[2] = (int)(Math.cos(Math.toRadians(enemyBearingFromGun)));
-		if (currentStateActionVector[2] >= 0 && currentStateActionVector[2] < (Math.PI)/2){
-			currentStateActionVector[2] = 0; 
+		
+		//Dimension 5: input: enemyDistance: 0-3
+		if (enemyDistance < 100) {
+			currentStateActionVector[5] = 0;
 		}
-		else if (currentStateActionVector[2] >= (Math.PI)/2 && currentStateActionVector[2] < Math.PI){
-			currentStateActionVector[2] = 1; 
+		else if (enemyDistance < 200) {
+			currentStateActionVector[5] = 1;
+		}
+		else if (enemyDistance < 400) {
+			currentStateActionVector[5] = 2;
 		}
 		else {
-			currentStateActionVector[2] = 1;
-		}
-		//Dimension 3: input: enemyFiringAction: 0-2
-		if (enemyBearingFromRadar < 33){
-			currentStateActionVector[3] = 0; 
-		}
-		else if (enemyBearingFromRadar < 66){
-			currentStateActionVector[3] = 1; 
-		}
-		else {
-			currentStateActionVector[3] = 2;
+			currentStateActionVector[5] = 3;
 		}
 		
-		//Dimension 4: input: enemyVelocity: 0-2
-		currentStateActionVector[4] = 0;
-		if (currentStateActionVector[4] < 33){
-			currentStateActionVector[4] = 0; 
-		}
-		else if (currentStateActionVector[4] >= 33 && currentStateActionVector[4]  < 66){
-			currentStateActionVector[4] = 1; 
-		}
-		else if (currentStateActionVector[4] > 66 && currentStateActionVector[4] <= 100){
-			currentStateActionVector[4] = 2; 
-		}
-		
-		//Dimension 5: input: enemyDistance: 0-2
-		currentStateActionVector[5] = 0;
-		
-		//Dimension 6: input: myEnergy_states: 0-2
+		//Dimension 6: null
 		currentStateActionVector[6] = 0;
-		if (currentStateActionVector[6] < 33){
-			currentStateActionVector[6] = 0; 
-		}
-		else if (currentStateActionVector[6] >= 33 && currentStateActionVector[6]  < 66){
-			currentStateActionVector[6] = 1; 
-		}
-		else if (currentStateActionVector[6] > 66 && currentStateActionVector[6] <= 100){
-			currentStateActionVector[6] = 1; 
-		}  
 		
 		
     		
@@ -834,26 +872,23 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     		setAhead(-50);
     	}
     	
-    	if ( ((currentStateActionVector[0])/4) %3 == 0){
+    	if ( ((currentStateActionVector[0])/4) %2 == 0){
     		setFire(1);
     	}
-    	else if ( ((currentStateActionVector[0])/4) %3 == 1){
-    		setFire(2);
-    	}
-    	else if ( ((currentStateActionVector[0])/4) %3 == 2){
+    	else if ( ((currentStateActionVector[0])/4) %2 == 1){
     		setFire(3);
     	}
     	
     	//firing behaviour (to counter defensive behaviour)
-    	if ((currentStateActionVector[0])/12 == 0){
+    	if ((currentStateActionVector[0])/8 == 0){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	}
     	
-    	else if ((currentStateActionVector[0])/12 == 1){
+    	else if ((currentStateActionVector[0])/8 == 1){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 20));
     	}
     	
-    	else if ((currentStateActionVector[0])/12 == 2){
+    	else if ((currentStateActionVector[0])/8 == 2){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 20));
     	}
       
@@ -934,7 +969,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                 else {
                 	//this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
                 	//flag prevents multiple imports and data overwrite since array is static
-                	if ( ((fileSettings_default & CONFIGMASK_FILE_stringTest) == CONFIGMASK_FILE_stringTest)
+                	if ( ((fileSettings_default & CONFIGMASK_FILETYPE_stringTest) == CONFIGMASK_FILETYPE_stringTest)
                 		&& (flag_stringTestImported == false) )
                 	{
                 		if (strName != "stringTest.dat") {
@@ -949,7 +984,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                 	}
                 	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
                 	//flag prevents multiple file imports (mostly for preventing export bugs)
-                	else if ( ((fileSettings_default & CONFIGMASK_FILE_LUTTrackfire) == CONFIGMASK_FILE_LUTTrackfire)
+                	else if ( ((fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire) == CONFIGMASK_FILETYPE_LUTTrackfire)
                 	&& (flag_LUTImported == false) )
                 	{
                 		if (strName != "LUTTrackfire.dat") {
@@ -1004,7 +1039,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                 		fileSettings_LUT = fileSettings_default;
                 		flag_LUTImported = true; //sets flag to prevent multiple instances of robot importing(and exporting) from same .dat (and causing weird interactions(?)).
                 	} // end of LUTTrackfire
-                	else if( ((fileSettings_default & CONFIGMASK_FILE_WinLose) == CONFIGMASK_FILE_WinLose) && (flag_WLImported == false) ) {
+                	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
                 		if (strName != "winlose.dat") {
                 			if (debug_import || debug) {
                 				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
@@ -1034,11 +1069,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                     		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
                     		out.println("fileSettings_LUT: " + fileSettings_LUT);
                     		out.println("fileSettings_WL: "+ fileSettings_WL);
-                    		out.println("CONFIGMASK_FILE_LUTTrackfire|verisett: " + (CONFIGMASK_FILE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL));
-                    		out.println("CONFIGMASK_FILE_WinLose|versett: " + (CONFIGMASK_FILE_WinLose | CONFIGMASK_VERIFYSETTINGSAVAIL));
+                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire|verisett: " + (CONFIGMASK_FILETYPE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL));
+                    		out.println("CONFIGMASK_FILETYPE_WinLose|versett: " + (CONFIGMASK_FILETYPE_WinLose | CONFIGMASK_VERIFYSETTINGSAVAIL));
                     		out.println("flag_LUTImported: " + flag_LUTImported);
-                    		out.println("fileSettings_default & CONFIGMASK_ZEROLUT: " + (fileSettings_default & CONFIGMASK_FILE_LUTTrackfire));
-                    		out.println("CONFIGMASK_FILE_LUTTrackfire: " + CONFIGMASK_FILE_LUTTrackfire);
+                    		out.println("fileSettings_default & CONFIGMASK_ZEROLUT: " + (fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire));
+                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire: " + CONFIGMASK_FILETYPE_LUTTrackfire);
                     	}
                 		return ERROR_8_import_dump; //error 8 - missed settings/file dump.
                 	}
