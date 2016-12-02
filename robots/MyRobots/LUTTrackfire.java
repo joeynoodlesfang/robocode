@@ -190,8 +190,8 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine
     private static final int enemyFiringAction = 3;  							//fire close, mid, far. 
     private static final int enemyVelocity = 3; 								//velocitiy is close, mid, far 
-    private static final int enemyDistance_states = 10;							//discretize distance into 10 
-    private static final int myEnergy_states = 10;								//discretize energy into 10 
+    private static final int enemyDistance_states = 3;							//discretize distance into 10 
+    private static final int myEnergy_states = 2;								//discretize energy into 10 
 
    
     /**
@@ -230,8 +230,8 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private short fileSettings_WL = 0;
     
     // LUT table stored in memory.
-    private static double [][][][][][][] roboLUT 
-        = new double
+    private static int [][][][][][][] roboLUT 
+        = new int
         [num_actions]
         [enemyBearingFromGun_sine]
         [enemyBearingFromGun_cosine]		
@@ -316,12 +316,12 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         
         flag_error = importData(strLUT);
         if(flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run: " + flag_error);
+        	out.println("ERROR @run LUT: " + flag_error);
         }
         
         flag_error = importData(strWL);
         if( flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run: " + flag_error);
+        	out.println("ERROR @run WL: " + flag_error);
         }
         
         //set gun and radar for robot turn
@@ -364,7 +364,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
     public void onDeath(DeathEvent event){
     	currentBattleResult = 0;
-    	reward -=100; 
+//    	reward -=100; 
 //        learningLoop(); //?Joey: why is learningLOop called here? for terminal reward? causes export errors
     	
         flag_error = exportData(strLUT);
@@ -389,7 +389,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */    
 	public void onWin(WinEvent e) {
     	currentBattleResult = 1;
-    	reward +=100; 
+//    	reward +=100; 
 //       learningLoop(); //?Joey: why is learningLOop called here? for terminal reward? causes export errors
     	
         flag_error = exportData(strLUT);
@@ -442,9 +442,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	*/     
     public void onBulletHit(BulletHitEvent e){
     	reward += 5; 
-		myHeading = getHeading(); 
-		myEnergy = getEnergy(); 
-		enemyEnergy = e.getEnergy();
+//		myHeading = getHeading(); 
+//		myEnergy = getEnergy(); 
+//		enemyEnergy = e.getEnergy();
 		//Joey: commented out from masters for now
 		// learningLoop(); //?Joey: why is learningLoop called here
     }
@@ -458,9 +458,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */   
     public void onHitWall(HitWallEvent e) {
     	reward -= 2;	
-    	myHeading = getHeading(); 
-    	myEnergy = getEnergy(); 
-    	learningLoop();
+  //  	myHeading = getHeading(); 
+  //  	myEnergy = getEnergy(); 
+  //  	learningLoop();
     }
     
     /**
@@ -472,7 +472,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */   
     public void onHitByBullet(HitByBulletEvent e) {
     	reward = -5;
-    	learningLoop();
+    //	learningLoop();
     }   
     
     /**
@@ -484,7 +484,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */   
     public void onHitRobot(HitRobotEvent e) {
     	reward = -1;
-    	learningLoop();
+    //	learningLoop();
     }  
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
@@ -636,7 +636,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
     public void qFunction(){
        getMax(); 
-       double prevQVal = calcNewPrevQVal();
+       int prevQVal = (int)calcNewPrevQVal();
        updateLUT(prevQVal);
     }
 
@@ -682,7 +682,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         }   
         
         for (int i = 0; i < num_actions; i++){
-            indexQVal = roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]];
+            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]];
             
             if (indexQVal > currMax){
             	currMax = indexQVal;
@@ -722,7 +722,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * 				1. qValMax
      * @return		prevQVal
      */
-    public double calcNewPrevQVal(){
+    public int calcNewPrevQVal(){
 
         double prevQVal = roboLUT[prevStateActionVector[0]]
         						 [prevStateActionVector[1]]
@@ -733,7 +733,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         						 [prevStateActionVector[6]];
         
         prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
-        return prevQVal;
+        return (int)prevQVal;
         
     }
     
@@ -744,7 +744,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @param:		1. prevQVal
      * @return:		n
      */
-    public void updateLUT(double prevQVal){
+    public void updateLUT(int prevQVal){
         int valueRandom = 0;
         
         double selectRandom = 0;
@@ -952,11 +952,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
                     		}
     	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
     	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-    	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
+    	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
     	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
     		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
     	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-    	                        					for (int p6 = 0; p5 < roboLUTDimensions[6]; p6++) {
+    	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
     	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = 0;
     	                        					}
     	                        				}
@@ -973,8 +973,8 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
     	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
     	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-    	                        					for (int p6 = 0; p6 < roboLUTDimensions[5]; p6++) {
-    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = Double.parseDouble(reader.readLine());
+    	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
+    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = Integer.parseInt(reader.readLine());
     	                        					}
     	                        				}
     	                        			}
@@ -1161,7 +1161,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	                    		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
 	                    			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
 	                    				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-	                    					w.println(roboLUT[p0][p1][p2][p3][p4][p5]);
+	                    					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
+	                    					w.println(roboLUT[p0][p1][p2][p3][p4][p5][p6]);
+	                    					}
 	                    				}
 	                				}
 	                    		}
