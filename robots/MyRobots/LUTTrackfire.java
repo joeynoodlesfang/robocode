@@ -208,7 +208,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
     
     //debug flags.
-    static private boolean debug = false;  
+    static private boolean debug = true;  
     static private boolean debug_doAction = false;
     static private boolean debug_import = false;
     static private boolean debug_export = false;
@@ -249,7 +249,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         [num_actions]
         [myPositionDiscretized_states]
         [myHeadingDiscretized_states]		
-        [1]
+        [enemyVelocity]
         [enemyEnergy_states]
         [enemyDistance_states]
         [1];
@@ -259,7 +259,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         num_actions, 
         myPositionDiscretized_states,
         myHeadingDiscretized_states,
-        1,
+        enemyVelocity,
         enemyEnergy_states,
         enemyDistance_states,
         1};
@@ -590,22 +590,23 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     public void generateCurrentStateVector(){
 
     	//Dimension 1: input: myPositionDiscretized = 0-4: center, left, top, right, bot
-    	if ( (myPosX<100) && ((myPosX > myPosY) || (myPosX) < (600-myPosY)) ) {
-    		currentStateActionVector[1] = 1;
-    	}
-    	else if (1) {
-    		currentStateActionVector[1] = 2;
-    	}
-    	else if (1) {
-    		currentStateActionVector[1] = 3;
-    	}
-    	else if (1) {
-    		currentStateActionVector[1] = 4;
-    	}
-    	else {
+    	if ((myPosX >=200) && (myPosX < 600) && (myPosY >=200) && (myPosX <= 400)){							//center
     		currentStateActionVector[1] = 0;
     	}
     	
+    	else if ( (myPosX<=200) && ((myPosX > myPosY) || myPosX <= (600-myPosY)) ){								//left corners
+    		currentStateActionVector[1] = 1;						
+    	}
+    	else if ( (myPosX>=600) && (  (myPosY <= (800-myPosX) ) || (myPosY > 400 && myPosY <= 600) ) ){		//right corners
+    		currentStateActionVector[1] = 2;						
+    	}
+    	else if ( (myPosY<=200) && ((myPosY > myPosX) || myPosY <= (800-myPosX)) ) {						//top 
+    		currentStateActionVector[1] = 3;
+    	}
+    	else if( (myPosY>=400) && (  (myPosX <= (600-myPosY) ) || (myPosX > 600 && myPosX <= 800) ) ){		//bottom				
+    		currentStateActionVector[1] = 4;
+    	}
+
     	//Dimension 2: input: myHeading = 0-3: 0-89, 90-179, 180-269, 270-359
     	if (myHeading < 90) {
     		currentStateActionVector[2] = 0;
@@ -619,28 +620,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     	else {
     		currentStateActionVector[2] = 3;
     	}
-//        //Dimension 1: input: bearingFromGun_sine: 0-1
-//		currentStateActionVector[1] = (int) (Math.sin(Math.toRadians(enemyBearingFromGun)));
-//		if (currentStateActionVector[1] >= 0 && currentStateActionVector[1] < (Math.PI)/2){
-//			currentStateActionVector[1] = 0; 
-//		}
-//		else if (currentStateActionVector[1] >= (Math.PI)/2 && currentStateActionVector[1] < Math.PI){
-//			currentStateActionVector[1] = 1; 
-//		}
-//		else {
-//			currentStateActionVector[1] = 1;
-//		}
-//		//Dimension 2: input: bearingFromGun_cosine: 0-1
-//		currentStateActionVector[2] = (int)(Math.cos(Math.toRadians(enemyBearingFromGun)));
-//		if (currentStateActionVector[2] >= 0 && currentStateActionVector[2] < (Math.PI)/2){
-//			currentStateActionVector[2] = 0; 
-//		}
-//		else if (currentStateActionVector[2] >= (Math.PI)/2 && currentStateActionVector[2] < Math.PI){
-//			currentStateActionVector[2] = 1; 
-//		}
-//		else {
-//			currentStateActionVector[2] = 1;
-//		}
 		//Dimension 3: input: enemyFiringAction: not sure if useful
 		currentStateActionVector[3] = 0;
 		
@@ -666,7 +645,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 			currentStateActionVector[5] = 3;
 		}
 		
-		//Dimension 6: null
+		//Dimension 6: enemy velocity 
 		currentStateActionVector[6] = 0;
 		
 		
