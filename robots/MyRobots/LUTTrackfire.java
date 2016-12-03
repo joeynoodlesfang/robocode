@@ -589,15 +589,15 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 
     public void generateCurrentStateVector(){
 
-    	//Dimension 1: input: myPositionDiscretized = 0-4: center, left, top, right, bot
+    	//Dimension 1: input: myPositionDiscretized = 0-4: center, left, right, top, bot
     	if ((myPosX >=200) && (myPosX < 600) && (myPosY >=200) && (myPosX <= 400)){							//center
     		currentStateActionVector[1] = 0;
     	}
     	
-    	else if ( (myPosX<=200) && ((myPosX > myPosY) || myPosX <= (600-myPosY)) ){								//left corners
+    	else if (  (myPosX<=100) && ( (myPosX > myPosY) || myPosX <= (600-myPosY) )  ){						//left corners
     		currentStateActionVector[1] = 1;						
     	}
-    	else if ( (myPosX>=600) && (  (myPosY <= (800-myPosX) ) || (myPosY > 400 && myPosY <= 600) ) ){		//right corners
+    	else if (  (myPosX>=700) && ( (myPosY <= (800-myPosX)) || (myPosY > 400 && myPosY <= 600)) ){		//right corners
     		currentStateActionVector[1] = 2;						
     	}
     	else if ( (myPosY<=200) && ((myPosY > myPosX) || myPosY <= (800-myPosX)) ) {						//top 
