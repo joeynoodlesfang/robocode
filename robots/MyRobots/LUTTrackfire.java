@@ -195,10 +195,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private static final int myPositionDiscretized_states = 5;
     private static final int myHeadingDiscretized_states = 4;
     private static final int enemyBearingFromGun_sine = 2; 						// 360 degrees / 4 for sine 
-    private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine
-    private static final int enemyFiringAction = 3;  							//fire close, mid, far. 
-    private static final int enemyVelocity = 3; 								//velocitiy is close, mid, far 
-    private static final int enemyDistance_states = 4;							//<100, 100-200, 200-400, 400+
+    private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine 
+    private static final int enemyDirection_states = 3; 								//velocitiy is close, mid, far 
+    private static final int enemyDistance_states = 3;							//<100, 100-200, 200-400, 400+
     private static final int enemyEnergy_states = 2;							//low(<30) or other
     private static final int myEnergy_states = 2;								//low(<30) or other 
 
@@ -208,7 +207,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
     
     //debug flags.
-    static private boolean debug = true;  
+    static private boolean debug = false;  
     static private boolean debug_doAction = false;
     static private boolean debug_import = false;
     static private boolean debug_export = false;
@@ -249,9 +248,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         [num_actions]
         [myPositionDiscretized_states]
         [myHeadingDiscretized_states]		
-        [enemyVelocity]
         [enemyEnergy_states]
         [enemyDistance_states]
+        [enemyDirection_states]
         [1];
     
     // Dimensions of LUT table, used for iterations.
@@ -259,9 +258,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         num_actions, 
         myPositionDiscretized_states,
         myHeadingDiscretized_states,
-        enemyVelocity,
         enemyEnergy_states,
         enemyDistance_states,
+        enemyDirection_states,
         1};
     
     // Stores current reward for action.
@@ -284,7 +283,12 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     
     //enemy information
     private int enemyDistance = 0;
-    private double enemyHeading = 0.0; 
+    private int enemyHeading = 0;
+    private int enemyHeadingRelative = 0;
+    private int enemyHeadingRelativeAbs = 0;
+    private int enemyVelocity = 0;
+    private int enemyDirection = 0;
+    
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
@@ -434,7 +438,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
 
 	public void onScannedRobot(ScannedRobotEvent event){
+		
 		myHeading = (int)getHeading();
+		enemyHeadingRelative = (int)normalRelativeAngleDegrees(event.getHeading() - getGunHeading());
+		enemyHeadingRelativeAbs = Math.abs(enemyHeadingRelative);
+		enemyVelocity = (int)event.getVelocity();
 		myPosX = (int)getX();
 		myPosY = (int)getY();
 		enemyBearingFromRadar = (double)myHeading + event.getBearing() - getRadarHeading();
@@ -443,6 +451,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 		enemyDistance = (int)event.getDistance(); 
 		enemyEnergy = (int)event.getEnergy();
 		myEnergy = (int)getEnergy();
+		out.println(event.getTime());
     	learningLoop();
     }
 
@@ -509,6 +518,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 //    	reward = -1;
 //    //	learningLoop();
 //    }  
+	
+	
+	
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
     /** 
@@ -590,21 +602,20 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     public void generateCurrentStateVector(){
 
     	//Dimension 1: input: myPositionDiscretized = 0-4: center, left, right, top, bot
-    	if ((myPosX >=200) && (myPosX < 600) && (myPosY >=200) && (myPosX <= 400)){							//center
-    		currentStateActionVector[1] = 0;
-    	}
-    	
-    	else if (  (myPosX<=100) && ( (myPosX > myPosY) || myPosX <= (600-myPosY) )  ){						//left corners
+    	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					//left
     		currentStateActionVector[1] = 1;						
     	}
-    	else if (  (myPosX>=700) && ( (myPosY <= (800-myPosX)) || (myPosY > 400 && myPosY <= 600)) ){		//right corners
+    	else if (  (myPosX>=750)  &&  ( ((800-myPosX) <= myPosY) || ((800-myPosX) <= (600-myPosY)) )  ){		//right
     		currentStateActionVector[1] = 2;						
     	}
-    	else if ( (myPosY<=200) && ((myPosY > myPosX) || myPosY <= (800-myPosX)) ) {						//top 
+    	else if (myPosY<=50) {		//top 
     		currentStateActionVector[1] = 3;
     	}
-    	else if( (myPosY>=400) && (  (myPosX <= (600-myPosY) ) || (myPosX > 600 && myPosX <= 800) ) ){		//bottom				
+    	else if (myPosY>=550) {		//bottom				
     		currentStateActionVector[1] = 4;
+    	}
+    	else {
+    		currentStateActionVector[1] = 0; 
     	}
 
     	//Dimension 2: input: myHeading = 0-3: 0-89, 90-179, 180-269, 270-359
@@ -620,32 +631,42 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     	else {
     		currentStateActionVector[2] = 3;
     	}
-		//Dimension 3: input: enemyFiringAction: not sure if useful
-		currentStateActionVector[3] = 0;
 		
-		//Dimension 4: input: enemyEnergy: 0-1
-		if (myEnergy > 30) {
+		//Dimension 3: input: enemyEnergy: 0-1
+		if (enemyEnergy > 30) {
+			currentStateActionVector[3] = 0;
+		}
+		else {
+			currentStateActionVector[3] = 1;
+		}
+		
+		//Dimension 4: input: enemyDistance: 0-2
+		if (enemyDistance < 150) {
 			currentStateActionVector[4] = 0;
 		}
-		else {
+		else if (enemyDistance < 350) {
 			currentStateActionVector[4] = 1;
 		}
+		else {
+			currentStateActionVector[4] = 2;
+		}
 		
-		//Dimension 5: input: enemyDistance: 0-3
-		if (enemyDistance < 100) {
-			currentStateActionVector[5] = 0;
+		//Dimension 5: is enemy moving right, left, or within the angle of my gun?
+		//requires mygunheading, enemyheading, enemyvelocity
+		if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
+			currentStateActionVector[5] = 0; //within angle of gun
 		}
-		else if (enemyDistance < 200) {
-			currentStateActionVector[5] = 1;
+		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity > 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity < 0)) ) {
+			currentStateActionVector[5] = 1; //enemy moving left
 		}
-		else if (enemyDistance < 400) {
-			currentStateActionVector[5] = 2;
+		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity < 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity > 0)) ){
+			currentStateActionVector[5] = 2; //enemy moving right
 		}
 		else {
-			currentStateActionVector[5] = 3;
+			out.println("Error! CSAV[5]");
 		}
 		
-		//Dimension 6: enemy velocity 
+		//Dimension 6: null 
 		currentStateActionVector[6] = 0;
 		
 		
@@ -796,8 +817,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         
         //Choosing next action based on policy.
         valueRandom = (int)(Math.random()*(num_actions));
-        
-        /* used for exploratory */
         if (policy == SARSA) {
         	currentStateActionVector[0] = valueRandom;
         }
@@ -870,8 +889,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     	else if ((currentStateActionVector[0])/8 == 2){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 20));
     	}
-      
-      
     	scan();
     	execute();
      
@@ -1122,9 +1139,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     		out.println("fileSettings_WL: "+ fileSettings_WL);
     	}
     	
-    	//if flag && config, then perform. redo for all. what if the file is deleted midway. 
-    	//set error code?
-        // out.println("wewhat");
+    	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
     	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
     	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
     	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )  ) {
