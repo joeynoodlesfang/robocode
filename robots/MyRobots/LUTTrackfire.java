@@ -81,8 +81,6 @@
 		- `test out zeroLUT
 		- tested out import export for LUT, zerolut, WL, all work.
 		
-	November 27, 2016. 
-		Fuck. 
 	
 	November 28, 2016. 4:03 pm. 
 		implementing new state-action pairs. 
@@ -96,6 +94,8 @@
 		working on new states branch.
 		- `figure out sine/cosine enemy angle
 		- `consider implementing reward system based on "change in health difference"
+		
+	-to zero data, go to the first line of LUTTrackfire and add 1 to the number. 
 
  */
 
@@ -110,20 +110,17 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
 
-import mainInterface.LUTInterface;
 import robocode.AdvancedRobot;
 import robocode.BattleEndedEvent;
 import robocode.BulletHitEvent;
 import robocode.BulletMissedEvent;
 import robocode.DeathEvent;
-import robocode.HitByBulletEvent;
-import robocode.HitRobotEvent;
 import robocode.HitWallEvent;
 import robocode.RobocodeFileOutputStream;
 import robocode.ScannedRobotEvent;
 import robocode.WinEvent;
 
-public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
+public class LUTTrackfire extends AdvancedRobot{
 	/*
 	 * SAV Change Rules:
 	 * 1. update STATEACTION VARIABLES
@@ -210,7 +207,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     static private boolean debug = false;  
     static private boolean debug_doAction = false;
     static private boolean debug_import = false;
-    static private boolean debug_export = false;
+    static private boolean debug_export = true;
     
     // Flag used for functions importData and exportData.
     // primary role is to maintain 1 import -> at most 1 export
@@ -219,7 +216,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private boolean flag_stringTestImported = false;
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
-    
+    private boolean flag_SAImported = false; 
     // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
@@ -241,6 +238,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
+    private short fileSettings_StateAction = 0; 
     
     // LUT table stored in memory.
     private static int [][][][][][][] roboLUT 
@@ -369,6 +367,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      */
     public void onBattleEnded(BattleEndedEvent event){
         flag_error = exportData(strLUT);
+        
         if(flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
         	//LUT is 0'd, causing error 9 (export_dump)
@@ -385,10 +384,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */
     public void onDeath(DeathEvent event){
-    	currentBattleResult = 0;
-//    	reward -=100; 
-//        learningLoop(); //?Joey: why is learningLOop called here? for terminal reward? causes export errors
-    	
+    	currentBattleResult = 0;    	
         flag_error = exportData(strLUT);
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onDeath: " + flag_error);
@@ -426,11 +422,13 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR: " + flag_error);
         }
+        
 	}
 	
     /**
      * @name:		onScannedRobot
      * @purpose:	1. determine enemy bearing and distance
+     * 				2. call learningloop to update the LUT
      * @param:		ScannedRobotEvent event
      * @return:		none, but updates:
      * 				1. getGunBearing
@@ -451,7 +449,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 		enemyDistance = (int)event.getDistance(); 
 		enemyEnergy = (int)event.getEnergy();
 		myEnergy = (int)getEnergy();
-		out.println(event.getTime());
+//		out.println("Time is" + event.getTime());
     	learningLoop();
     }
 
@@ -461,9 +459,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @param:		1. HItBulletEvent class from Robot
 	* @return:		n
 	*/      
-//    public void onBulletMissed(BulletMissedEvent event){
-//    	reward += -5;    	
-//    }
+    public void onBulletMissed(BulletMissedEvent event){
+    	reward += -5;    
+//    	learningLoop(); 
+//    	out.println("Missed Bullet" + reward);
+    }
     
 	/**
 	* @name: 		onBulletHit
@@ -472,14 +472,10 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	* @param:		1. HItBulletEvent class from Robot
 	* @return:		n
 	*/     
-//    public void onBulletHit(BulletHitEvent e){
-//    	reward += 5; 
-////		myHeading = getHeading(); 
-////		myEnergy = getEnergy(); 
-////		enemyEnergy = e.getEnergy();
-//		//Joey: commented out from masters for now
-//		// learningLoop(); //?Joey: why is learningLoop called here
-//    }
+    public void onBulletHit(BulletHitEvent e){
+    	reward += 5; 
+//    	out.println("Hit Bullet" + reward);
+    }
     
     /**
      * @name: 		onHitWall
@@ -488,12 +484,10 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @param:		1. HitWallEvent class from Robot
      * @return:		n
      */   
-//    public void onHitWall(HitWallEvent e) {
-//  //  	reward -= 2;	
-//  //  	myHeading = getHeading(); 
-//  //  	myEnergy = getEnergy(); 
-//  //  	learningLoop();
-//    }
+    public void onHitWall(HitWallEvent e) {
+    	reward = -5; 
+//    	out.println("Hit Wall" + reward);
+    }
     
     /**
      * @name: 		onHitByBullet
@@ -552,7 +546,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * @return:		n
      */
     public void learningLoop(){
-    	
     	while (true) {
     		calculateReward();
         	copyCurrentSAVIntoPrevSAV();
@@ -560,10 +553,11 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         	qFunction(); 
         	doAction(); 
         	resetReward(); //can try divide by 2 instead of = 0.
-        }
+    	}
     }
 
-    /**
+
+	/**
      * @name:		calculateReward
      * @purpose:	calculates reward based on change in energy difference of robots.
      * @param:		none
@@ -597,8 +591,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
      * 				1. bearingFromGun
      * @return: 	none
      */
-
-
     public void generateCurrentStateVector(){
 
     	//Dimension 1: input: myPositionDiscretized = 0-4: center, left, right, top, bot
@@ -828,7 +820,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
         else{ 
         	currentStateActionVector[0] = actionChosenForQValMax;
         }
-        
+        saveSAVector(); 
         //Choosing next action based on policy.
 //        valueRandom = (int)(Math.random()*(num_actions));
 //     
@@ -892,9 +884,9 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     	scan();
     	execute();
      
-      if (debug_doAction || debug) {
-    	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
-      }
+//      if (debug_doAction || debug) {
+//    	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
+//      }
     }
     
 	/**
@@ -943,6 +935,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
     		out.println("fileSettings_LUT: " + fileSettings_LUT);
     		out.println("fileSettings_WL: "+ fileSettings_WL);
+    		out.println("fileSettings_SAV: " + fileSettings_StateAction); 
     	}
     	
         try {
@@ -1142,7 +1135,7 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
     	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
     	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
-    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )  ) {
+    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ) ){
 	    	
     		PrintStream w = null;
 	        
@@ -1230,15 +1223,6 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
 	        			w.println(currentBattleResult);
 	            	flag_WLImported = false;
 	            }
-	            
-	            
-	            else {
-	            	if (debug_export || debug) {
-	            		out.println("error 9");
-	            		
-	            	}
-	            	return ERROR_9_export_dump;
-	            }
 	        } 
 	        
 	        //OC: PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
@@ -1266,128 +1250,41 @@ public class LUTTrackfire extends AdvancedRobot implements LUTInterface{
     		return ERROR_10_export_mismatchedStringName;
     	}
     }
-    /**
-     * @deprecated - use exportData
-     * @name:		exportLUTData
-     * @author:		Mostly from sittingduckbot
-     * @purpose: 	1. Exports local LUT from memory to .dat file.
-     * 					A. Configuration of the .dat file is written in the first line 
-     * @param: 		1. repeatFlag
-     * @return:		1. repeatFlag
-     */
-    public boolean exportLUTData(boolean repeatFlag){
-        
-        if (flag_LUTImported == true) {
-            out.println("wewhat");
-            PrintStream w = null;
-            try {
-                w = new PrintStream(new RobocodeFileOutputStream(getDataFile("LUTTrackfire.dat")));
-                for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-                    for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-                    	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++){
-                    		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-                    			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-                    				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-                    					w.println(roboLUT[p0][p1][p2][p3][p4][p5]);
-                    				}
-                				}
-                    		}
-                    	}
-                    }
-                }
-                
-                // PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
-                if (w.checkError()) {
-                    //Error 0x03: cannot write
-                    out.println("Something done fucked up (Error0x03 cannot write)");
-                }
-            } catch (IOException e) {
-                out.println("IOException trying to write: ");
-                e.printStackTrace(out); //Joey: lol no idea what this means
-            } finally {
-                if (w != null) {
-                    w.close();
-                }
-            }
-        }      
-        
-        flag_LUTImported = false;
-        return repeatFlag;
-    }
-    
-    /**
-     * @deprecated - use importData
-     * @name: importWinLose
-     */
-    public void importWinLose(){
-    	try {
-            BufferedReader reader = null;
-            try {
-            	reader = new BufferedReader(new FileReader(getDataFile("winlose.dat")));
-            	totalFights = Integer.parseInt(reader.readLine());
-            	for (int i = 0; i < battleResults.length; i++){
-            		if (i < totalFights) {
-            			battleResults[i] = Integer.parseInt(reader.readLine());
-            		}
-            		else {
-            			battleResults[i] = 0;
-            		}
-            	}
-            } finally {
-                if (reader != null) {
-                    reader.close();
-                }
-            }
-        } 
-        catch (IOException e) {
-            // Error0x01: error in file reading
-            out.println("Something done fucked up (Error0x01 error in file reading)");
-        } 
-        catch (NumberFormatException e) {
-            // Error0x02: error in int conversion
-            out.println("Something done fucked up (Error0x02 error in int conversion)");
-        }
-    }
-    	
-    /**
-     * @deprecated - use exportData
-     * @param winLose
-     */
-    public void exportWinLose(int winLose){  
-    	PrintStream w = null;
-    	try {
-			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("winlose.dat")));
-			w.println(totalFights+1);
-        	for (int i = 0; i < totalFights; i++){
-    			w.println(battleResults[i]);
-        	}
-    			w.println(winLose);
+
+    private void saveSAVector() {
+		PrintStream w = null;
+		try {
+			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("StateAction.dat")));
+
+			w.println(Arrays.toString(currentStateActionVector));
+//			for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
+//                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
+//                	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
+//                		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
+//                			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
+//                				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
+//                					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
+//                					w.println(roboLUT[p0][p1][p2][p3][p4][p5][p6]);
+//                					}
+//                				}
+//            				}
+//                		}
+//                	}
+//                }
+//            }
+			
+			// PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
+			if (w.checkError()) {
+				out.println("Error in saving data");
+			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			out.println("IOException trying to write: ");
+			e.printStackTrace(out);
 		} finally {
-            if (w != null) {
-                w.close();
-            }
+			if (w != null) {
+				w.close();
+			}
 		}
-    	
-    	
-    }
-    /* Methods in LUTInterface not being used */
-	@Override
-	public double[] outputForward(double[] X, boolean flag, int numTrial) {
-		return null;
-	}
-	@Override
-	public double train(double[] X, double argValue, double[] Ycalc, boolean flag, int numTrial) {
-		return 0;
-	}
-	@Override
-	public void save(double error, int numTrial, PrintStream saveFile, boolean flag) {
-	}
-	@Override
-	public void load(String argFileName) throws IOException {
-	}
-	@Override
-	public void initialiseLUT() {
+		
 	}
 }
