@@ -17,7 +17,7 @@ public interface CommonInterface{
 	 * @return The value returned by the look-up table (LUT) or neural net (NN) for the input vector
 	 */
 	
-	public double[] outputForward(double [] X, boolean flag, int numTrial); 
+	public double[] outputForward(Object X, boolean flag, int numTrial); 
 	 
 	/** Function "Train" 
 	 * This is a PUBLIC METHOD that takes in an array of type double named "X". 
@@ -26,7 +26,7 @@ public interface CommonInterface{
 	 * @param argValue - The new value to learn. 
 	 * @return The error in the output for that input vector. 
 	 */
-	public double train(double [] X, double argValue, double[] Ycalc, boolean flag, int numTrial); 
+	public double train(Object X, double argValue, double[] Ycalc, boolean flag, int numTrial); 
 	
 	/** Function: "save"
 	 * This is a PUBLIC METHOD that takes in an array of type double named "X" and the new value to learn. 
