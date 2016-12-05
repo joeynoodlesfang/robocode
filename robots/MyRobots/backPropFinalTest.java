@@ -5,18 +5,21 @@ package MyRobots;
  * @purpose: Class "BackPropTest" is used to test the backPropagation XOR problem. 
 */
 
+import java.io.BufferedReader;
 /* Import headers */
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Arrays;
 
 /* Main Testing Class */
 public class backPropFinalTest{
 	public static void main(String args[])
 	{
-		
-		for (int a = 0; a < 10; a ++){	 
+		for (int a = 0; a < 1; a ++){	 
 			/*Initiate variables */
 			int numOutput = 1; //number of outputs per training set. 
 			int numInputs = 3; //number of inputs for training set
@@ -32,72 +35,91 @@ public class backPropFinalTest{
 			
 			/* Neural net state action pair*/
 			boolean flag = true; 
-			
-		    // Dimensions of LUT table, used for iterations.
+			double [] outputs = new double [8641]; 
 		    /**
-			 * STATEACTION VARIABLES
+			 * input data
 			 */
-		    final int[] action = new int [10]; 								
-			final int enemyBearing = 360; 							// 360 degrees 
-		    final int distanceX = 800; 								//800x600
-		    final int distanceY = 600; 								//800x600
-		    final int myEnergyState = 120;								//energy can be more than 100
-		    final int enemyEnergyState = 120; 							//energy can be more than 100
+			final int num_actions = 24; 
+		    final int myPositionDiscretized_states = 5;
+		    final int myHeadingDiscretized_states = 4;
+		    final int enemyDirection_states = 3; 							
+		    final int enemyDistance_states = 3;					
+		    final int enemyEnergy_states = 2;
+		    // LUT table stored in memory.
+		    int [][][][][][][] input
+		        = new int
+		        [num_actions]
+		        [myPositionDiscretized_states]
+		        [myHeadingDiscretized_states]		
+		        [enemyEnergy_states]
+		        [enemyDistance_states]
+		        [enemyDirection_states]
+		        [1];
 		    
-		    double [][][][][][][][][][][][][][][] inputs 
-		        = new double
-		        [action[0]]
-		        [action[1]]
-		        [action[2]]
-		        [action[3]]
-		        [action[4]]
-		        [action[5]]
-		        [action[6]]
-		        [action[7]]
-		        [action[8]]
-		        [action[9]]
-		        [enemyBearing]
-		        [distanceX ]		
-		        [distanceY]
-		        [myEnergyState]
-		        [enemyEnergyState];
-	
-
-	    
-//			for (int p0 = 0; p0 < inputs[0]; p0++) {
-//                for (int p1 = 0; p1 < inputs[1]; p1++) {
-//                	for(int p2 = 0; p2 <inputs[2]; p2++){
-//                		for (int p3 = 0; p3 < inputs[3]; p3++) {
-//                			for (int p4 = 0; p4 < inputs[4]; p4++) {
-//                				for (int p5 = 0; p5 < inputs[5]; p5++) {
-//                					for (int p6 = 0; p6 < inputs[6]; p6++) {
-//                    					for (int p7 = 0; p7 < inputs[7]; p7++) {
-//                        					for (int p8 = 0; p8 < inputs[8]; p8++) {
-//                            					for (int p9 = 0; p9 < inputs[9]; p9++) {
-//                                					for (int p10 = 0; p9 < inputs[10]; p10++) {
-//                                    					for (int p11 = 0; p11 < inputs[11]; p11++) {
-//                                        					for (int p12 = 0; p12 < inputs[12]; p12++) {
-//                                            					for (int p13 = 0; p13 < inputs[13]; p13++) {
-//                                                					for (int p14 = 0; p14 < inputs[14]; p14++) {
-//                                                    					for (int p15 = 0; p15 < inputs[15]; p15++) {
-//                                                    						inputs[0][1][2][3][4][5][6][7][8][9][10][11][12][13][14] = 0;
-//
-//                                                    					}
-//                                                					}
-//                                            					}
-//                                        					}	
-//                                    					}
-//                                					}	
-//                            					}		
-//                        					}	
-//                    					}
-//                					}
-//                				}
-//            				}
-//                		}
-//                	}
-//                }
-//            }
+		    // Dimensions of LUT table, used for iterations.
+		    int[] roboLUTDimensions = {
+		        num_actions, 
+		        myPositionDiscretized_states,
+		        myHeadingDiscretized_states,
+		        enemyEnergy_states,
+		        enemyDistance_states,
+		        enemyDirection_states,
+		        1}; 
+		    // Dimensions of LUT table, used for iterations.
+   
+		    BufferedReader reader = null;
+		    try {
+		    	String dir1 = "C:/Users/Andrea/github/robocode/robots/MyRobots/LUTTrackfire.data";
+				reader = new BufferedReader(new FileReader(dir1 + "/" + "LUTTrackfire.dat"));
+				try {
+					for (int i=0; i < 8641; i++){
+						outputs[i] = Integer.parseInt(reader.readLine()); 
+					}
+					//store each line into output block. 
+					
+				} catch (NumberFormatException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} 
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		    System.out.println("output" + Arrays.toString(outputs)); 
+		    
+		    double [][] testArray = new double [3][4]; 
+		    
+		    for (int i = 0; i < 3; i++){
+		    	
+			    for (int j = 0; j < 4; j++){
+			    	testArray[i][j] = j; 
+			    }
+		    }
+		    System.out.println("testArray" + Arrays.deepToString(testArray)); 
+		    
+		    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
+                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
+                	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
+                		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
+                			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
+                				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
+                					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
+//                						input[[0]][][][][][][] = {p0, p1, p2, p3, p4, p5,p6};
+                					}
+                				}
+                			}
+                		}
+                	}
+                }
+		    }
+                
+			/* For binary training set */						//if flag == true, then binary, if false, then bipolar
+//			double inputs[][] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}}; 	// binary inputs
+//			double outputs[]   = {0, 1, 1, 0}; 		  				// binary outputs
+////	
 			//The number of inputs to the NN would be states + actions (5 states, 10 actions = 15) . 
 			
 			backPropFinal myNeuralNet = new backPropFinal(numInputs, numHidden, lRate, momentum);		/*Create new object of class "myBackProp */
@@ -121,10 +143,10 @@ public class backPropFinalTest{
 				double totalError = 0.0;
 				for (int i = 0; i < numTrials; i++){
 					//Call function for forward propagation
-					double[] Ycalc = myNeuralNet.outputForward(inputs[i], flag, i);
+//					double[] Ycalc = myNeuralNet.outputForward(inputs[i], flag, i);
 					//Call function for backward propagation
-					double error = myNeuralNet.train(inputs[i], outputs[i], Ycalc, flag, i);	
-					totalError += error; 
+//					double error = myNeuralNet.train(inputs[i], outputs[i], Ycalc, flag, i);	
+//					totalError += error; 
 				}
 				if (totalError <= errorThreshold || numEpoch > maxEpoch){
 					System.out.println("Trial " + a + "\tEpoch " + numEpoch + "\tError " + totalError);
@@ -135,4 +157,5 @@ public class backPropFinalTest{
 			}			
 		}
 	}
+		
 }

@@ -138,7 +138,7 @@ public class LUTTrackfire extends AdvancedRobot{
 	/**
 	 * FINALS (defines)
 	 */
-	 //variables for the q-function. Robot will NOT change learning pattern midfight.
+	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
     private static final double alpha = 0.2;                //to what extent the newly acquired information will override the old information.
     private static final double gamma = 0.2;                //importance of future rewards
     private static final double epsilon = 0.1; 				//degree of exploration 
@@ -156,6 +156,10 @@ public class LUTTrackfire extends AdvancedRobot{
     //     				stringTest: 16400 (0x4010)
     // 					strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
     //     				WL:			16448 (0x4040)
+    /* 
+     * Notes: 
+     * short - size of int. 
+     * CONFIGMASK - */
     private static final short CONFIGMASK_ZEROLUT  = 				0x0001;
     private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 	0x4000;
     private static final short CONFIGMASK_FILETYPE_stringTest =		0x0010;
@@ -181,22 +185,21 @@ public class LUTTrackfire extends AdvancedRobot{
     String strStringTest = "stringTest.dat";    
     String strLUT = "LUTTrackfire.dat";
     String strWL = "winlose.dat";
-
+    String strSA = "stateAction.dat"; 
     
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 * Currently 518400 state/actions
 	 */
     private static final int num_actions = 24; 
-    private static final int enemyBearingFromGun_states = 4;
     private static final int myPositionDiscretized_states = 5;
     private static final int myHeadingDiscretized_states = 4;
-    private static final int enemyBearingFromGun_sine = 2; 						// 360 degrees / 4 for sine 
-    private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine 
+//    private static final int enemyBearingFromGun_sine = 2; 						// 360 degrees / 4 for sine 
+//    private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine 
     private static final int enemyDirection_states = 3; 								//velocitiy is close, mid, far 
     private static final int enemyDistance_states = 3;							//<100, 100-200, 200-400, 400+
     private static final int enemyEnergy_states = 2;							//low(<30) or other
-    private static final int myEnergy_states = 2;								//low(<30) or other 
+//    private static final int myEnergy_states = 2;								//low(<30) or other 
 
    
     /**
@@ -207,7 +210,7 @@ public class LUTTrackfire extends AdvancedRobot{
     static private boolean debug = false;  
     static private boolean debug_doAction = false;
     static private boolean debug_import = false;
-    static private boolean debug_export = true;
+    static private boolean debug_export = false;
     
     // Flag used for functions importData and exportData.
     // primary role is to maintain 1 import -> at most 1 export
@@ -216,18 +219,12 @@ public class LUTTrackfire extends AdvancedRobot{
     private boolean flag_stringTestImported = false;
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
-    private boolean flag_SAImported = false; 
     // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
 //    //Flag used if user desires to zero LUT at the next battle. 
 //    static private boolean zeroLUT = false; 
-    
-    
-    
-    
-    
-    
+
     /**
      *  OTHER GLOBALS
      */
@@ -238,7 +235,7 @@ public class LUTTrackfire extends AdvancedRobot{
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
-    private short fileSettings_StateAction = 0; 
+    private short fileSettings_SA = 0; 
     
     // LUT table stored in memory.
     private static int [][][][][][][] roboLUT 
@@ -281,11 +278,11 @@ public class LUTTrackfire extends AdvancedRobot{
     
     //enemy information
     private int enemyDistance = 0;
-    private int enemyHeading = 0;
+//    private int enemyHeading = 0;
     private int enemyHeadingRelative = 0;
     private int enemyHeadingRelativeAbs = 0;
     private int enemyVelocity = 0;
-    private int enemyDirection = 0;
+//    private int enemyDirection = 0;
     
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
@@ -343,16 +340,16 @@ public class LUTTrackfire extends AdvancedRobot{
         if( flag_error != SUCCESS_importData) {
         	out.println("ERROR @run WL: " + flag_error);
         }
-        
-        //set gun and radar for robot turn
+            
+        //set gun and radar for robot turn separate gun, radar and robot (robocode properties). 
         setAdjustGunForRobotTurn(true);
     	setAdjustRadarForGunTurn(true);	
     	setAdjustRadarForRobotTurn(true);
 
-    	// infinite loop
+    	// anything in infinite loop is initial behaviour of robot
         for(;;){
         	setTurnRadarRight(20);
-    		execute();
+    		execute();					//from "AdvancedRobot" to allow parallel commands. 
         }
          
     }
@@ -366,8 +363,15 @@ public class LUTTrackfire extends AdvancedRobot{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-        flag_error = exportData(strLUT);
+        flag_error = exportData(strLUT);				//strLUT = "LUTTrackfire.dat"
         
+        
+        if(flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
+        	//LUT is 0'd, causing error 9 (export_dump)
+        }
+//        flag_error =  exportData(strSA); 
+        flag_error = saveData(strSA); 
         if(flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
         	//LUT is 0'd, causing error 9 (export_dump)
@@ -384,15 +388,20 @@ public class LUTTrackfire extends AdvancedRobot{
      * @return:		n
      */
     public void onDeath(DeathEvent event){
-    	currentBattleResult = 0;    	
+    	currentBattleResult = 0;    					//global variable. 
         flag_error = exportData(strLUT);
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onDeath: " + flag_error);
         }
         
-        flag_error = exportData(strWL);
+        flag_error = exportData(strWL);					//"strWL" = winLose.dat
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR: " + flag_error);
+        }
+//        flag_error =  exportData(strSA); 
+        flag_error = saveData(strSA); 
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onDeath: " + flag_error);
         }
     }
     
@@ -403,14 +412,13 @@ public class LUTTrackfire extends AdvancedRobot{
      * 				   	death or fight end.
      * 				2.  Sets a terminal reward of +100 
      * @param:		1.	WinEvent class from Robot
+     * @notes: 		can not call learningLoop() in onWin or onDeath because these are final events. 
      * @return:		n
      */    
 	public void onWin(WinEvent e) {
     	currentBattleResult = 1;
-//    	reward +=100; 
-//       learningLoop(); //?Joey: why is learningLOop called here? for terminal reward? causes export errors
-    	
         flag_error = exportData(strLUT);
+        
         if( flag_error != SUCCESS_exportData) {
         	if (debug_export || debug) {
         		
@@ -422,10 +430,15 @@ public class LUTTrackfire extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR: " + flag_error);
         }
-        
+//        flag_error =  exportData(strSA); 
+        flag_error = saveData(strSA); 
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onDeath: " + flag_error);
+        }
 	}
 	
-    /**
+
+	/**
      * @name:		onScannedRobot
      * @purpose:	1. determine enemy bearing and distance
      * 				2. call learningloop to update the LUT
@@ -436,7 +449,6 @@ public class LUTTrackfire extends AdvancedRobot{
      */
 
 	public void onScannedRobot(ScannedRobotEvent event){
-		
 		myHeading = (int)getHeading();
 		enemyHeadingRelative = (int)normalRelativeAngleDegrees(event.getHeading() - getGunHeading());
 		enemyHeadingRelativeAbs = Math.abs(enemyHeadingRelative);
@@ -453,66 +465,69 @@ public class LUTTrackfire extends AdvancedRobot{
     	learningLoop();
     }
 
-	/**
-	* @name: 		onBulletMissed
-	* @purpose: 	1. Updates reward. -10 if bullet misses enemy
-	* @param:		1. HItBulletEvent class from Robot
-	* @return:		n
-	*/      
-    public void onBulletMissed(BulletMissedEvent event){
-    	reward += -5;    
-//    	learningLoop(); 
-//    	out.println("Missed Bullet" + reward);
-    }
+	/* 
+	 * If want to emphasize a certain event, then call the event and add external reward. 
+	 * */
+//	/**
+//	* @name: 		onBulletMissed
+//	* @purpose: 	1. Updates reward. -10 if bullet misses enemy
+//	* @param:		1. HItBulletEvent class from Robot
+//	* @return:		n
+//	*/      
+//    public void onBulletMissed(BulletMissedEvent event){
+////    	reward += -5;    
+////    	learningLoop(); 
+////    	out.println("Missed Bullet" + reward);
+//    }
     
-	/**
-	* @name: 		onBulletHit
-	* @purpose: 	1. Updates reward. +30 if bullet hits enemy
-	* 				2. Update the values of heading and energy of my robot 
-	* @param:		1. HItBulletEvent class from Robot
-	* @return:		n
-	*/     
-    public void onBulletHit(BulletHitEvent e){
-    	reward += 5; 
-//    	out.println("Hit Bullet" + reward);
-    }
+//	/**
+//	* @name: 		onBulletHit
+//	* @purpose: 	1. Updates reward. +30 if bullet hits enemy
+//	* 				2. Update the values of heading and energy of my robot 
+//	* @param:		1. HItBulletEvent class from Robot
+//	* @return:		n
+//	*/     
+//    public void onBulletHit(BulletHitEvent e){
+//    	reward += 5; 
+////    	out.println("Hit Bullet" + reward);
+//    }
+//    
+//    /**
+//     * @name: 		onHitWall
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+//    public void onHitWall(HitWallEvent e) {
+//    	reward = -5; 
+////    	out.println("Hit Wall" + reward);
+//    }
     
-    /**
-     * @name: 		onHitWall
-     * @purpose: 	1. Updates reward. -10
-     * 				2. Updates heading and energy levels. 
-     * @param:		1. HitWallEvent class from Robot
-     * @return:		n
-     */   
-    public void onHitWall(HitWallEvent e) {
-    	reward = -5; 
-//    	out.println("Hit Wall" + reward);
-    }
+//    /**
+//     * @name: 		onHitByBullet
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+////    public void onHitByBullet(HitByBulletEvent e) {
+////    	reward += -5;
+////    //	learningLoop();
+////    }   
     
-    /**
-     * @name: 		onHitByBullet
-     * @purpose: 	1. Updates reward. -10
-     * 				2. Updates heading and energy levels. 
-     * @param:		1. HitWallEvent class from Robot
-     * @return:		n
-     */   
-//    public void onHitByBullet(HitByBulletEvent e) {
-//    	reward += -5;
-//    //	learningLoop();
-//    }   
-    
-    /**
-     * @name: 		onHitRobot
-     * @purpose: 	1. Updates reward. -10
-     * 				2. Updates heading and energy levels. 
-     * @param:		1. HitWallEvent class from Robot
-     * @return:		n
-     */   
-//    public void onHitRobot(HitRobotEvent e) {
-//    	reward = -1;
-//    //	learningLoop();
-//    }  
-	
+//    /**
+//     * @name: 		onHitRobot
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+////    public void onHitRobot(HitRobotEvent e) {
+////    	reward = -1;
+////    //	learningLoop();
+////    }  
+//	
 	
 	
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
@@ -592,7 +607,6 @@ public class LUTTrackfire extends AdvancedRobot{
      * @return: 	none
      */
     public void generateCurrentStateVector(){
-
     	//Dimension 1: input: myPositionDiscretized = 0-4: center, left, right, top, bot
     	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					//left
     		currentStateActionVector[1] = 1;						
@@ -660,9 +674,6 @@ public class LUTTrackfire extends AdvancedRobot{
 		
 		//Dimension 6: null 
 		currentStateActionVector[6] = 0;
-		
-		
-    		
     }
  
     /**
@@ -820,7 +831,6 @@ public class LUTTrackfire extends AdvancedRobot{
         else{ 
         	currentStateActionVector[0] = actionChosenForQValMax;
         }
-        saveSAVector(); 
         //Choosing next action based on policy.
 //        valueRandom = (int)(Math.random()*(num_actions));
 //     
@@ -919,6 +929,7 @@ public class LUTTrackfire extends AdvancedRobot{
      * 				stringTest: 16400 (0x4010)
      * 				strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
      * 				WL:			16448 (0x4040)
+     * 				strSA: 		? 
      * 				
      * @param: 		1. stringname of file desired to be written. The fxn currently accepts 3(three) 
      * 				files: LUTTrackfire.dat, winlose.dat, and stringTest.dat. Any other string 
@@ -934,20 +945,22 @@ public class LUTTrackfire extends AdvancedRobot{
     		out.println("fileSettings_default: " + fileSettings_default);
     		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
     		out.println("fileSettings_LUT: " + fileSettings_LUT);
-    		out.println("fileSettings_WL: "+ fileSettings_WL);
-    		out.println("fileSettings_SAV: " + fileSettings_StateAction); 
+    		out.println("fileSettings_WL: "+ fileSettings_WL); 
     	}
     	
         try {
         	BufferedReader reader = null;
             try {
                 reader = new BufferedReader(new FileReader(getDataFile(strName)));
-                fileSettings_default = (short)Integer.parseInt(reader.readLine());
+                fileSettings_default = (short)Integer.parseInt(reader.readLine());			//reads first line of code to obtain what is in "fileSettings_default"
+                
                 if (debug_import || debug) {
             		out.println("extracted fileSettings into default: ");
             		out.println("fileSettings_default: " + fileSettings_default);
             	}
                 // CONFIGMASK_VERIFYSETTINGSAVAIL = 0x4000
+                // & is bit-wise "and" to compare every single bit of CONFIGMASK with fileSettings_default
+                // to ensure that a first line exists. 
                 if ((fileSettings_default & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
                 	if (debug_import || debug) {
                 		out.println("Import aborted (file not configured properly)");
@@ -971,6 +984,7 @@ public class LUTTrackfire extends AdvancedRobot{
                 		fileSettings_stringTest = fileSettings_default;
                 		flag_stringTestImported = true;
                 	}
+                	
                 	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
                 	//flag prevents multiple file imports (mostly for preventing export bugs)
                 	else if ( ((fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire) == CONFIGMASK_FILETYPE_LUTTrackfire)
@@ -1005,6 +1019,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	                    }
                     	} // end of configmask_zeroLUT for LUTTrackfire
                     	else {
+                    		int i = 0; 
                     		for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
     	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
     	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
@@ -1028,6 +1043,7 @@ public class LUTTrackfire extends AdvancedRobot{
                 		fileSettings_LUT = fileSettings_default;
                 		flag_LUTImported = true; //sets flag to prevent multiple instances of robot importing(and exporting) from same .dat (and causing weird interactions(?)).
                 	} // end of LUTTrackfire
+                	
                 	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
                 		if (strName != "winlose.dat") {
                 			if (debug_import || debug) {
@@ -1051,6 +1067,8 @@ public class LUTTrackfire extends AdvancedRobot{
                 	//write code for new file uses here. 
                 	//also change the string being called 
                 	//ctr+f: Import data. ->Change imported filename here<- 
+                	
+                	//file is undefined - so returns error 8
                 	else {
                 		if (debug_import || debug) {
                     		out.println("error 8:");
@@ -1074,12 +1092,14 @@ public class LUTTrackfire extends AdvancedRobot{
                 }
             }
         } 
+        //exception to catch when file is unreadable
         catch (IOException e) {
         	if (debug_import || debug) {
         		out.println("Something done fucked up (Error0x01 error in file reading)");
         	}
             return ERROR_1_import_IOException;
         } 
+        // type of exception where there is a wrong number format (type is wrong or blank)  
         catch (NumberFormatException e) {
             if (debug_import || debug) {
             	out.println("Something done fucked up (Error0x02 error in type conversion - check class throw for more details)");
@@ -1135,7 +1155,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
     	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
     	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
-    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ) ){
+    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )){
 	    	
     		PrintStream w = null;
 	        
@@ -1198,7 +1218,7 @@ public class LUTTrackfire extends AdvancedRobot{
 	                    			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
 	                    				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
 	                    					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-	                    					w.println(roboLUT[p0][p1][p2][p3][p4][p5][p6]);
+	                    						w.println(roboLUT[p0][p1][p2][p3][p4][p5][p6]);
 	                    					}
 	                    				}
 	                				}
@@ -1209,7 +1229,7 @@ public class LUTTrackfire extends AdvancedRobot{
 	                flag_LUTImported = false;
 	                
 	        	} //endof trackfire
-	            
+
 	            //winlose
 	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
 	            	if (debug_export || debug) {
@@ -1222,8 +1242,22 @@ public class LUTTrackfire extends AdvancedRobot{
 	            	}
 	        			w.println(currentBattleResult);
 	            	flag_WLImported = false;
+	            }// end winLose
+	            
+	            
+	            /* to add new files for exporting data
+	             * such as saveData
+	             */
+	                        
+	            
+	            else {
+	            	if (debug_export || debug) {
+	            		out.println("error 9");
+	            		
+	            	}
+	            	return ERROR_9_export_dump;
 	            }
-	        } 
+	        }
 	        
 	        //OC: PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
 	        catch (IOException e) {
@@ -1250,41 +1284,41 @@ public class LUTTrackfire extends AdvancedRobot{
     		return ERROR_10_export_mismatchedStringName;
     	}
     }
-
-    private void saveSAVector() {
-		PrintStream w = null;
-		try {
-			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("StateAction.dat")));
-
-			w.println(Arrays.toString(currentStateActionVector));
-//			for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-//                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-//                	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-//                		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-//                			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-//                				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-//                					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//                					w.println(roboLUT[p0][p1][p2][p3][p4][p5][p6]);
-//                					}
-//                				}
-//            				}
-//                		}
-//                	}
-//                }
-//            }
-			
-			// PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
-			if (w.checkError()) {
-				out.println("Error in saving data");
-			}
-		} catch (IOException e) {
-			out.println("IOException trying to write: ");
-			e.printStackTrace(out);
-		} finally {
-			if (w != null) {
-				w.close();
-			}
-		}
-		
+    
+    public int saveData(String strName) {
+    	PrintStream w = null;
+        try {
+            w = new PrintStream(new RobocodeFileOutputStream(getDataFile(strName)));
+//        	out.println("writing into strSA");
+        	//DEBUG
+        	if (debug_export || debug) {
+        		out.println("writing into strSA");
+        	}
+            for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
+                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
+                	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
+                		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
+                			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
+                				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
+                					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
+                					w.println("\t" + p0+p1+p2+p3+p4+p5+p6);
+                					}
+                				}
+            				}
+                		}
+                	}
+                }
+            }
+    } catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
 	}
+    finally {
+        if (w != null) {
+            w.close();
+        }
+    } 
+    return SUCCESS_exportData;
+}
+
 }
