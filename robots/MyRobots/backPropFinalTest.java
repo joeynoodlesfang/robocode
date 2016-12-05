@@ -13,7 +13,9 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /* Main Testing Class */
 public class backPropFinalTest{
@@ -36,6 +38,9 @@ public class backPropFinalTest{
 			/* Neural net state action pair*/
 			boolean flag = true; 
 			double [] outputs = new double [8641]; 
+			String [] inputsRaw = new String [8641];
+			String [] inputs1 = new String [8640];  
+			int [] inputToNN = new int [8640];
 		    /**
 			 * input data
 			 */
@@ -46,8 +51,8 @@ public class backPropFinalTest{
 		    final int enemyDistance_states = 3;					
 		    final int enemyEnergy_states = 2;
 		    // LUT table stored in memory.
-		    int [][][][][][][] input
-		        = new int
+		    String [][][][][][][] input
+		        = new String
 		        [num_actions]
 		        [myPositionDiscretized_states]
 		        [myHeadingDiscretized_states]		
@@ -67,55 +72,90 @@ public class backPropFinalTest{
 		        1}; 
 		    // Dimensions of LUT table, used for iterations.
    
-		    BufferedReader reader = null;
+		    /* read the q-values from "LUTTrackfire.dat" and read the input state-action vector from "stateAction.dat"
+		     * ***hope that it is the correct correspondence! 
+		     */
+		    BufferedReader readerLUT = null;
+		    BufferedReader readerSAV = null;
 		    try {
 		    	String dir1 = "C:/Users/Andrea/github/robocode/robots/MyRobots/LUTTrackfire.data";
-				reader = new BufferedReader(new FileReader(dir1 + "/" + "LUTTrackfire.dat"));
+		    	String dir2 = "C:/Users/Andrea/github/robocode/robots/MyRobots/LUTTrackfire.data";
+				readerLUT = new BufferedReader(new FileReader(dir1 + "/" + "LUTTrackfire.dat"));
+				readerSAV = new BufferedReader(new FileReader(dir2 + "/" + "stateAction.dat"));
 				try {
-					for (int i=0; i < 8641; i++){
-						outputs[i] = Integer.parseInt(reader.readLine()); 
+					//store each line into output block.
+					for (int i=0; i < 8640; i++){
+						outputs[i] = Integer.parseInt(readerLUT.readLine()); 
 					}
-					//store each line into output block. 
+					//store each input vector into input block.
+//					System.out.println("output " + Arrays.toString(outputs));
+					for (int i=0; i < 8640; i++){
+						inputsRaw[i] = readerSAV.readLine();
+						inputs1[i] = inputsRaw[i].replace("\t", "");				//remove the tab from the line. 
+					}
+//					System.out.println("output " + Arrays.toString(inputs1));
+					//can't convert directly to Integer because lose the leading zeros. 
+					//place each string into an array? 
+					List listA = new ArrayList();
+					for(int i = 0; i < inputs1.length; i++) {
+						int count = 0; 
+						char[] inputArray = new char [inputs1[i].length()];
+					    for (int j = 0; j < inputs1[i].length(); j++){
+					    	inputArray[j] = inputs1[i].charAt(j); 
+					    }
+					    listA.add(inputArray);
+//					    System.out.println("inputArray " + Arrays.toString(inputArray));
+//					    System.out.println("inputArray " + Arrays.toString(temparray));
+					    System.out.println("inputArray " + Arrays.deepToString(listA));
+					    
+					}
 					
-				} catch (NumberFormatException e) {
+//					for(int i = 0; i < inputs1.length; i++) {
+//						char[] inputArray = new char [inputs1[i].length()];
+//					    for (int j = 0; j < inputs1[i].length(); j++){
+//					    	inputArray[j] = inputs1[i].charAt(j); 
+//					    	System.out.println("inputArray " + (inputArray[j]));
+//					    	System.out.println(Integer.parseInt(inputArray[j]));
+//					    }
+////					    System.out.println("inputArray " + Arrays.toString(inputArray));
+//					    
+////					    inputToNN[i] = (int)(inputArray); 
+//					}
+//					
+				} 
+
+				catch (NumberFormatException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} 
+	            finally {
+	                if (readerLUT != null) {
+	                    try {
+							readerLUT.close();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+	                }
+	                if (readerSAV != null) {
+	                    try {
+							readerLUT.close();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+	                }
+	            }
+				
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		    System.out.println("output" + Arrays.toString(outputs)); 
-		    
-		    double [][] testArray = new double [3][4]; 
-		    
-		    for (int i = 0; i < 3; i++){
-		    	
-			    for (int j = 0; j < 4; j++){
-			    	testArray[i][j] = j; 
-			    }
-		    }
-		    System.out.println("testArray" + Arrays.deepToString(testArray)); 
-		    
-		    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-                	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-                		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-                			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-                				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-                					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//                						input[[0]][][][][][][] = {p0, p1, p2, p3, p4, p5,p6};
-                					}
-                				}
-                			}
-                		}
-                	}
-                }
-		    }
-                
+
+//		    System.out.println("input " + Arrays.deepToString(nnInputs));
 			/* For binary training set */						//if flag == true, then binary, if false, then bipolar
 //			double inputs[][] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}}; 	// binary inputs
 //			double outputs[]   = {0, 1, 1, 0}; 		  				// binary outputs

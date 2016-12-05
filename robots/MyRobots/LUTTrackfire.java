@@ -1301,7 +1301,7 @@ public class LUTTrackfire extends AdvancedRobot{
                 			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
                 				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
                 					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-                					w.println("\t" + p0+p1+p2+p3+p4+p5+p6);
+                						w.println("\t" + p0+p1+p2+p3+p4+p5+p6);
                 					}
                 				}
             				}
