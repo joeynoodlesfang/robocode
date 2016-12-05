@@ -70,15 +70,22 @@ public class backPropFinal implements NeuralNetInterface {
 		}	
  	}
 
-	public double[] outputForward(Object X, boolean flag, int numTrial) {
+	public double[] outputForward(String X, boolean flag, int numTrial) {
+		
 // 		System.out.println("VNow " + Arrays.deepToString(vNow));
 // 		System.out.println("wNow " + Arrays.deepToString(wNow));
-//		System.out.println("X " + (X));
+//		System.out.println("X " + X.length());
+		
+//		for (int i = 0; i < X.length(); i++){
+//			System.out.println("X " + Character.getNumericValue(X.charAt(i)));
+//		} 
+//		System.out.println("*************************");
 		for (int j = 1; j < numHidden; j++){
 			double sumIn = 0.0; 
 			//inner loop is to go through each X input
 			for (int i= 0; i < numInputs; i++){	
-				sumIn += X(i)*vNow[i][j]; 
+//				System.out.println("Xi " + Character.getNumericValue(X.charAt(i)));
+				sumIn += Character.getNumericValue(X.charAt(i))*vNow[i][j]; 
 			}
 			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
 			Z_in[0] = bias; 									//set z_in[0] = bias
@@ -92,12 +99,12 @@ public class backPropFinal implements NeuralNetInterface {
 				Z[0] = Z_in[0];
 			}
 		}
-////		System.out.println("Z " + Arrays.deepToString(Z));
-////		System.out.println("Z_in " + Arrays.toString(Z[numTrial]));
-//
-////		//Second: For each output unit from 1 to k, sums its weighted hidden signals: Y[0]*W[0][k] + Sum(Y[k]*W[j][k]) for j number of hidden units (starting at 1) 
-////		System.out.println("Output Weight " + Arrays.deepToString(w)); 
-////		System.out.println("Z " + Arrays.toString(Z));
+//		System.out.println("Z " + Arrays.deepToString(Z));
+//		System.out.println("Z_in " + Arrays.toString(Z[numTrial]));
+
+//		//Second: For each output unit from 1 to k, sums its weighted hidden signals: Y[0]*W[0][k] + Sum(Y[k]*W[j][k]) for j number of hidden units (starting at 1) 
+//		System.out.println("Output Weight " + Arrays.deepToString(w)); 
+//		System.out.println("Z " + Arrays.toString(Z));
 		for (int k = 0; k < numOutput; k++){
 			double sumOut = 0.0; 
 //			//inner loop is to go through each X input
@@ -118,7 +125,7 @@ public class backPropFinal implements NeuralNetInterface {
 	return Y; 
 	}
 
-	public double train(Object X, double Yreal, double[] Ycalc, boolean flag, int numTrial) {
+	public double train(String X, double Yreal, double[] Ycalc, boolean flag, int numTrial) {
 //		System.out.println("z_in " + Arrays.toString(Z_in));
 //		System.out.println("Y_in " + Arrays.toString(Y_in));	
 		for (int k = 0; k < numOutput; k++){
@@ -158,7 +165,7 @@ public class backPropFinal implements NeuralNetInterface {
 			for (int i = 0; i< numInputs; i++){
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
 //				System.out.println("vNow[i][j] " + vNow[i][j]);
-				deltaV[i][j] = alpha*delta_hidden[j]*X.get(i);
+				deltaV[i][j] = alpha*delta_hidden[j]*Character.getNumericValue(X.charAt(i));
 				vNext[i][j]  = vNow[i][j] + deltaV[i][j] + mom*(vNow[i][j] - vPast[i][j]); 
 				vPast[i][j] = vNow[i][j]; 
 				vNow[i][j] = vNext[i][j]; 
@@ -226,5 +233,5 @@ public class backPropFinal implements NeuralNetInterface {
  		double bipDeriv = 0.5*(1 + bipFunc)*(1 - bipFunc);  
  		return bipDeriv;
  	}
- 	
+
 }

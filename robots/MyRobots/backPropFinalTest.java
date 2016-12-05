@@ -16,6 +16,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /* Main Testing Class */
 public class backPropFinalTest{
@@ -106,6 +107,7 @@ public class backPropFinalTest{
 					    	inputArray[j] = inputs1[i].charAt(j); 
 					    }
 					    inputToNN.add((String)Arrays.toString(inputArray));  
+					    
 					}
 				}
 				
@@ -153,21 +155,28 @@ public class backPropFinalTest{
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			}
+			//reformat the input as a string without '[], or space'
+			String [] inputNNRe  = new String [inputToNN.size()];
+			for (int i = 0; i < inputToNN.size(); i++){
+				inputNNRe[i] = ((String) inputToNN.get(i)).replaceAll("\\D+","");
+			}
+//			System.out.println("input " + Arrays.deepToString(inputNNRe));
 			/* Start epochs */  
 			int numEpoch = 0; 
-			System.out.println( "Whole list=" +  inputToNN.get(13));
-//			System.out.println(Integer.parseInt(inputToNN.get(13)));
 //			double inputs[][] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}}; 	// binary inputs
 //			double outputs[]   = {0, 1, 1, 0}; 		  				// binary outputs
 			while (stopError == false){ 
 				double totalError = 0.0;
 				for (int i = 0; i < (numTrials-1); i++){
 					//Call function for forward propagation
-//					double[] Ycalc = myNeuralNet.outputForward(inputToNN.get(i), flag, i);
+//					System.out.println("input " + (inputNNRe[i]));
+					double[] Ycalc = myNeuralNet.outputForward(inputNNRe[i], flag, i);
+					System.out.println("YCalc " + Arrays.toString(Ycalc));
 					//Call function for backward propagation
-//					double error = myNeuralNet.train(inputToNN.get(i), outputs[i], Ycalc, flag, i);	
-//					totalError += error; 
+					double error = myNeuralNet.train(inputNNRe[i], outputs[i], Ycalc, flag, i);	
+					totalError += error; 
 				}
+//				System.out.println("totalError " + totalError);
 				if (numEpoch > maxEpoch){
 					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
 					stopError = true;
