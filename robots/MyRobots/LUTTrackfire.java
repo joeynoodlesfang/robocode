@@ -768,6 +768,7 @@ public class LUTTrackfire extends AdvancedRobot{
         if (debug) {
         	System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
         }
+//        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
     }
     
     /**
@@ -893,10 +894,10 @@ public class LUTTrackfire extends AdvancedRobot{
     	}
     	scan();
     	execute();
-     
-//      if (debug_doAction || debug) {
-//    	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
-//      }
+//    	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));     
+      if (debug_doAction || debug) {
+    	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
+      }
     }
     
 	/**

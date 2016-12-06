@@ -26,19 +26,13 @@ public class backPropFinalTest{
 		    /*
 			 * input data
 			 */
-			final int num_actions = 24; 
-		    final int myPositionDiscretized_states = 5;
-		    final int myHeadingDiscretized_states = 4;
-		    final int enemyDirection_states = 3; 							
-		    final int enemyDistance_states = 3;					
-		    final int enemyEnergy_states = 2;
-		    
 			/*Initiate variables */
 			int numOutput = 1; 			//number of outputs per training set. 
-			int numInputs = 6; 			//number of inputs for training set
+			int numInputs = 7; 			//number of inputs for training set
 			int numHidden = 5;			//number of hidden inputs
-			int numTrials = 8641; 			//number of trials in the training set
-			double lRate = 0.2; 			//learning rate
+			int numTrials = 3; 
+//			int numTrials = 8641; 			//number of trials in the training set
+			double lRate = 0.02; 			//learning rate
 //			double errorThreshold = 0.05;	//error threshold
 			double momentum = 0.0;  	//value of momentum 
 			boolean stopError = false; 	//if flag == false, then stop loop, else continue 
@@ -51,32 +45,9 @@ public class backPropFinalTest{
 			double [] outputs = new double [8641]; 
 			String [] inputsRaw = new String [8641];
 			String [] inputs1 = new String [8640];  
-			ArrayList inputToNN = new ArrayList();
+			ArrayList<String> inputToNN = new ArrayList<String>();
 			
-		    // LUT table stored in memory.
-		    String [][][][][][][] input
-		        = new String
-		        [num_actions]
-		        [myPositionDiscretized_states]
-		        [myHeadingDiscretized_states]		
-		        [enemyEnergy_states]
-		        [enemyDistance_states]
-		        [enemyDirection_states]
-		        [1];
-		    
-		    // Dimensions of LUT table, used for iterations.
-		    int[] roboLUTDimensions = {
-		        num_actions, 
-		        myPositionDiscretized_states,
-		        myHeadingDiscretized_states,
-		        enemyEnergy_states,
-		        enemyDistance_states,
-		        enemyDirection_states,
-		        1}; 
-		    // Dimensions of LUT table, used for iterations.
-   
 		    /* read the q-values from "LUTTrackfire.dat" and read the input state-action vector from "stateAction.dat"
-		     * ***hope that it is the correct correspondence! 
 		     */
 		    BufferedReader readerLUT = null;
 		    BufferedReader readerSAV = null;
@@ -85,13 +56,18 @@ public class backPropFinalTest{
 		    	String dir2 = "C:/Users/Andrea/github/robocode/robots/MyRobots/LUTTrackfire.data";
 				readerLUT = new BufferedReader(new FileReader(dir1 + "/" + "LUTTrackfire.dat"));
 				readerSAV = new BufferedReader(new FileReader(dir2 + "/" + "stateAction.dat"));
+
 				try {
-					//store each line into output block.
-					for (int i=0; i < 8640; i++){
-						outputs[i] = Integer.parseInt(readerLUT.readLine()); 
-					}
+					//store each line into output block, skipping the first line, which was the counter. 
+					 readerLUT.readLine(); // this will read the first line
+					 String line1=null;
+					 int countI = 0; 
+					 while ( ( (line1 = readerLUT.readLine()) != null) && (countI < 8640) ) { //loop will run from 2nd line
+						 outputs[countI] = Integer.parseInt(line1);
+						 countI +=1; 
+					 }
+//					System.out.println("output " + Arrays.toString(outputs));					 
 					//store each input vector into input block.
-//					System.out.println("output " + Arrays.toString(outputs));
 					for (int i=0; i < 8640; i++){
 						inputsRaw[i] = readerSAV.readLine();
 						inputs1[i] = inputsRaw[i].replace("\t", "");				//remove the tab from the line. 
@@ -99,15 +75,12 @@ public class backPropFinalTest{
 //					System.out.println("output " + Arrays.toString(inputs1));
 					//can't convert directly to Integer because lose the leading zeros. 
 					//place each string into an array? 
-					
 					for(int i = 0; i < inputs1.length; i++) {
-						int count = 0; 
 						char[] inputArray = new char [inputs1[i].length()];
 					    for (int j = 0; j < inputs1[i].length(); j++){
 					    	inputArray[j] = inputs1[i].charAt(j); 
 					    }
 					    inputToNN.add((String)Arrays.toString(inputArray));  
-					    
 					}
 				}
 				
@@ -160,23 +133,28 @@ public class backPropFinalTest{
 			for (int i = 0; i < inputToNN.size(); i++){
 				inputNNRe[i] = ((String) inputToNN.get(i)).replaceAll("\\D+","");
 			}
-//			System.out.println("input " + Arrays.deepToString(inputNNRe));
+			System.out.println("input " + Arrays.deepToString(inputNNRe));
+			
 			/* Start epochs */  
 			int numEpoch = 0; 
-//			double inputs[][] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}}; 	// binary inputs
-//			double outputs[]   = {0, 1, 1, 0}; 		  				// binary outputs
+			maxEpoch = 3; 
+////			double inputs[][] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}}; 	// binary inputs
+////			double outputs[]   = {0, 1, 1, 0}; 		  				// binary outputs
 			while (stopError == false){ 
 				double totalError = 0.0;
 				for (int i = 0; i < (numTrials-1); i++){
 					//Call function for forward propagation
 //					System.out.println("input " + (inputNNRe[i]));
 					double[] Ycalc = myNeuralNet.outputForward(inputNNRe[i], flag, i);
-					System.out.println("YCalc " + Arrays.toString(Ycalc));
-					//Call function for backward propagation
-					double error = myNeuralNet.train(inputNNRe[i], outputs[i], Ycalc, flag, i);	
-					totalError += error; 
+//					System.out.println("YCalc " + Arrays.toString(Ycalc));
+//					//Call function for backward propagation
+//					System.out.println("outputs[i] " + outputs[i]);
+//					System.out.println("YCalc " + inputNNRe[i]);
+//					double error = myNeuralNet.train(inputNNRe[i], outputs[i], Ycalc, flag, i);	
+//					
+//					totalError += error; 
 				}
-//				System.out.println("totalError " + totalError);
+////				System.out.println("totalError " + totalError);
 				if (numEpoch > maxEpoch){
 					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
 					stopError = true;
