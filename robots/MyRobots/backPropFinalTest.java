@@ -28,10 +28,9 @@ public class backPropFinalTest{
 			 */
 			/*Initiate variables */
 			int numOutput = 1; 			//number of outputs per training set. 
-			int numInputs = 7; 			//number of inputs for training set
+			int numInputs = 11; 		//number of inputs for training set (each action takes one but thermometer code so 5 digits/action). 
 			int numHidden = 5;			//number of hidden inputs
-			int numTrials = 3; 
-//			int numTrials = 8641; 			//number of trials in the training set
+			int numTrials = 8641; 		//number of trials in the training set	
 			double lRate = 0.02; 			//learning rate
 //			double errorThreshold = 0.05;	//error threshold
 			double momentum = 0.0;  	//value of momentum 
@@ -41,7 +40,7 @@ public class backPropFinalTest{
 			double lowerThres = -0.5;	//lower threshold for random weights
 			
 			/* Neural net state action pair*/
-			boolean flag = true; 
+			boolean flag = false; 
 			double [] outputs = new double [8641]; 
 			String [] inputsRaw = new String [8641];
 			String [] inputs1 = new String [8640];  
@@ -130,38 +129,91 @@ public class backPropFinalTest{
 			}
 			//reformat the input as a string without '[], or space'
 			String [] inputNNRe  = new String [inputToNN.size()];
+			Integer [] inputAsInteger = new Integer[inputToNN.size()];
+			Integer [] firstDigits = new Integer[inputToNN.size()];
+			Integer [] asBinary  = new Integer[inputToNN.size()]; 
+			String [] asString = new String[inputToNN.size()];
+			String [] updatedInputs = new String[inputToNN.size()];
+			Integer [] updatedAsInt = new Integer[inputToNN.size()];
 			for (int i = 0; i < inputToNN.size(); i++){
 				inputNNRe[i] = ((String) inputToNN.get(i)).replaceAll("\\D+","");
-			}
-			System.out.println("input " + Arrays.deepToString(inputNNRe));
-			
-			/* Start epochs */  
-			int numEpoch = 0; 
-			maxEpoch = 3; 
-////			double inputs[][] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}}; 	// binary inputs
-////			double outputs[]   = {0, 1, 1, 0}; 		  				// binary outputs
-			while (stopError == false){ 
-				double totalError = 0.0;
-				for (int i = 0; i < (numTrials-1); i++){
-					//Call function for forward propagation
-//					System.out.println("input " + (inputNNRe[i]));
-					double[] Ycalc = myNeuralNet.outputForward(inputNNRe[i], flag, i);
-//					System.out.println("YCalc " + Arrays.toString(Ycalc));
-//					//Call function for backward propagation
-//					System.out.println("outputs[i] " + outputs[i]);
-//					System.out.println("YCalc " + inputNNRe[i]);
-//					double error = myNeuralNet.train(inputNNRe[i], outputs[i], Ycalc, flag, i);	
-//					
-//					totalError += error; 
+				inputAsInteger[i] = Integer.parseInt(inputNNRe[i]);
+				if (inputNNRe[i].length() == 7){
+					firstDigits[i] = Integer.parseInt(inputNNRe[i].substring(0, 1));
 				}
+				else if (inputNNRe[i].length() == 8){
+					firstDigits[i] = Integer.parseInt(inputNNRe[i].substring(0, 2));
+				}
+			}
+			
+			//for the dimensionality reduction of the states instead of 0-24, goes 00000 --> 11000
+			for (int i = 0; i < inputToNN.size(); i++){
+				asBinary[i] = Integer.parseInt(Integer.toBinaryString(firstDigits[i])); 
+				asString[i] = asBinary[i].toString();
+				if (inputNNRe[i].length() == 7){
+					updatedInputs[i] = asString[i]+inputNNRe[i].substring(1);
+				}
+				else if (inputNNRe[i].length() == 8){
+					updatedInputs[i] = asString[i]+inputNNRe[i].substring(2);
+				}
+				
+			}
+			//not all the inputs are sized 11. 
+			System.out.println("input " + Arrays.toString(updatedInputs));
+			for (int i = 0; i < (updatedInputs.length); i++){
+				if (updatedInputs[i].length() < 11){
+					//add a zero to the beginning until string is length 11. 
+					int getLength = updatedInputs[i].length(); 
+					if (getLength == 7){
+						updatedInputs[i] = "0000"+updatedInputs[i].substring(0);
+//						System.out.println("updatedInputs" + updatedInputs[i]); 
+					}
+					else if (getLength == 8){
+						updatedInputs[i] = "000"+updatedInputs[i].substring(0);
+//						System.out.println("updatedInputs" + updatedInputs[i]); 
+					}
+					else if (getLength == 9){
+						updatedInputs[i] = "00"+updatedInputs[i].substring(0);
+//						System.out.println("updatedInputs" + updatedInputs[i]); 
+					}
+					else if (getLength == 10){
+						updatedInputs[i] = "0"+updatedInputs[i].substring(0);
+//						System.out.println("updatedInputs" + updatedInputs[i]); 
+					}
+				}
+//				System.out.println("updatedInputs " + updatedInputs[i]); 	
+			}
+			/* Start epochs */  
+//			int numEpoch = 0; 
+//			maxEpoch = 3; 
+//////			double inputs[][] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}}; 	// binary inputs
+//////			double outputs[]   = {0, 1, 1, 0}; 		  				// binary outputs
+//			while (stopError == false){ 
+//				double totalError = 0.0;
+////				numTrials = 4; 		//for testing
+//				for (int i = 0; i < (numTrials-1); i++){
+//					//Call function for forward propagation
+////					System.out.println("input " + (updatedInputs[i]));
+////					System.out.println("output " + (outputs[i]));
+//					//should we eliminate the outputs that give only zero value? 
+//					double[] Ycalc = myNeuralNet.outputForward(updatedInputs[i], flag, i);
+////					System.out.println("YCalc " + Arrays.toString(Ycalc));
+////					//Call function for backward propagation
+////					System.out.println("outputs[i] " + outputs[i]);
+////					System.out.println("YCalc " + inputNNRe[i]);
+//					double error = myNeuralNet.train(updatedInputs[i], outputs[i], Ycalc, flag, i);	
+//					System.out.println("error " + error); 
+//					totalError += error; 
+//				}
 ////				System.out.println("totalError " + totalError);
-				if (numEpoch > maxEpoch){
-					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
-					stopError = true;
-				}				
-				myNeuralNet.save (totalError, numEpoch, saveFile, stopError);
-				numEpoch +=1;
-			}			
+//				if (numEpoch > maxEpoch){
+//					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
+//					stopError = true;
+//				}		
+//				System.out.println("error " + totalError);
+//				myNeuralNet.save (totalError, numEpoch, saveFile, stopError);
+//				numEpoch +=1;
+//			}			
 		}
 	}
 		

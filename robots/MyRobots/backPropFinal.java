@@ -34,7 +34,7 @@ public class backPropFinal implements NeuralNetInterface {
 	}
 	// define variables 
 	int numOutput = 1; 			//number of outputs per training set. 
-	int numInputs = 7; 			//number of inputs for training set
+	int numInputs = 11; 			//number of inputs for training set
 	int numHidden = 5;			//number of hidden inputs
 	
 	// initialize arrays 
@@ -74,20 +74,16 @@ public class backPropFinal implements NeuralNetInterface {
 		
 // 		System.out.println("VNow " + Arrays.deepToString(vNow));
 // 		System.out.println("wNow " + Arrays.deepToString(wNow));
-		System.out.println("************************* " + numTrial + " ************************* ");
+//		System.out.println("X " + X);
+//		System.out.println(X.getClass().getName());
+		
+//		System.out.println("************************* " + numTrial + " ************************* ");
 		for (int j = 1; j < numHidden; j++){
 			double sumIn = 0.0; 
 			//inner loop is to go through each X input
-			System.out.println("numInputs " + numInputs);
 			for (int i= 0; i < numInputs; i++){	
-				//make a note of the first index - must take up two inputs? 
-				if (i > 2){
-					System.out.println("Xi " + Character.getNumericValue(X.charAt(i)+ X.charAt(i+1)));
-					
-//					sumIn += Character.getNumericValue(X.charAt(i))*vNow[i][j];
-				}
 //				System.out.println("Xi " + Character.getNumericValue(X.charAt(i)));
-//				sumIn += Character.getNumericValue(X.charAt(i))*vNow[i][j]; 
+				sumIn += Character.getNumericValue(X.charAt(i))*vNow[i][j]; 
 			}
 			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
 			Z_in[0] = bias; 									//set z_in[0] = bias
@@ -185,10 +181,10 @@ public class backPropFinal implements NeuralNetInterface {
 		return error;
 	}
 
-	@Override
-	public void save(double error, int numTrial, PrintStream saveFile, boolean flag) {
-		// TODO Auto-generated method stub
-		
+	public void save (double totalError, int epochNum, PrintStream saveFile, boolean lastOne) {
+		saveFile.println("Epoch\t " + epochNum + "\tError\t " + totalError);
+		if (lastOne == true)
+			saveFile.close();		
 	}
 
 	@Override
