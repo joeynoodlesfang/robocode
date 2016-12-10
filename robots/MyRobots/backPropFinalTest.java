@@ -124,7 +124,7 @@ public class backPropFinalTest{
 			PrintStream saveFile2 = null; 
 			try {
 				saveFile1 = new PrintStream( new FileOutputStream(robotFile));
-				saveFile2 = new PrintStream( new FileOutputStream(robotFile));
+				saveFile2 = new PrintStream( new FileOutputStream(NNFile));
 				
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
@@ -185,8 +185,10 @@ public class backPropFinalTest{
 				}
 //				System.out.println("updatedInputs " + updatedInputs[i]); 	
 			}
-			
-//			updatedValues.save (totalError, numEpoch, saveFile, stopError);
+			for (int i = 0; i < (updatedInputs.length); i++){
+				saveFile2.println("updatedValues\t " + updatedInputs[i]);
+			}
+			saveFile2.close();	
 			
 			/* Start epochs */  
 			int numEpoch = 0; 
@@ -207,7 +209,7 @@ public class backPropFinalTest{
 //					System.out.println("outputs[i] " + outputs[i]);
 //					System.out.println("YCalc " + inputNNRe[i]);
 					double error = myNeuralNet.train(updatedInputs[i], outputs[i], Ycalc, flag, i);	
-					System.out.println("error " + error); 
+//					System.out.println("error " + error); 
 					totalError += error; 
 				}
 //				System.out.println("totalError " + totalError);
@@ -215,7 +217,7 @@ public class backPropFinalTest{
 					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
 					stopError = true;
 				}		
-				System.out.println("error " + totalError);
+//				System.out.println("error " + totalError);
 				myNeuralNet.save (totalError, numEpoch, saveFile1, stopError);
 				numEpoch +=1;
 			}			
