@@ -119,10 +119,12 @@ public class backPropFinalTest{
 			
 			/* save data into files */
 			File robotFile = new File ("robotFile.txt");
-
-			PrintStream saveFile = null;
+			File NNFile = new File ("savingInputs.txt"); 
+			PrintStream saveFile1 = null;
+			PrintStream saveFile2 = null; 
 			try {
-				saveFile = new PrintStream( new FileOutputStream(robotFile));
+				saveFile1 = new PrintStream( new FileOutputStream(robotFile));
+				saveFile2 = new PrintStream( new FileOutputStream(robotFile));
 				
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
@@ -183,37 +185,40 @@ public class backPropFinalTest{
 				}
 //				System.out.println("updatedInputs " + updatedInputs[i]); 	
 			}
+			
+//			updatedValues.save (totalError, numEpoch, saveFile, stopError);
+			
 			/* Start epochs */  
-//			int numEpoch = 0; 
-//			maxEpoch = 3; 
-//////			double inputs[][] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}}; 	// binary inputs
-//////			double outputs[]   = {0, 1, 1, 0}; 		  				// binary outputs
-//			while (stopError == false){ 
-//				double totalError = 0.0;
-////				numTrials = 4; 		//for testing
-//				for (int i = 0; i < (numTrials-1); i++){
-//					//Call function for forward propagation
-////					System.out.println("input " + (updatedInputs[i]));
-////					System.out.println("output " + (outputs[i]));
-//					//should we eliminate the outputs that give only zero value? 
-//					double[] Ycalc = myNeuralNet.outputForward(updatedInputs[i], flag, i);
-////					System.out.println("YCalc " + Arrays.toString(Ycalc));
-////					//Call function for backward propagation
-////					System.out.println("outputs[i] " + outputs[i]);
-////					System.out.println("YCalc " + inputNNRe[i]);
-//					double error = myNeuralNet.train(updatedInputs[i], outputs[i], Ycalc, flag, i);	
-//					System.out.println("error " + error); 
-//					totalError += error; 
-//				}
-////				System.out.println("totalError " + totalError);
-//				if (numEpoch > maxEpoch){
-//					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
-//					stopError = true;
-//				}		
-//				System.out.println("error " + totalError);
-//				myNeuralNet.save (totalError, numEpoch, saveFile, stopError);
-//				numEpoch +=1;
-//			}			
+			int numEpoch = 0; 
+			maxEpoch = 100; 
+////			double inputs[][] = {{1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}}; 	// binary inputs
+////			double outputs[]   = {0, 1, 1, 0}; 		  				// binary outputs
+			while (stopError == false){ 
+				double totalError = 0.0;
+//				numTrials = 4; 		//for testing
+				for (int i = 0; i < (numTrials-1); i++){
+					//Call function for forward propagation
+//					System.out.println("input " + (updatedInputs[i]));
+//					System.out.println("output " + (outputs[i]));
+					//should we eliminate the outputs that give only zero value? 
+					double[] Ycalc = myNeuralNet.outputForward(updatedInputs[i], flag, i);
+//					System.out.println("YCalc " + Arrays.toString(Ycalc));
+//					//Call function for backward propagation
+//					System.out.println("outputs[i] " + outputs[i]);
+//					System.out.println("YCalc " + inputNNRe[i]);
+					double error = myNeuralNet.train(updatedInputs[i], outputs[i], Ycalc, flag, i);	
+					System.out.println("error " + error); 
+					totalError += error; 
+				}
+//				System.out.println("totalError " + totalError);
+				if (numEpoch > maxEpoch){
+					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
+					stopError = true;
+				}		
+				System.out.println("error " + totalError);
+				myNeuralNet.save (totalError, numEpoch, saveFile1, stopError);
+				numEpoch +=1;
+			}			
 		}
 	}
 		
