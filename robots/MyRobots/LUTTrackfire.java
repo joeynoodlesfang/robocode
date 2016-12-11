@@ -566,8 +566,8 @@ public class LUTTrackfire extends AdvancedRobot{
         	copyCurrentSAVIntoPrevSAV();
         	generateCurrentStateVector();
         	qFunction(); 
+        	resetReward();
         	doAction(); 
-        	resetReward(); //can try divide by 2 instead of = 0.
     	}
     }
 
@@ -843,6 +843,19 @@ public class LUTTrackfire extends AdvancedRobot{
 //        }
     }
     
+	/**
+     * @name:		resetReward
+     * @purpose: 	Resets reward to 0.
+     * @param: 		n, but uses:
+     * 				1. reward
+     * @return:		n
+     */
+    public void resetReward(){
+        
+        reward = 0;
+        
+    }
+    
     /**
      * @name:		doAction
      * @purpose: 	Converts state Action vector into action by reading currentSAV[0]
@@ -900,18 +913,6 @@ public class LUTTrackfire extends AdvancedRobot{
       }
     }
     
-	/**
-     * @name:		resetReward
-     * @purpose: 	Resets reward to 0.
-     * @param: 		n, but uses:
-     * 				1. reward
-     * @return:		n
-     */
-    public void resetReward(){
-        
-        reward = 0;
-        
-    }
 
 
 
