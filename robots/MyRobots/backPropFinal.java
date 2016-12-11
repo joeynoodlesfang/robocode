@@ -2,6 +2,7 @@ package MyRobots;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -30,7 +31,8 @@ public class backPropFinal implements NeuralNetInterface {
 	{
 		// define variables 
 		this.mom = momentum; 
-		this.alpha = lRate;	
+		this.alpha = lRate;
+
 	}
 	// define variables 
 	int numOutput = 1; 			//number of outputs per training set. 
@@ -124,6 +126,7 @@ public class backPropFinal implements NeuralNetInterface {
 	}
 
 	public double train(String X, double Yreal, double[] Ycalc, boolean flag, int numTrial) {
+
 //		System.out.println("z_in " + Arrays.toString(Z_in));
 //		System.out.println("Y_in " + Arrays.toString(Y_in));	
 		for (int k = 0; k < numOutput; k++){
@@ -172,12 +175,14 @@ public class backPropFinal implements NeuralNetInterface {
 //				System.out.println("vNext[i][j] " + vNext[i][j]);
 			}
 		}
+
 //		//Step 9 - Calculate local error. 
 		double error = 0.0;
 		for (int k = 0; k < numOutput; k++){ 
-			error = 0.5*(java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
+//			error = (Yreal - Ycalc[k]); 
+			error = (java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
+//			error = 0.5*(java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
 		}
-//		System.out.println("error " + error);
 		return error;
 	}
 
