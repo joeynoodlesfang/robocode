@@ -15,7 +15,7 @@ import java.util.Random;
  * @purpose: Implement the backpropagation class using the NeuralNetInterface (trial 3) 
  */
 
-public class backPropFinal implements NeuralNetInterface {
+public class backPropFinal implements NeuralNetInterface{
 	
 	/**
 	 * Constructor.
@@ -25,26 +25,21 @@ public class backPropFinal implements NeuralNetInterface {
 	 * @param argMomentumTerm The momentum coefficient
 	 */
 	// define variables 
-	int numOutput = 0; 			//number of outputs per training set. 
-	int numInputs = 0; 			//number of inputs for training set
-	int numHidden = 0;			//number of hidden inputs
+	int numOutput = 1; 			//number of outputs per training set. 
+	int numInputs = 9; 			//number of inputs for training set
+	int numHidden = 5;			//number of hidden inputs
 	double mom = 0.0; 
 	double alpha = 0.0; 
 	double maxQ = 0.0; 
 	double minQ = 0.0; 
 	
-	public backPropFinal (int numIn, int numHid, double lRate, double momentum, double qMax, double qMin, int numInputs, int numHidden, int numOutput)
+	public backPropFinal (int numIn, int numHid, double lRate, double momentum, double qMax, double qMin)
 	{
 		// define variables 
 		this.mom = momentum; 
 		this.alpha = lRate;
 		this.maxQ = qMax; 
 		this.minQ = qMin; 
-		this.numInputs = numInputs; 
-		this.numHidden = numHidden; 
-		this.numOutput = numOutput; 
-		System.out.println("numIn" + numInputs); 
-		System.out.println("numIn" + alpha); 
 	}
 
 
@@ -64,12 +59,16 @@ public class backPropFinal implements NeuralNetInterface {
 	double [] delta_out = new double[numOutput];
 	double [] delta_hidden = new double[numHidden];
 	
+	
  	public void initializeWeights(double upperThres, double lowerThres) { 	
  		//initialize hidden weights
+// 		System.out.println("VArray " + Arrays.toString(vNow)); 
  		for (int i=0; i < numInputs; i++){	
 			for (int j=1; j < numHidden; j++){
+//				System.out.println("Vnow " + vNow[i][j]);
 				double result = Math.random() *(upperThres - lowerThres) + lowerThres;
 				vNow[i][j] = result;
+				
 			}
 		}
 		// initialize output weights
@@ -100,11 +99,11 @@ public class backPropFinal implements NeuralNetInterface {
 			Z_in[0] = bias; 									//set z_in[0] = bias
 			//apply activation function for output signal. 
 			if (flag == true){
-				Z[j] = binaryActivation(Z_in[j], maxQ, minQ); 
+				Z[j] = binaryActivation(Z_in[j]); 
 				Z[0] = Z_in[0];
 			}
 			else{
-				Z[j] = bipolarActivation(Z_in[j], maxQ, minQ); 
+				Z[j] = bipolarActivation(Z_in[j]); 
 				Z[0] = Z_in[0];
 			}
 		}
@@ -122,11 +121,11 @@ public class backPropFinal implements NeuralNetInterface {
 			}
 			Y_in[k] = sumOut; 	
 //			//apply activation function for output signal. 
-			Y[k] =  customActivation(Y_in[k],maxQ, minQ);
-//			if (flag == true)
-//				Y[k] = binaryActivation(Y_in[k],maxQ, minQ); 
-//			else
-//				Y[k] = bipolarActivation(Y_in[k],maxQ, minQ);				
+//			Y[k] =  customActivation(Y_in[k],maxQ, minQ);
+			if (flag == true)
+				Y[k] = binaryActivation(Y_in[k]); 
+			else
+				Y[k] = bipolarActivation(Y_in[k]);				
 		}		
 //	System.out.println("Hidden Neuron Values " + Arrays.toString(Z));
 //	System.out.println("final Y " + Arrays.toString(Y));	
@@ -140,13 +139,13 @@ public class backPropFinal implements NeuralNetInterface {
 //		System.out.println("z_in " + Arrays.toString(Z_in));
 //		System.out.println("Y_in " + Arrays.toString(Y_in));	
 		for (int k = 0; k < numOutput; k++){
-			Y[k] =  customActivationDerivation(Y_in[k],maxQ, minQ);
-//			if (flag == true){
-//				delta_out[k] = (Yreal - Ycalc[k])*binaryDerivative(Y_in[k]); 
-//			}
-//			else{
-//				delta_out[k] = (Yreal - Ycalc[k])*bipolarDerivative(Y_in[k]);	
-//			}
+//			delta_out[k]  =  (Yreal - Ycalc[k])*customActivationDerivation(Y_in[k],maxQ, minQ);
+			if (flag == true){
+				delta_out[k] = (Yreal - Ycalc[k])*binaryDerivative(Y_in[k]); 
+			}
+			else{
+				delta_out[k] = (Yreal - Ycalc[k])*bipolarDerivative(Y_in[k]);	
+			}
 //			System.out.println("\n");
 //			System.out.println("delta " + delta_out[k]);
 			for (int j = 0; j < numHidden; j++){
@@ -168,7 +167,7 @@ public class backPropFinal implements NeuralNetInterface {
 			for (int k = 0;  k < numOutput; k++){
 				sumDeltaInputs += delta_out[k]*wNow[j][k];
 				if (flag == true){
-					 delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j],maxQ); 
+					 delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
 				}
 				else{
 					delta_hidden[j] = sumDeltaInputs*bipolarDerivative(Z_in[j]);	
@@ -186,8 +185,7 @@ public class backPropFinal implements NeuralNetInterface {
 //				System.out.println("vNext[i][j] " + vNext[i][j]);
 			}
 		}
-
-//		//Step 9 - Calculate local error. 
+		//Step 9 - Calculate local error. 
 		double error = 0.0;
 		for (int k = 0; k < numOutput; k++){ 
 			error = (java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
@@ -201,20 +199,31 @@ public class backPropFinal implements NeuralNetInterface {
 		if (lastOne == true)
 			saveFile.close();		
 	}
-
-	@Override
-	public void load(String argFileName) throws IOException {
-		// TODO Auto-generated method stub
-		
-	}
 	
 	/*Function name: binaryActivation 
  	 * @param: current hidden value "z"
  	 * @return: new value evaluated at the f(x) = 1/(1 + Math.exp(-x)); 
  	*/ 
- 	public double binaryActivation(double x, double sigma) {
+	
+	public double customActivation(double x, double maxQ, double minQ){
+		double activationGamma = maxQ-minQ; 
+		double dell = -minQ; 
+		double fX = 1/(1 + Math.exp(-x));
+		double gX = activationGamma*fX - dell; 
+		return gX; 
+	}
+	
+	public double customActivationDerivation(double x, double maxQ, double minQ){
+		double activationGamma = maxQ-minQ; 
+		double dell = -minQ; 
+		double gX = customActivation(x, maxQ, minQ);
+		double newVal = (1/activationGamma)*(dell + gX)*(activationGamma - dell - gX);
+		return newVal;  
+	}
+	
+ 	public double binaryActivation(double x) {
 // 		System.out.println("BINARY ");
- 		double newVal = 1/(1 + Math.exp(-sigma*x)); 
+ 		double newVal = 1/(1 + Math.exp(-x)); 
 // 		System.out.println("binary " + newVal );
  		return newVal;
  	}
@@ -223,8 +232,8 @@ public class backPropFinal implements NeuralNetInterface {
  	 * @param: current hidden value "z"
  	 * @return: new value evaluated at the f(x) = (2/(1 + e(-x))) - 1 
  	*/ 	
- 	public double bipolarActivation(double x,double sigma) {
- 		double newVal = (2/(1 + Math.exp(-sigma*x)))-1; 
+ 	public double bipolarActivation(double x) {
+ 		double newVal = (2/(1 + Math.exp(-x)))-1; 
  		return newVal; 
  	}
  	/* Function name: binaryDerivative
@@ -232,9 +241,9 @@ public class backPropFinal implements NeuralNetInterface {
  	 * @return: derivative of value. 
  	 * 
  	 */
- 	public double binaryDerivative(double x,double sigma) {
- 		double binFunc = binaryActivation(x,sigma);
- 		double binDeriv = sigma*binFunc*(1 - binFunc); 
+ 	public double binaryDerivative(double x) {
+ 		double binFunc = binaryActivation(x);
+ 		double binDeriv = binFunc*(1 - binFunc); 
  		return binDeriv;
  	}
  	/* Function name: bipolarDerivative
@@ -242,10 +251,11 @@ public class backPropFinal implements NeuralNetInterface {
  	 * @return: derivative of value: f'(x) =  0.5*(1 + f(x))*(1 - f(x));
  	 * 
  	 */
- 	public double bipolarDerivative(double x,double sigma) {
- 		double bipFunc = bipolarActivation(x,sigma);
- 		double bipDeriv = sigma*0.5*(1 + bipFunc)*(1 - bipFunc);  
+ 	public double bipolarDerivative(double x) {
+ 		double bipFunc = bipolarActivation(x);
+ 		double bipDeriv = 0.5*(1 + bipFunc)*(1 - bipFunc);  
  		return bipDeriv;
  	}
+
 
 }

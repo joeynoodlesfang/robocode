@@ -115,6 +115,7 @@ import robocode.BattleEndedEvent;
 import robocode.BulletHitEvent;
 import robocode.BulletMissedEvent;
 import robocode.DeathEvent;
+import robocode.HitByBulletEvent;
 import robocode.HitWallEvent;
 import robocode.RobocodeFileOutputStream;
 import robocode.ScannedRobotEvent;
@@ -141,7 +142,7 @@ public class LUTTrackfire extends AdvancedRobot{
 	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
     private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
     private static final double gamma = 0.5;                //importance of future rewards
-    private static final double epsilon = 0.1; 				//degree of exploration 
+    private static final double epsilon = 0.05; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
     private static final int greedy = 0;
@@ -162,7 +163,7 @@ public class LUTTrackfire extends AdvancedRobot{
      * CONFIGMASK - */
     private static final short CONFIGMASK_ZEROLUT  = 				0x0001;
     private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 	0x4000;
-//    private static final short CONFIGMASK_FILETYPE_stringTest =		0x0010;
+    private static final short CONFIGMASK_FILETYPE_stringTest =		0x0010;
     private static final short CONFIGMASK_FILETYPE_LUTTrackfire =	0x0020;
     private static final short CONFIGMASK_FILETYPE_WinLose = 		0x0040;
     
@@ -172,7 +173,7 @@ public class LUTTrackfire extends AdvancedRobot{
     private static final int ERROR_1_import_IOException = 				1;
     private static final int ERROR_2_import_typeConversionOrBlank = 	2;
     private static final int ERROR_3_import_verification = 				3;
-//    private static final int ERROR_4_import_wrongFileName_stringTest =	4;
+    private static final int ERROR_4_import_wrongFileName_stringTest =	4;
     private static final int ERROR_5_import_wrongFileName_WL =			5;
     private static final int ERROR_6_export_cannotWrite =				6;
     private static final int ERROR_7_export_IOException =				7;
@@ -182,7 +183,7 @@ public class LUTTrackfire extends AdvancedRobot{
     private static final int ERROR_11_import_wrongFileName_LUT = 		11;
     
     //strings used for importing or extracting files 
-//    String strStringTest = "stringTest.dat";    
+    String strStringTest = "stringTest.dat";    
     String strLUT = "LUTTrackfire.dat";
     String strWL = "winlose.dat";
     String strSA = "stateAction.dat"; 
@@ -216,7 +217,7 @@ public class LUTTrackfire extends AdvancedRobot{
     // primary role is to maintain 1 import -> at most 1 export
     // secondary goals: Assists in preventing overwrite, and protection against wrong file entries.
     // False == inaccessible to write-to-file commands.
-//    private boolean flag_stringTestImported = false;
+    private boolean flag_stringTestImported = false;
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
     // printout error flag - initialized to 0, which is no error.
@@ -232,7 +233,7 @@ public class LUTTrackfire extends AdvancedRobot{
 
     // LUT table configuration information, stored in the first line of .dat
     private short fileSettings_default = 0;
-//    private short fileSettings_stringTest = 0;
+    private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
     private short fileSettings_SA = 0; 
@@ -273,7 +274,7 @@ public class LUTTrackfire extends AdvancedRobot{
     private double qValMax = 0.0; // stores the maximum currSAV QMax
 
     //chosen policy. greedy or exploratory or SARSA 
-    private static int policy = exploratory; 
+    private static int policy = greedy; 
 
     
     //enemy information
@@ -294,6 +295,9 @@ public class LUTTrackfire extends AdvancedRobot{
     private int myEnergy = 0;
     private int myPosX = 0;
     private int myPosY = 0;
+    
+    //general information
+    private int tick = 0;
     
     
     private int totalFights = 0;
@@ -430,7 +434,7 @@ public class LUTTrackfire extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR: " + flag_error);
         }
-//        flag_error =  exportData(strSA); 
+
 //        flag_error = saveData(strSA); 
 //        if( flag_error != SUCCESS_exportData) {
 //        	out.println("ERROR @onDeath: " + flag_error);
@@ -461,8 +465,9 @@ public class LUTTrackfire extends AdvancedRobot{
 		enemyDistance = (int)event.getDistance(); 
 		enemyEnergy = (int)event.getEnergy();
 		myEnergy = (int)getEnergy();
+		tick = (int)getTime();
 //		out.println("Time is" + event.getTime());
-    	learningLoop();
+    	learning();
     }
 
 	/* 
@@ -504,17 +509,16 @@ public class LUTTrackfire extends AdvancedRobot{
 ////    	out.println("Hit Wall" + reward);
 //    }
     
-//    /**
-//     * @name: 		onHitByBullet
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-////    public void onHitByBullet(HitByBulletEvent e) {
-////    	reward += -5;
-////    //	learningLoop();
-////    }   
+    /**
+     * @name: 		onHitByBullet
+     * @purpose: 	1. Updates reward. -10
+     * 				2. Updates heading and energy levels. 
+     * @param:		1. HitWallEvent class from Robot
+     * @return:		n
+     */   
+    public void onHitByBullet(HitByBulletEvent e) {
+    	reward += -5;
+    }   
     
 //    /**
 //     * @name: 		onHitRobot
@@ -566,12 +570,23 @@ public class LUTTrackfire extends AdvancedRobot{
         	copyCurrentSAVIntoPrevSAV();
         	generateCurrentStateVector();
         	qFunction(); 
-        	//must execute action AFTER resetting the reward otherwise the reward will not get reset. 
-        	resetReward(); //can try divide by 2 instead of = 0.
+        	resetReward();
         	doAction(); 
     	}
     }
 
+    public void learning() {
+    	calculateReward();
+    	copyCurrentSAVIntoPrevSAV();
+    	generateCurrentStateVector();
+    	qFunction(); 
+    	resetReward();
+    	doAction();
+    	
+    	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	scan();
+    	execute();
+    }
 
 	/**
      * @name:		calculateReward
@@ -581,11 +596,8 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void calculateReward(){
     	energyDiffPrev = energyDiffCurr;
-//    	System.out.println("energyDiffPrev " +energyDiffPrev );
     	energyDiffCurr = myEnergy - enemyEnergy;
-//    	System.out.println("energyDiffCurr " +energyDiffCurr );
-    	reward += energyDiffCurr - energyDiffPrev;  
-//    	System.out.println("reward" + reward);
+    	reward += energyDiffCurr - energyDiffPrev;  	
     }
     
     /**
@@ -847,75 +859,6 @@ public class LUTTrackfire extends AdvancedRobot{
 //        }
     }
     
-    /**
-     * @name:		doAction
-     * @purpose: 	Converts state Action vector into action by reading currentSAV[0]
-     * @param: 		n, but uses:
-     * 				1. Array currentSAV, which is a vector that ranges from 0 to 24. 
-     * 
-     * @return:		n
-     */
-    	
-    public void doAction(){
-    	//correlate distance and velocity state-action
-    	
-    	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-//    	out.println("CASV " + currentStateActionVector[0]);
-    	//maneuver behaviour (chase-offensive/defensive)
-    	if ((currentStateActionVector[0])%4 == 0) {
-    		out.println("1"); 
-    		setTurnRight(enemyBearingFromHeading);
-    		setAhead(20);
-    	}
-    	else if((currentStateActionVector[0])%4 == 1){
-    		out.println("2"); 
-    		setTurnRight(enemyBearingFromHeading);
-    		setAhead(-20);
-    	}
-    	else if((currentStateActionVector[0])%4 == 2){
-    		out.println("3"); 
-    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
-    		setAhead(20);
-    	}
-    	else if((currentStateActionVector[0])%4 == 3){
-    		out.println("4"); 
-    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
-    		setAhead(-20);
-    	}
-    	
-    	if ( ((currentStateActionVector[0])/4) %2 == 0){
-    		out.println("5"); 
-    		setFire(1);
-    	}
-    	else if ( ((currentStateActionVector[0])/4) %2 == 1){
-    		out.println("6"); 
-    		setFire(3);
-    	}
-    	
-    	//firing behaviour (to counter defensive behaviour)
-    	if ((currentStateActionVector[0])/8 == 0){
-    		out.println("7"); 
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-    	}
-    	
-    	else if ((currentStateActionVector[0])/8 == 1){
-    		out.println("8"); 
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));
-    	}
-    	
-    	else if ((currentStateActionVector[0])/8 == 2){
-    		out.println("9"); 
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
-    	}
-    	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector)); 
-    	scan();
-    	execute();
-    	    
-      if (debug_doAction || debug) {
-    	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
-      }
-    }
-    
 	/**
      * @name:		resetReward
      * @purpose: 	Resets reward to 0.
@@ -928,6 +871,64 @@ public class LUTTrackfire extends AdvancedRobot{
         reward = 0;
         
     }
+    
+    /**
+     * @name:		doAction
+     * @purpose: 	Converts state Action vector into action by reading currentSAV[0]
+     * @param: 		n, but uses:
+     * 				1. Array currentSAV.
+     * @return:		n
+     */
+    	
+    public void doAction(){
+    	
+
+    	
+    	//maneuver behaviour (chase-offensive/defensive)
+    	if ((currentStateActionVector[0])%4 == 0) {
+    		setTurnRight(enemyBearingFromHeading);
+    		setAhead(50);
+    	}
+    	else if((currentStateActionVector[0])%4 == 1){
+    		setTurnRight(enemyBearingFromHeading);
+    		setAhead(-50);
+    	}
+    	else if((currentStateActionVector[0])%4 == 2){
+    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
+    		setAhead(50);
+    	}
+    	else if((currentStateActionVector[0])%4 == 3){
+    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
+    		setAhead(-50);
+    	}
+    	
+    	if ( ((currentStateActionVector[0])/4) %2 == 0){
+    		setFire(1);
+    	}
+    	else if ( ((currentStateActionVector[0])/4) %2 == 1){
+    		setFire(3);
+    	}
+    	
+    	//firing behaviour (to counter defensive behaviour)
+    	if ((currentStateActionVector[0])/8 == 0){
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    	}
+    	
+    	else if ((currentStateActionVector[0])/8 == 1){
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));
+    	}
+    	
+    	else if ((currentStateActionVector[0])/8 == 2){
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
+    	}
+    	scan();
+
+//    	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));     
+      if (debug_doAction || debug) {
+    	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
+      }
+    }
+    
 
 
 
@@ -960,7 +961,7 @@ public class LUTTrackfire extends AdvancedRobot{
     		out.println("@importData: at beginning of fxn");
     		out.println("printing fileSettings: ");
     		out.println("fileSettings_default: " + fileSettings_default);
-//    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
     		out.println("fileSettings_LUT: " + fileSettings_LUT);
     		out.println("fileSettings_WL: "+ fileSettings_WL); 
     	}
@@ -982,28 +983,29 @@ public class LUTTrackfire extends AdvancedRobot{
                 	if (debug_import || debug) {
                 		out.println("Import aborted (file not configured properly)");
                 	}
+                	
                 	return ERROR_3_import_verification;
                 }
                 else {
                 	//this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
                 	//flag prevents multiple imports and data overwrite since array is static
-//                	if ( ((fileSettings_default & CONFIGMASK_FILETYPE_stringTest) == CONFIGMASK_FILETYPE_stringTest)
-//                		&& (flag_stringTestImported == false) )
-//                	{
-//                		if (strName != "stringTest.dat") {
-//            				if (debug_import || debug) {
-//            					out.println ("Import aborted (Imported wrong file - file declared stringTest.dat in settings)");
-//            				}
-//                			return ERROR_4_import_wrongFileName_stringTest;
-//                		}
-//                		
-//                		fileSettings_stringTest = fileSettings_default;
-//                		flag_stringTestImported = true;
-//                	}
+                	if ( ((fileSettings_default & CONFIGMASK_FILETYPE_stringTest) == CONFIGMASK_FILETYPE_stringTest)
+                		&& (flag_stringTestImported == false) )
+                	{
+                		if (strName != "stringTest.dat") {
+            				if (debug_import || debug) {
+            					out.println ("Import aborted (Imported wrong file - file declared stringTest.dat in settings)");
+            				}
+                			return ERROR_4_import_wrongFileName_stringTest;
+                		}
+                		
+                		fileSettings_stringTest = fileSettings_default;
+                		flag_stringTestImported = true;
+                	}
                 	
                 	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
                 	//flag prevents multiple file imports (mostly for preventing export bugs)
-                	if ( ((fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire) == CONFIGMASK_FILETYPE_LUTTrackfire)
+                	else if ( ((fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire) == CONFIGMASK_FILETYPE_LUTTrackfire)
                 	&& (flag_LUTImported == false) )
                 	{
                 		if (strName != "LUTTrackfire.dat") {
@@ -1089,7 +1091,7 @@ public class LUTTrackfire extends AdvancedRobot{
                 		if (debug_import || debug) {
                     		out.println("error 8:");
                     		out.println("fileSettings_default: " + fileSettings_default);
-//                    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+                    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
                     		out.println("fileSettings_LUT: " + fileSettings_LUT);
                     		out.println("fileSettings_WL: "+ fileSettings_WL);
                     		out.println("CONFIGMASK_FILETYPE_LUTTrackfire|verisett: " + (CONFIGMASK_FILETYPE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL));
@@ -1126,7 +1128,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	if (debug_import || debug) {
     		out.println("end of fxn fileSettings check (succeeded):");
     		out.println("fileSettings_default: " + fileSettings_default);
-//    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
     		out.println("fileSettings_LUT: " + fileSettings_LUT);
     		out.println("fileSettings_WL: "+ fileSettings_WL);
     	}
@@ -1163,15 +1165,14 @@ public class LUTTrackfire extends AdvancedRobot{
     		out.println("@exportData: beginning");
     		out.println("printing fileSettings: ");
     		out.println("fileSettings_default: " + fileSettings_default);
-//    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
     		out.println("fileSettings_LUT: " + fileSettings_LUT);
     		out.println("fileSettings_WL: "+ fileSettings_WL);
     	}
     	
     	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
-    	if(  
-//    			( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
-    	   ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
+    	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
+    	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
     	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )){
 	    	
     		PrintStream w = null;
@@ -1188,17 +1189,17 @@ public class LUTTrackfire extends AdvancedRobot{
 	            }
 	            
 	            //if scope for exporting files to stringTest
-//	            if ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) {
-//	            	
-//	            	//debug
-//	            	if (debug_export || debug) {
-//	            		out.println("writing into strStringTest");
-//	            	}
-//	            	
-//	            	w.println(fileSettings_stringTest);
-//	            	flag_stringTestImported = false;
-//	            	
-//	            } //end of testString
+	            if ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) {
+	            	
+	            	//debug
+	            	if (debug_export || debug) {
+	            		out.println("writing into strStringTest");
+	            	}
+	            	
+	            	w.println(fileSettings_stringTest);
+	            	flag_stringTestImported = false;
+	            	
+	            } //end of testString
 	            
 	        	//update LUT
 	            else if ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) {

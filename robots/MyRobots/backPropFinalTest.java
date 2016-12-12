@@ -21,24 +21,20 @@ public class backPropFinalTest{
 	public static void main(String args[])
 	{
 		for (int a = 0; a < 1; a ++){	 
-		    /*
-			 * input data
-			 */
+
 			/*Initiate variables */
-			int numOutputs = 1; 
 			int numInputs = 9; 		//6 states + 3 actions. 
 			int numHidden = 5;			//number of hidden inputs
 			int numTrials = 8641; 		//number of trials in the training set	
-			double lRate = 0.02; 			//learning rate
-			double errorThreshold = 0.05;	//error threshold
+			double lRate = 0.1; 			//learning rate
 			double momentum = 0.2;  	//value of momentum 
 			boolean stopError = false; 	//if flag == false, then stop loop, else continue 
-			int maxEpoch = 200; 	//if reach maximum number of Epochs, stop loop. 
-			double upperThres = -1; 	//upper threshold for random weights
-			double lowerThres = 1;	//lower threshold for random weights
+			int maxEpoch = 100; 	//if reach maximum number of Epochs, stop loop. 
+			double upperThres = -0.5; 	//upper threshold for random weights
+			double lowerThres = 0.5;	//lower threshold for random weights
 			
 			/* Neural net state action pair*/
-			boolean flag = true;  
+			boolean flag = false;  
 			double [] outputs = new double [8641]; 
 			String [] inputsRaw = new String [8641];
 			String [] inputs1 = new String [8640]; 
@@ -49,14 +45,14 @@ public class backPropFinalTest{
 			File robotFile = new File ("robotFile.txt");
 			File NNFile = new File ("savingInputs.txt"); 
 			File saveWeights = new File ("finalWeights.txt"); 
-			PrintStream saveWeightFile = null;
 			
+//			PrintStream saveWeightFile = null;
 			PrintStream saveFile1 = null;
 			PrintStream saveFile2 = null; 
 			try {
 				saveFile1 = new PrintStream( new FileOutputStream(robotFile));
 				saveFile2 = new PrintStream( new FileOutputStream(NNFile));
-				saveWeightFile = new PrintStream( new FileOutputStream(saveWeights));
+//				saveWeightFile = new PrintStream( new FileOutputStream(saveWeights));
 				
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
@@ -77,7 +73,8 @@ public class backPropFinalTest{
 					 readerLUT.readLine(); // this will read the first line
 					 String line1=null;
 					 int countI = 0; 
-					 while ( ( (line1 = readerLUT.readLine()) != null) && (countI < 8640) ) { //loop will run from 2nd line
+					 while ( ( (line1 = readerLUT.readLine()) != null) && (countI < 8640) ) { 
+						 //loop will run from 2nd line
 						 outputs[countI] = Integer.parseInt(line1);
 						 countI +=1; 
 					 }
@@ -103,7 +100,6 @@ public class backPropFinalTest{
 					    inputToNN.add((String)Arrays.toString(inputArray));  
 					}
 				}
-				
 				catch (NumberFormatException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -232,14 +228,13 @@ public class backPropFinalTest{
 				else if (firstDigits[i] == 23){
 					updatedInputs[i] = inputsACT[23]+inputNNRe[i].substring(2);
 				}
-//				saveFile2.println("StateActionVector \t " + updatedInputs[i]);
 			} 	
 			
 			/* preprocess outputs 
 			 * 
 			 */
 			
-//			System.out.println("output " + Arrays.toString(outputs));
+			System.out.println("output " + Arrays.toString(outputs));
 			double qMax = outputs[0];
 			for (int i = 1; i < outputs.length; i++) {
 			    if (outputs[i] > qMax) {
@@ -252,43 +247,51 @@ public class backPropFinalTest{
 			    	qMin = outputs[i];
 			    }
 			}
+			/* normalize the outputs */
+			Double [] normalizedOutputs = new Double[outputs.length]; 
+			for (int i = 0; i < outputs.length; i++){
+				normalizedOutputs[i] = outputs[i]/qMax; 
+			}
 			
+//			System.out.println("normalizedOutputs " + Arrays.toString(normalizedOutputs));
 			/* initialize myNeuralNet. 
 			 * */
-		    backPropFinal myNeuralNet = new backPropFinal(numInputs, numHidden, lRate, momentum, qMax, qMin, numInputs, numHidden, numOutputs);		/*Create new object of class "myBackProp */
+		    backPropFinal myNeuralNet = new backPropFinal(numInputs, numHidden, lRate, momentum, qMax, qMin);		/*Create new object of class "myBackProp */
 			myNeuralNet.initializeWeights(upperThres, lowerThres);  							//Initialize weights to random weights between -0.5 and 0.5
 			
-			/* Start epochs */  
+			/* Start epochs */ 
+			
 			int numEpoch = 0; 
-			double errorTemp = 0; 
+			double error = 0.0; 
+			double rmsError = 0.0;
+			double allRMSError = 0.0; 
 			while (stopError == false){ 
 				double totalError = 0.0;
 				for (int i = 0; i < (numTrials-1); i++){
 //					//Call function for forward propagation
-//					double[] Ycalc = myNeuralNet.outputForward(updatedInputs[i], flag, i);
-//					System.out.println("YCalc " + Arrays.toString(Ycalc));
-////					//Call function for backward propagation
-////					System.out.println("outputs[i] " + outputs[i]);
-////					System.out.println("YCalc " + inputNNRe[i]);
-//					double error = myNeuralNet.train(updatedInputs[i], outputs[i], Ycalc, flag, i);	
-////					System.out.println("error " + error); 
-////					errorTemp = (java.lang.Math.pow(error, 2)); 
-//					totalError += error;
-//					saveFile2.println("StateActionVector \t " + updatedInputs[i] + "\t error \t " + error);
+					double[] Ycalc = myNeuralNet.outputForward(updatedInputs[i], flag, i);
+					error = myNeuralNet.train(updatedInputs[i], normalizedOutputs[i], Ycalc, flag, i);	
+					totalError += error;
+					saveFile2.println("StateActionVector \t " + updatedInputs[i] + "\t error \t " + error);
 				}
-//				saveFile2.close();	
-//				//rmsError = sqrt(sumof(target - actual output)^2)/numPatterns)
-//				double rmsError = Math.sqrt(totalError)/numTrials; 
-////				System.out.println("rmsError " + rmsError);
-////				System.out.println("numEpoch " + numEpoch);
-//				if (numEpoch > maxEpoch){
+				
+				rmsError = Math.sqrt(totalError)/numTrials; 
+//				System.out.println("rmsError " + rmsError);
+				if (numEpoch > maxEpoch){
 //					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
-//					stopError = true;
-//				}		
-//				System.out.println("numTrial " + numEpoch);
-////				myNeuralNet.save (rmsError, numEpoch, saveFile1, stopError);
-//				numEpoch +=1;
-			}			
+					stopError = true;
+					saveFile2.close();	
+				}		
+//				
+				
+				myNeuralNet.save (rmsError, numEpoch, saveFile1, stopError);
+				numEpoch +=1;
+				allRMSError += rmsError; 
+			}
+			System.out.println("numTrial " + numEpoch);
+			
+			double averageRMS = allRMSError/numEpoch;
+			System.out.println("averageRMS " + averageRMS);
 		}
 	}
 }
