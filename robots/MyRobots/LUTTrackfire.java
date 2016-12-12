@@ -139,8 +139,8 @@ public class LUTTrackfire extends AdvancedRobot{
 	 * FINALS (defines)
 	 */
 	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
-    private static final double alpha = 0.2;                //to what extent the newly acquired information will override the old information.
-    private static final double gamma = 0.2;                //importance of future rewards
+    private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
+    private static final double gamma = 0.5;                //importance of future rewards
     private static final double epsilon = 0.1; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
@@ -900,12 +900,12 @@ public class LUTTrackfire extends AdvancedRobot{
     	
     	else if ((currentStateActionVector[0])/8 == 1){
     		out.println("8"); 
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 20));
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));
     	}
     	
     	else if ((currentStateActionVector[0])/8 == 2){
     		out.println("9"); 
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 20));
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
     	}
     	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector)); 
     	scan();
