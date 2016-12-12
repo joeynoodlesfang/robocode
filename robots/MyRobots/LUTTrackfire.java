@@ -576,14 +576,17 @@ public class LUTTrackfire extends AdvancedRobot{
     }
 
     public void learning() {
-    	calculateReward();
-    	copyCurrentSAVIntoPrevSAV();
-    	generateCurrentStateVector();
-    	qFunction(); 
-    	resetReward();
-    	doAction();
-    	
-    	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	if (tick%5 == 0) {
+	    	calculateReward();
+	    	copyCurrentSAVIntoPrevSAV();
+	    	generateCurrentStateVector();
+	    	qFunction(); 
+	    	resetReward();
+	    	doAction();
+    	}
+    	else {
+    		setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	}
     	scan();
     	execute();
     }
@@ -921,7 +924,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	else if ((currentStateActionVector[0])/8 == 2){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
     	}
-    	scan();
+    	
 
 //    	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));     
       if (debug_doAction || debug) {
