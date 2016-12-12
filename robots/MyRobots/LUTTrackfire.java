@@ -139,9 +139,9 @@ public class LUTTrackfire extends AdvancedRobot{
 	 * FINALS (defines)
 	 */
 	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
-    private static final double alpha = 0.2;                //to what extent the newly acquired information will override the old information.
-    private static final double gamma = 0.2;                //importance of future rewards
-    private static final double epsilon = 0.1; 				//degree of exploration 
+    private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
+    private static final double gamma = 0.5;                //importance of future rewards
+    private static final double epsilon = 0.05; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
     private static final int greedy = 0;
@@ -295,6 +295,9 @@ public class LUTTrackfire extends AdvancedRobot{
     private int myPosX = 0;
     private int myPosY = 0;
     
+    //general information
+    private int tick = 0;
+    
     
     private int totalFights = 0;
     private int[] battleResults = new int [520000];
@@ -399,10 +402,10 @@ public class LUTTrackfire extends AdvancedRobot{
         	out.println("ERROR: " + flag_error);
         }
 //        flag_error =  exportData(strSA); 
-        flag_error = saveData(strSA); 
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath: " + flag_error);
-        }
+//        flag_error = saveData(strSA); 
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onDeath: " + flag_error);
+//        }
     }
     
     /**
@@ -430,11 +433,11 @@ public class LUTTrackfire extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR: " + flag_error);
         }
-//        flag_error =  exportData(strSA); 
-        flag_error = saveData(strSA); 
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath: " + flag_error);
-        }
+
+//        flag_error = saveData(strSA); 
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onDeath: " + flag_error);
+//        }
 	}
 	
 
@@ -461,8 +464,9 @@ public class LUTTrackfire extends AdvancedRobot{
 		enemyDistance = (int)event.getDistance(); 
 		enemyEnergy = (int)event.getEnergy();
 		myEnergy = (int)getEnergy();
+		tick = (int)getTime();
 //		out.println("Time is" + event.getTime());
-    	learningLoop();
+    	learning();
     }
 
 	/* 
@@ -571,6 +575,18 @@ public class LUTTrackfire extends AdvancedRobot{
     	}
     }
 
+    public void learning() {
+    	calculateReward();
+    	copyCurrentSAVIntoPrevSAV();
+    	generateCurrentStateVector();
+    	qFunction(); 
+    	resetReward();
+    	doAction();
+    	
+    	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+    	scan();
+    	execute();
+    }
 
 	/**
      * @name:		calculateReward
@@ -866,7 +882,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	
     public void doAction(){
     	
-    	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+
     	
     	//maneuver behaviour (chase-offensive/defensive)
     	if ((currentStateActionVector[0])%4 == 0) {
@@ -899,14 +915,14 @@ public class LUTTrackfire extends AdvancedRobot{
     	}
     	
     	else if ((currentStateActionVector[0])/8 == 1){
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 20));
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));
     	}
     	
     	else if ((currentStateActionVector[0])/8 == 2){
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 20));
+    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
     	}
     	scan();
-    	execute();
+
 //    	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));     
       if (debug_doAction || debug) {
     	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
