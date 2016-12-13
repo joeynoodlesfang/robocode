@@ -120,7 +120,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //left (<0 relative dir w/ positive velo || >0 with negative velo), 
     //right (<0 dir w/ negative velo || >0 with positive velo)
 
-
+    
    
     /**
      * FLAGS AND COUNTS
@@ -156,27 +156,29 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
     private short fileSettings_SA = 0; 
-    
+
     // LUT table stored in memory.
-    private static int [][][][][][][] roboLUT 
+    private static int [][][][][][][][] roboLUT 
         = new int
-        [num_actions]
-        [myPositionDiscretized_states]
-        [myHeadingDiscretized_states]		
-        [enemyEnergy_states]
-        [enemyDistance_states]
-        [enemyDirection_states]
-        [1];
+        [input_action0_moveReferringToEnemy_possibilities]
+        [input_action1_fire_possibilities]
+        [input_action2_fireDirection_possibilities]		
+        [input_state0_myPos_possibilities]
+        [input_state1_myHeading_originalPossilibities]
+        [input_state2_enemyEnergy_originalPossibilities]
+        [input_state3_enemyDistance_originalPossibilities]
+        [input_state4_enemyDirection_originalPossibilities];
     
     // Dimensions of LUT table, used for iterations.
     private static int[] roboLUTDimensions = {
-        num_actions, 
-        myPositionDiscretized_states,
-        myHeadingDiscretized_states,
-        enemyEnergy_states,
-        enemyDistance_states,
-        enemyDirection_states,
-        1};
+    	input_action0_moveReferringToEnemy_possibilities, 
+    	input_action1_fire_possibilities,
+    	input_action2_fireDirection_possibilities,
+    	input_state0_myPos_possibilities,
+    	input_state1_myHeading_originalPossilibities,
+    	input_state2_enemyEnergy_originalPossibilities,
+    	input_state3_enemyDistance_originalPossibilities,
+    	input_state4_enemyDirection_originalPossibilities};
     
     // Stores current reward for action.
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
@@ -188,6 +190,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
      
     //variables used for getMax.
+    int num_actions = 3; 
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
     private int actionChosenForQValMax = 0; //stores the chosen currSAV with maxqval before policy
     private double qValMax = 0.0; // stores the maximum currSAV QMax
@@ -685,7 +688,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         }   
         
         for (int i = 0; i < num_actions; i++){
-            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]];
+            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]][currentStateActionVector[7]];
             
             if (indexQVal > currMax){
             	currMax = indexQVal;
@@ -734,7 +737,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
         						 [prevStateActionVector[3]]
         						 [prevStateActionVector[4]]
         						 [prevStateActionVector[5]]
-        						 [prevStateActionVector[6]];
+        						 [prevStateActionVector[6]]
+        						 [prevStateActionVector[7]]		 ;
         
         prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
         return (int)prevQVal;
@@ -760,6 +764,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
          	   [prevStateActionVector[4]]
          	   [prevStateActionVector[5]]
          	   [prevStateActionVector[6]]	   
+         	   [prevStateActionVector[7]]
          					  = prevQVal;
         
         if (debug) {

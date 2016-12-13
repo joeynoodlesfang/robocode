@@ -29,9 +29,9 @@ public class backPropFinalTest{
 			double lRate = 0.05; 			//learning rate
 			double momentum = 0.2;  	//value of momentum 
 			boolean stopError = false; 	//if flag == false, then stop loop, else continue 
-			int maxEpoch = 100; 	//if reach maximum number of Epochs, stop loop. 
-			double upperThres = -0.5; 	//upper threshold for random weights
-			double lowerThres = 0.5;	//lower threshold for random weights
+			int maxEpoch = 1000; 	//if reach maximum number of Epochs, stop loop. 
+			double upperThres = 0.2; 	//upper threshold for random weights
+			double lowerThres = -0.2;	//lower threshold for random weights
 			
 			/* Neural net state action pair*/
 			boolean flag = false;  
@@ -44,15 +44,13 @@ public class backPropFinalTest{
 			/* define files to save data */
 			File robotFile = new File ("robotFile.txt");
 			File NNFile = new File ("savingInputs.txt"); 
-			File saveWeights = new File ("finalWeights.txt"); 
-			
-			PrintStream saveWeightFile = null;
+
 			PrintStream saveFile1 = null;
 			PrintStream saveFile2 = null; 
 			try {
 				saveFile1 = new PrintStream( new FileOutputStream(robotFile));
 				saveFile2 = new PrintStream( new FileOutputStream(NNFile));
-				saveWeightFile = new PrintStream( new FileOutputStream(saveWeights));
+
 				
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
@@ -234,7 +232,7 @@ public class backPropFinalTest{
 			 * 
 			 */
 			
-			System.out.println("output " + Arrays.toString(outputs));
+//			System.out.println("output " + Arrays.toString(outputs));
 			double qMax = outputs[0];
 			for (int i = 1; i < outputs.length; i++) {
 			    if (outputs[i] > qMax) {
@@ -253,7 +251,7 @@ public class backPropFinalTest{
 				normalizedOutputs[i] = outputs[i]/qMax; 
 			}
 			
-//			System.out.println("normalizedOutputs " + Arrays.toString(normalizedOutputs));
+			System.out.println("normalizedOutputs " + Arrays.toString(normalizedOutputs));
 			/* initialize myNeuralNet. 
 			 * */
 		    backPropFinal myNeuralNet = new backPropFinal(numInputs, numHidden, lRate, momentum, qMax, qMin);		/*Create new object of class "myBackProp */
@@ -263,31 +261,38 @@ public class backPropFinalTest{
 			int numEpoch = 0; 
 			double error = 0.0; 
 			double rmsError = 0.0;
-			double allErrors = 0.0; 
 			while (stopError == false){ 
+				boolean finalTrial = false; 
 				double totalError = 0.0;
 				for (int i = 0; i < (numTrials-1); i++){
-//					//Call function for forward propagation
+					//Call function for forward propagation
 					double[] Ycalc = myNeuralNet.outputForward(updatedInputs[i], flag, i);
-					error = myNeuralNet.train(updatedInputs[i], normalizedOutputs[i], Ycalc, flag, i);	
+					if (i == (numTrials-2)){
+						finalTrial = true; 
+					}
+					error = myNeuralNet.train(updatedInputs[i], normalizedOutputs[i], Ycalc, flag, i, finalTrial, numEpoch);	
+//					System.out.println("error " + error);
 					totalError += error;
 //					saveFile2.println("StateActionVector \t " + updatedInputs[i] + "\t error \t " + error);
 				}
-				allErrors = totalError; 
 				if (numEpoch > maxEpoch){
 //					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
 					stopError = true;
 //					saveFile2.close();	
-				}		
-				allErrors += totalError; 
+				}	
+//				System.out.println("total error " + totalError);
+				myNeuralNet.save (totalError, numEpoch, saveFile1, stopError);
 				numEpoch +=1;
 			}
+			 
 			//rmsError is the 1/k*(sum from 1 - k of the sqrt((y-t)^2))
 //			rmsError =  sqrt(Etotal/2), where Etotal is 1/2*sum(xi-yi)^2 for i from 0 - maxTrials
-			rmsError = Math.sqrt(allErrors)/numEpoch;
-			System.out.println("rmsError " + rmsError);
-			myNeuralNet.save (rmsError, numEpoch, saveFile1, stopError);
-			System.out.println("numTrial " + numEpoch);
+			rmsError = Math.sqrt(285.72906385145296/2);
+//			System.out.println("rmsError " + rmsError);
+//			myNeuralNet.save (rmsError, numEpoch, saveFile1, stopError);
+//			System.out.println("numTrial " + numEpoch);
 		}
+
+		
 	}
 }
