@@ -506,6 +506,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
              calculateReward();
              copyCurrentSVIntoPrevSV();
              generateCurrentStateVector();
+             getQfromNet(); 
              qFunction();
              resetReward();
              doAction();
@@ -521,6 +522,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         execute();
 
     }
+
 
 	/**
      * @name:		calculateReward
@@ -616,6 +618,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	out.println("currentStateVector " + Arrays.toString(currentStateVector));
     }
  
+    /** 
+     * @name:		getQfromNet
+     * @purpose: 	Get NNWeights_inputToHidden and NNWeights_hiddenToOutput 
+     * 				Call forwardPropagation from "backPropFinal" 
+     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
+     * @return: 	The maximum value from 
+     */
+
+	public void getQfromNet() {
+		// TODO Auto-generated method stub
+		
+	}
     /**
      * @name:		qFunction
      * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
