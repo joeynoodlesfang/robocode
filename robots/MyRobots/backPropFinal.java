@@ -195,7 +195,7 @@ public class backPropFinal implements NeuralNetInterface{
 	}
 
 	public void save (double totalError, int epochNum, PrintStream saveFile, boolean lastOne) {
-		saveFile.println("Epoch\t " + epochNum + "\tError\t " + totalError);
+		saveFile.println("Epoch\t " + epochNum + "\tRMSError\t " + totalError);
 		if (lastOne == true)
 			saveFile.close();		
 	}

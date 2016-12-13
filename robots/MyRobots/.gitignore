@@ -7,3 +7,4 @@
 /NeuralNetInterface.class
 /CommonInterface.class
 /readingInput.class
+/backPropNoQuantization.class

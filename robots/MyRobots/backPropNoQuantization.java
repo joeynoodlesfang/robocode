@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 /* Main Testing Class */
-public class backPropFinalTest{
+public class backPropNoQuantization{
 	public static void main(String args[])
 	{
 		for (int a = 0; a < 1; a ++){	 
@@ -46,13 +46,13 @@ public class backPropFinalTest{
 			File NNFile = new File ("savingInputs.txt"); 
 			File saveWeights = new File ("finalWeights.txt"); 
 			
-			PrintStream saveWeightFile = null;
+//			PrintStream saveWeightFile = null;
 			PrintStream saveFile1 = null;
 			PrintStream saveFile2 = null; 
 			try {
 				saveFile1 = new PrintStream( new FileOutputStream(robotFile));
 				saveFile2 = new PrintStream( new FileOutputStream(NNFile));
-				saveWeightFile = new PrintStream( new FileOutputStream(saveWeights));
+//				saveWeightFile = new PrintStream( new FileOutputStream(saveWeights));
 				
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
@@ -132,7 +132,9 @@ public class backPropFinalTest{
 			}
 //		    System.out.println( "Whole list=" + inputToNN);
 
-			//reformat the input as a string without '[], or space'
+			/* Obtaining just the first two digits to insert the correct action (instead of going from 0 - 23). 
+			 * 
+			 */
 			String [] inputNNRe  = new String [inputToNN.size()];
 			Integer [] inputAsInteger = new Integer[inputToNN.size()];
 			Integer [] firstDigits = new Integer[inputToNN.size()];
@@ -230,11 +232,8 @@ public class backPropFinalTest{
 				}
 			} 	
 			
-			/* preprocess outputs 
-			 * 
-			 */
-			
-			System.out.println("output " + Arrays.toString(outputs));
+			/* normalize the outputs */
+//			System.out.println("output " + Arrays.toString(outputs));
 			double qMax = outputs[0];
 			for (int i = 1; i < outputs.length; i++) {
 			    if (outputs[i] > qMax) {
@@ -247,47 +246,114 @@ public class backPropFinalTest{
 			    	qMin = outputs[i];
 			    }
 			}
-			/* normalize the outputs */
+			
 			Double [] normalizedOutputs = new Double[outputs.length]; 
 			for (int i = 0; i < outputs.length; i++){
 				normalizedOutputs[i] = outputs[i]/qMax; 
+			}			
+//			System.out.println("normalizedOutputs " + Arrays.toString(normalizedOutputs));
+			
+			/*Get rid of dimentionality (does not mean add more states - just change the values of the current states
+			 * 
+			 * 
+			 */
+			ArrayList<String> inputWithNewActions = new ArrayList<String>();
+			
+			for(int i = 0; i < updatedInputs.length; i++) {
+				char[] inputArray1 = new char [updatedInputs[i].length()];
+			    for (int j = 0; j < updatedInputs[i].length(); j++){
+			    	inputArray1[j] = updatedInputs[i].charAt(j); 
+			    }
+			    inputWithNewActions.add((String)Arrays.toString(inputArray1));  
 			}
 			
-//			System.out.println("normalizedOutputs " + Arrays.toString(normalizedOutputs));
+			String [] nnone = new String [inputWithNewActions.size()];
+			String [] lastDigits = new String[inputWithNewActions.size()];
+			
+			//first must convert all "characters" to integers! 
+			for (int i = 0; i < updatedInputs.length; i++){
+				for (int j = 0; j < updatedInputs[i].length(); j++){
+					nnone[i] = ((String) inputWithNewActions.get(i)).replaceAll("[^\\d-]", "");
+				}
+				if (nnone[i].length() == 13){
+					lastDigits[i] = (nnone[i].substring(7, 13));
+				}
+				else if (nnone[i].length() == 12){
+					lastDigits[i] = (nnone[i].substring(7, 12));
+				}
+			}
+			System.out.println("input with new actions " + Arrays.toString(nnone));
+			System.out.println("input with new actions " + Arrays.toString(lastDigits));
+//			Integer [] asInteger = new Integer[lastDigits.length]; 
+//			for (int i = 0; i < lastDigits.length; i++){
+//				asInteger[i] = Integer.parseInt(lastDigits[i]); 
+//			}
+			for (int i = 0; i < lastDigits.length; i++){
+				for (int j = 0; j < lastDigits[i].length(); j++){
+					if (lastDigits[i].charAt(j) == '0'){
+						System.out.println("char " + lastDigits[i].charAt(j));
+					}
+				}
+			}
+			
+//				    	//state 1 now goes from 0 - 100
+//				    	if (j == 7){
+//				    		System.out.println("inputArray[j] " + updatedInputs[i].charAt(j));
+////				    		
+////				    			updatedInputs[i].charAt(j) = i; 
+////				    		}
+////				    		else if (updatedInputs[i].charAt(j) == 1){
+////				    			
+////				    		}	
+////				    		else if (updatedInputs[i].charAt(j) == 2){
+////				    			
+////				    		}
+////				    		else if (updatedInputs[i].charAt(j) == 3){
+////				    			
+////				    		}
+//				    	}
+//				    }
+//				}
+//				else if (updatedInputs[i].length() == 12){
+//				    for (int j = 6; j < updatedInputs[i].length(); j++){
+//				    	System.out.println("inputArray[j] " + updatedInputs[i].charAt(j));		    	
+//				    }				
+//				}
+//			    System.out.println("\n");
+//			}
 			/* initialize myNeuralNet. 
 			 * */
-		    backPropFinal myNeuralNet = new backPropFinal(numInputs, numHidden, lRate, momentum, qMax, qMin);		/*Create new object of class "myBackProp */
-			myNeuralNet.initializeWeights(upperThres, lowerThres);  							//Initialize weights to random weights between -0.5 and 0.5
-			
-			/* Start epochs */ 
-			int numEpoch = 0; 
-			double error = 0.0; 
-			double rmsError = 0.0;
-			double allErrors = 0.0; 
-			while (stopError == false){ 
-				double totalError = 0.0;
-				for (int i = 0; i < (numTrials-1); i++){
-//					//Call function for forward propagation
-					double[] Ycalc = myNeuralNet.outputForward(updatedInputs[i], flag, i);
-					error = myNeuralNet.train(updatedInputs[i], normalizedOutputs[i], Ycalc, flag, i);	
-					totalError += error;
+//		    backPropFinal myNeuralNet = new backPropFinal(numInputs, numHidden, lRate, momentum, qMax, qMin);		/*Create new object of class "myBackProp */
+//			myNeuralNet.initializeWeights(upperThres, lowerThres);  							//Initialize weights to random weights between -0.5 and 0.5
+//			
+//			/* Start epochs */ 
+//			
+//			int numEpoch = 0; 
+//			double error = 0.0; 
+//			double rmsError = 0.0;
+//			double allRMSError = 0.0; 
+//			while (stopError == false){ 
+//				double totalError = 0.0;
+//				for (int i = 0; i < (numTrials-1); i++){
+////					//Call function for forward propagation
+//					double[] Ycalc = myNeuralNet.outputForward(updatedInputs[i], flag, i);
+//					error = myNeuralNet.train(updatedInputs[i], normalizedOutputs[i], Ycalc, flag, i);	
+//					totalError += error;
 //					saveFile2.println("StateActionVector \t " + updatedInputs[i] + "\t error \t " + error);
-				}
-				allErrors = totalError; 
-				if (numEpoch > maxEpoch){
-//					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
-					stopError = true;
+//				}
+//				if (numEpoch > maxEpoch){
+////					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
+//					stopError = true;
 //					saveFile2.close();	
-				}		
-				allErrors += totalError; 
-				numEpoch +=1;
-			}
-			//rmsError is the 1/k*(sum from 1 - k of the sqrt((y-t)^2))
-//			rmsError =  sqrt(Etotal/2), where Etotal is 1/2*sum(xi-yi)^2 for i from 0 - maxTrials
-			rmsError = Math.sqrt(allErrors)/numEpoch;
-			System.out.println("rmsError " + rmsError);
-			myNeuralNet.save (rmsError, numEpoch, saveFile1, stopError);
-			System.out.println("numTrial " + numEpoch);
+//				}		
+//				
+////				rmsError =  sqrt(Etotal/2), where Etotal is 1/2*sum(xi-yi)^2 for i from 0 - maxTrials
+//				rmsError = Math.sqrt(totalError/2);
+////				System.out.println("rmsError " + rmsError);
+//				myNeuralNet.save (rmsError, numEpoch, saveFile1, stopError);
+//				numEpoch +=1;
+//			}
+//			System.out.println("numTrial " + numEpoch);
 		}
 	}
 }
