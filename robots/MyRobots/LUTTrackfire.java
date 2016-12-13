@@ -115,7 +115,6 @@ import robocode.BattleEndedEvent;
 import robocode.BulletHitEvent;
 import robocode.BulletMissedEvent;
 import robocode.DeathEvent;
-import robocode.HitByBulletEvent;
 import robocode.HitWallEvent;
 import robocode.RobocodeFileOutputStream;
 import robocode.ScannedRobotEvent;
@@ -274,7 +273,7 @@ public class LUTTrackfire extends AdvancedRobot{
     private double qValMax = 0.0; // stores the maximum currSAV QMax
 
     //chosen policy. greedy or exploratory or SARSA 
-    private static int policy = greedy; 
+    private static int policy = exploratory; 
 
     
     //enemy information
@@ -509,16 +508,17 @@ public class LUTTrackfire extends AdvancedRobot{
 ////    	out.println("Hit Wall" + reward);
 //    }
     
-    /**
-     * @name: 		onHitByBullet
-     * @purpose: 	1. Updates reward. -10
-     * 				2. Updates heading and energy levels. 
-     * @param:		1. HitWallEvent class from Robot
-     * @return:		n
-     */   
-    public void onHitByBullet(HitByBulletEvent e) {
-    	reward += -5;
-    }   
+//    /**
+//     * @name: 		onHitByBullet
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+////    public void onHitByBullet(HitByBulletEvent e) {
+////    	reward += -5;
+////    //	learningLoop();
+////    }   
     
 //    /**
 //     * @name: 		onHitRobot
@@ -576,16 +576,35 @@ public class LUTTrackfire extends AdvancedRobot{
     }
 
     public void learning() {
-    	calculateReward();
-    	copyCurrentSAVIntoPrevSAV();
-    	generateCurrentStateVector();
-    	qFunction(); 
-    	resetReward();
-    	doAction();
-    	
-    	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	scan();
-    	execute();
+
+        if (tick%3 == 0) {
+
+             calculateReward();
+
+             copyCurrentSAVIntoPrevSAV();
+
+             generateCurrentStateVector();
+
+             qFunction();
+
+             resetReward();
+
+             doAction();
+
+        }
+
+        else {
+
+            setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+
+        }
+
+        setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+
+        scan();
+
+        execute();
+
     }
 
 	/**
@@ -921,7 +940,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	else if ((currentStateActionVector[0])/8 == 2){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
     	}
-    	scan();
+    	
 
 //    	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));     
       if (debug_doAction || debug) {
