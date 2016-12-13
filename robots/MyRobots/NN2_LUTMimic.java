@@ -26,7 +26,7 @@ import robocode.RobocodeFileOutputStream;
 import robocode.ScannedRobotEvent;
 import robocode.WinEvent;
 
-public class NN1_DeadBunnyCrying extends AdvancedRobot{
+public class NN2_LUTMimic extends AdvancedRobot{
 	/*
 	 * SAV Change Rules:
 	 * 1. update STATEACTION VARIABLES
@@ -97,28 +97,29 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	 * STATEACTION VARIABLES for stateAction ceilings.
 	 * FOR NN
 	 */
-    //currently NN needs to forward propagate 5*5*4*5 = 500
-    private static final int input_action0_turnReferringToEnemy_possibilities = 5;
-    //-90, -45, 0, 45, 90
-    //considerations: considered using a fan of min to max angle of turn; but
-    //robot might not have enough computing time to calculate since it needs to find
-    //maxQ for all actions.
+    //currently NN needs to forward propagate 4 * 2 * 3 = 24
+    private static final int input_action0_moveReferringToEnemy_possibilities = 4;
+    //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
     
-    private static final int input_action1_ahead_possibilities = 5;
-    //-100, -50, 0, 50, 100
+    private static final int input_action1_fire_possibilities = 2;
+    //1, 3
     
-    private static final int input_action2_fireStrength_possibilities = 4;
-    //0, 1, 2, 3
+    private static final int input_action2_fireDirection_possibilities = 3;
+    //-10deg, 0, 10deg
     
-    private static final int input_action3_fireDir_possibilities = 5;
-    // -10, -5, 0, 5, 10
-    
-    private static final int input_state0_myXPos_possibilities = 800;
-    private static final int input_state1_myYPos_possibilities = 600; 
-    private static final int input_state2_enemyDirection_possibilities = 3; 								//velocitiy is close, mid, far 
-    private static final int enemyDistance_states = 3;							//<100, 100-200, 200-400, 400+
-    private static final int enemyEnergy_states = 2;							//low(<30) or other
-//    private static final int myEnergy_states = 2;								//low(<30) or other 
+    private static final int input_state0_myPos_possibilities = 5;
+    //center, left, right, top, bottom
+    private static final int input_state1_myHeading_originalPossilibities = 4;
+    //0-89deg, 90-179, 180-269, 270-359
+    private static final int input_state2_enemyEnergy_originalPossibilities = 2;
+    //>30, <30
+    private static final int input_state3_enemyDistance_originalPossibilities = 3;
+    //<150, <350, >=350
+    private static final int input_states4_enemyDirection_originalPossibilities = 3;
+    //head-on (still (abs <30 || >150), 
+    //left (<0 relative dir w/ positive velo || >0 with negative velo), 
+    //right (<0 dir w/ negative velo || >0 with positive velo)
+
 
    
     /**
