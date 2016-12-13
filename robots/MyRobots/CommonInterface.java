@@ -26,7 +26,7 @@ public interface CommonInterface{
 	 * @param argValue - The new value to learn. 
 	 * @return The error in the output for that input vector. 
 	 */
-	public double train(String X, double argValue, double[] Ycalc, boolean flag, int numTrial); 
+	public double train(String X, double argValue, double[] Ycalc, boolean flag, int numTrial, boolean flag1, int numEpoch); 
 	
 	/** Function: "save"
 	 * This is a PUBLIC METHOD that takes in an array of type double named "X" and the new value to learn. 

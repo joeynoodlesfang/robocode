@@ -132,6 +132,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     private static final int numStates = 5;
 
+
     private static final int numInputBias = 0;
     
     
@@ -140,7 +141,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int numInputsTotal = ( numInputBias + numActions + numStates );
     private static final int numHiddensTotal = ( numHiddenBias + numHiddenNeuron);
     private static final int numOutputsTotal = 1;
-    
+
     /**
      * FLAGS AND COUNTS
      */
@@ -189,8 +190,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
     private short fileSettings_SA = 0; 
-    
-    
+
+
     // Stores current reward for action.
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
     private int energyDiffCurr = 0;
@@ -201,6 +202,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
      
     //variables used for getMax.
+    int num_actions = 3; 
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
     private int actionChosenForQValMax = 0; //stores the chosen currSAV with maxqval before policy
     private double qValMax = 0.0; // stores the maximum currSAV QMax
@@ -698,7 +700,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         }   
         
         for (int i = 0; i < num_actions; i++){
-            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]];
+            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]][currentStateActionVector[7]];
             
             if (indexQVal > currMax){
             	currMax = indexQVal;
@@ -747,7 +749,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
         						 [prevStateActionVector[3]]
         						 [prevStateActionVector[4]]
         						 [prevStateActionVector[5]]
-        						 [prevStateActionVector[6]];
+        						 [prevStateActionVector[6]]
+        						 [prevStateActionVector[7]]		 ;
         
         prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
         return (int)prevQVal;
@@ -773,6 +776,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
          	   [prevStateActionVector[4]]
          	   [prevStateActionVector[5]]
          	   [prevStateActionVector[6]]	   
+         	   [prevStateActionVector[7]]
          					  = prevQVal;
         
         if (debug) {

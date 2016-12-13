@@ -134,7 +134,7 @@ public class backPropFinal implements NeuralNetInterface{
 	return Y; 
 	}
 
-	public double train(String X, double Yreal, double[] Ycalc, boolean flag, int numTrial) {
+	public double train(String X, double Yreal, double[] Ycalc, boolean flag, int numTrial, boolean lastTrial, int numEpoch) {
 
 //		System.out.println("z_in " + Arrays.toString(Z_in));
 //		System.out.println("Y_in " + Arrays.toString(Y_in));	
@@ -188,14 +188,42 @@ public class backPropFinal implements NeuralNetInterface{
 		//Step 9 - Calculate local error. 
 		double error = 0.0;
 		for (int k = 0; k < numOutput; k++){ 
-			error = (java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
-//			error = 0.5*(java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
+			error = 0.5*(java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
+		}
+//		System.out.println("last trial " + lastTrial);
+		if (lastTrial == true){
+			saveFile(numEpoch, vNow, wNow);
+//			System.out.println("epoch number " + numEpoch); 
+
 		}
 		return error;
 	}
-
+	
+	public void saveFile(int epochNum, double [][] hiddenWeights, double [][] outerWeights){
+		File saveWeights = new File ("finalWeights.txt"); 
+		PrintStream saveWeightFile = null;
+		try {
+			saveWeightFile = new PrintStream( new FileOutputStream(saveWeights));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+//		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
+//		System.out.println("final weights " + Arrays.deepToString(outerWeights));
+		for (int i = 0; i < hiddenWeights.length; i++){
+			for (int j = 0; j < hiddenWeights[i].length; j++){
+				saveWeightFile.println("hiddenWeight " + hiddenWeights[i][j]);
+			}
+		}
+		for (int i = 0; i < outerWeights.length; i++){
+			for (int j = 0; j < outerWeights[i].length; j++){
+				saveWeightFile.println("outerWeight " + outerWeights[i][j]);
+			}
+		}
+//		saveWeightFile.println("Epoch\t " + epochNum + "\nhiddenWeights\t " + Arrays.deepToString(hiddenWeights)+ "\nouterWeights\t " + Arrays.deepToString(outerWeights));
+		saveWeightFile.close(); 
+	}
 	public void save (double totalError, int epochNum, PrintStream saveFile, boolean lastOne) {
-		saveFile.println("Epoch\t " + epochNum + "\tRMSError\t " + totalError);
+		saveFile.println("Epoch\t " + epochNum + "\terror\t " + totalError);
 		if (lastOne == true)
 			saveFile.close();		
 	}
