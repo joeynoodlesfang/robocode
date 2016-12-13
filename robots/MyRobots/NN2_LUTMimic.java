@@ -11,9 +11,13 @@ import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.Color;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import robocode.AdvancedRobot;
@@ -118,7 +122,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int numActions = 3;
     
     private static final int input_state0_myPos_possibilities = 5;
-    //center, left, right, top, bottom
+    //center, left, right, top, bottom (cannot be undiscretized) 
     private static final int input_state1_myHeading_originalPossilibities = 4;
     //0-89deg, 90-179, 180-269, 270-359
     private static final int input_state2_enemyEnergy_originalPossibilities = 2;
@@ -193,13 +197,17 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
 
     // Stores current reward for action.
+    
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
     private int energyDiffCurr = 0;
     private int energyDiffPrev = 0;
     
-//    // Stores current and previous stateAction vectors.
-//    private int currentStateActionVector[] = new int [roboLUTDimensions.length];
-//    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
+
+    // Stores current and previous stateAction vectors.
+    //State vector (no actions) where copy currentSV to prevSV 
+    private double currentStateActionVector[] = new double [numInputsTotal];
+    private double prevStateActionVector[]    = new double [numInputsTotal]; 
+
      
     //variables used for getMax.
     int num_actions = 3; 
@@ -210,15 +218,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //chosen policy. greedy or exploratory or SARSA 
     private static int policy = exploratory; 
 
-    
     //enemy information
     private int enemyDistance = 0;
-//    private int enemyHeading = 0;
     private int enemyHeadingRelative = 0;
     private int enemyHeadingRelativeAbs = 0;
-    private int enemyVelocity = 0;
-//    private int enemyDirection = 0;
-    
+    private int enemyVelocity = 0;    
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
@@ -514,10 +518,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
         
      */
     public void learning() {
-    	//tick%3 is possible new state. 
+    		//tick%3 is possible new state. 
              calculateReward();
-             copyCurrentSAVIntoPrevSAV();
+             copyCurrentSVIntoPrevSV();
              generateCurrentStateVector();
+             getQfromNet(); 
              qFunction();
              resetReward();
              doAction();
@@ -533,6 +538,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         execute();
 
     }
+
 
 	/**
      * @name:		calculateReward
@@ -553,8 +559,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				1. currentStateActionVector
      * @return:		n
      */
-    public void copyCurrentSAVIntoPrevSAV(){
-    	for (int i = 0; i < prevStateActionVector.length; i++) {
+    public void copyCurrentSVIntoPrevSV(){
+    	for (int i = 0; i < currentStateActionVector.length; i++) {
     		prevStateActionVector[i] = currentStateActionVector[i];
     	}
     }
@@ -566,83 +572,71 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				3. Update array of current stateAction vector.  
      * @param: 		n
      * @return: 	none
+     * currentStateVector positions [0][1][2] are all the actions. 
      */
     public void generateCurrentStateVector(){
-    	//INPUT 0: ACTION
-    	
-    	//Dimension 1: input: myXPosDiscretized = 0-4: center, left, right, top, bot
+    	//INPUTS 0, 1 and 2 are ACTION
+        
+    	//Dimension 1 - private static final int input_state0_myPos_possibilities = 5;
     	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					//left
-    		currentStateActionVector[1] = 1;						
+    		currentStateActionVector[3] = 1;						
     	}
     	else if (  (myPosX>=750)  &&  ( ((800-myPosX) <= myPosY) || ((800-myPosX) <= (600-myPosY)) )  ){		//right
-    		currentStateActionVector[1] = 2;						
+    		currentStateActionVector[3] = 2;						
     	}
     	else if (myPosY<=50) {		//top 
-    		currentStateActionVector[1] = 3;
+    		currentStateActionVector[3] = 3;
     	}
     	else if (myPosY>=550) {		//bottom				
-    		currentStateActionVector[1] = 4;
+    		currentStateActionVector[3] = 4;
     	}
     	else {
-    		currentStateActionVector[1] = 0; 
+    		currentStateActionVector[3] = 0; 
     	}
 
-    	//Dimension 2: input: myHeading = 0-3: 0-89, 90-179, 180-269, 270-359
-    	if (myHeading < 90) {
-    		currentStateActionVector[2] = 0;
-    	}
-    	else if (myHeading < 180) {
-    		currentStateActionVector[2] = 1;
-    	}
-    	else if (myHeading < 270) {
-    		currentStateActionVector[2] = 2;
-    	}
-    	else {
-    		currentStateActionVector[2] = 3;
-    	}
-		
-		//Dimension 3: input: enemyEnergy: 0-1
-		if (enemyEnergy > 30) {
-			currentStateActionVector[3] = 0;
-		}
-		else {
-			currentStateActionVector[3] = 1;
-		}
-		
-		//Dimension 4: input: enemyDistance: 0-2
-		if (enemyDistance < 150) {
-			currentStateActionVector[4] = 0;
-		}
-		else if (enemyDistance < 350) {
-			currentStateActionVector[4] = 1;
-		}
-		else {
-			currentStateActionVector[4] = 2;
-		}
-		
+    	//Dimension 3 - private static final int input_state1_myHeading_originalPossilibities = 4;
+    	currentStateActionVector[4] = myHeading;
+    	
+    	//Dimension 4 - enemyEnergy
+    	currentStateActionVector[5] = enemyEnergy;
+
+    	//Dimension 5: is enemy moving right, left, or within the angle of my gun?
+    	currentStateActionVector[6] = enemyDistance;
+   
 		//Dimension 5: is enemy moving right, left, or within the angle of my gun?
 		//requires mygunheading, enemyheading, enemyvelocity
-		if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
-			currentStateActionVector[5] = 0; //within angle of gun
+    	if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
+			currentStateActionVector[7] = 0; //within angle of gun
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity > 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity < 0)) ) {
-			currentStateActionVector[5] = 1; //enemy moving left
+			currentStateActionVector[7] = 1; //enemy moving left
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity < 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity > 0)) ){
-			currentStateActionVector[5] = 2; //enemy moving right
+			currentStateActionVector[7] = 2; //enemy moving right
 		}
-		else {
-			out.println("Error! CSAV[5]");
-		}
-		
-		//Dimension 6: null 
-		currentStateActionVector[6] = 0;
+    	out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
     }
  
+    /** 
+     * @name:		getQfromNet
+     * @input: 		currentStateVector 
+     * @purpose: 	For each state in "stateVector", call forwardPropagation to generate the output.  
+     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
+     * @return: 	not sure yet
+     */
+
+	public void getQfromNet() {
+		for (int i = 0; i < num_actions; i++){
+			//Call function for forward propagation
+			double[] Ycalc = forwardProp(currentStateActionVector, flag, i);
+			out.println("YCalc " + Ycalc);
+			}
+	}
+	
     /**
      * @name:		qFunction
-     * @purpose: 	1. Obtain the action in current state with the highest q-value, 
-     * 				   and its associated q-value. 
+     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
+     * 				2. The q value is the maximum "Y" from array
      * 				2. Calculate new prev q-value. 
      * 				3. Update prevSAV with this q-value in LUT. 
      * @param: 		none, but uses:
@@ -655,6 +649,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void qFunction(){
        getMax(); 
        int prevQVal = (int)calcNewPrevQVal();
+       out.println("prevQVal " + prevQVal);
        updateLUT(prevQVal);
     }
 
@@ -700,7 +695,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
         }   
         
         for (int i = 0; i < num_actions; i++){
-            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]][currentStateActionVector[7]];
+//        	indexQVal = (double)
+//            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]][currentStateActionVector[7]];
             
             if (indexQVal > currMax){
             	currMax = indexQVal;
@@ -742,7 +738,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return		prevQVal
      */
     public int calcNewPrevQVal(){
-
         double prevQVal = roboLUT[prevStateActionVector[0]]
         						 [prevStateActionVector[1]]
         						 [prevStateActionVector[2]]		 
@@ -991,6 +986,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
                 w2.close();
             }
         }      
+    	return SUCCESS_exportDataWeights;
     }
     
     /**
@@ -1402,4 +1398,142 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //	    } 
 //	    return SUCCESS_exportData;
 //	}
+    
+    
+    /** Neural net stuff 
+     * 
+     * */
+
+    
+    /*Initiate variables */
+		
+	double lRate = 0.05; 			//learning rate
+	double momentum = 0.2;  	//value of momentum 
+	boolean stopError = false; 	//if flag == false, then stop loop, else continue 
+	int maxEpoch = 1000; 	//if reach maximum number of Epochs, stop loop. 
+	double upperThres = 0.2; 	//upper threshold for random weights
+	double lowerThres = -0.2;	//lower threshold for random weights
+	
+	// initialize arrays 
+	double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
+	double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
+	double [][] vNow 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights.
+	double [][] wNow	= new double[numHiddensTotal][numOutputsTotal]; 
+	double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
+	double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
+	double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
+	double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
+	double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
+	double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
+	double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
+	double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
+	double [] delta_out = new double[numOutputsTotal];
+	double [] delta_hidden = new double[numHiddensTotal];
+	boolean flag = false;  
+	private final int bias = 1; 
+	
+	/** function for forwardpropagation
+	 * @purpose: does forwardPropagation on the inputs from the robot. 
+	 * @return: an array of Y values for all the state pairs. 
+	 **/
+    public double[] forwardProp(double [] currentStateVector, boolean flag, int numTrial) {
+		for (int j = 1; j < numHiddensTotal; j++){
+			double sumIn = 0.0; 
+			for (int i= 0; i < numInputsTotal; i++){	
+				sumIn += currentStateVector[i]*vNow[i][j]; 
+			}
+			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
+			Z_in[0] = bias; 									//set z_in[0] = bias 
+			if (flag == true){
+				Z[j] = binaryActivation(Z_in[j]); 
+				Z[0] = Z_in[0];
+			}
+			else{
+				Z[j] = bipolarActivation(Z_in[j]); 
+				Z[0] = Z_in[0];
+			}
+		}
+		for (int k = 0; k < numOutputsTotal; k++){
+			double sumOut = 0.0; 
+			for (int j= 0; j < numHiddensTotal; j++){	
+				sumOut += Z[j]*wNow[j][k]; 
+			}
+			Y_in[k] = sumOut; 	
+			if (flag == true)
+				Y[k] = binaryActivation(Y_in[k]); 
+			else
+				Y[k] = bipolarActivation(Y_in[k]);				
+		}		
+		return Y; 
+	}
+    /**binaryActivation function
+     * @param x
+     * @return squashedValue. 
+     */
+ 	public double binaryActivation(double x) {
+// 		System.out.println("BINARY ");
+ 		double newVal = 1/(1 + Math.exp(-x)); 
+// 		System.out.println("binary " + newVal );
+ 		return newVal;
+ 	}
+ 	
+ 	/**Function name: bipolarActivation 
+ 	 * @param: current hidden value "z"
+ 	 * @return: new value evaluated at the f(x) = (2/(1 + e(-x))) - 1 
+ 	**/ 	
+ 	public double bipolarActivation(double x) {
+ 		double newVal = (2/(1 + Math.exp(-x)))-1; 
+ 		return newVal; 
+ 	}
+ 	/** Function name: binaryDerivative
+ 	 * @param: input to take the derivative of based on f'(x) = f(x)*(1-f(x)). 
+ 	 * @return: derivative of value. 
+ 	 * 
+ 	 **/
+ 	public double binaryDerivative(double x) {
+ 		double binFunc = binaryActivation(x);
+ 		double binDeriv = binFunc*(1 - binFunc); 
+ 		return binDeriv;
+ 	}
+ 	/** Function name: bipolarDerivative
+ 	 * @param: input to take the derivative of. 
+ 	 * @return: derivative of value: f'(x) =  0.5*(1 + f(x))*(1 - f(x));
+ 	 * 
+ 	 **/
+ 	public double bipolarDerivative(double x) {
+ 		double bipFunc = bipolarActivation(x);
+ 		double bipDeriv = 0.5*(1 + bipFunc)*(1 - bipFunc);  
+ 		return bipDeriv;
+ 	}
+	
+ 	/** 
+ 	 * saveWeightFile. 
+ 	 * @param epochNum, numHiddenWeights, numOuterWeights. 
+ 	 */
+	public void saveWeightFile(int epochNum, double [][] hiddenWeights, double [][] outerWeights){
+		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights.txt"); 
+		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights.txt"); 
+		PrintStream saveHiddenWeights = null;
+		PrintStream saveOuterWeights = null;
+		try {
+			saveHiddenWeights = new PrintStream( new FileOutputStream(saveWeights));
+			saveOuterWeights = new PrintStream( new FileOutputStream(saveOutWeights));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+//		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
+//		System.out.println("final weights " + Arrays.deepToString(outerWeights));
+		for (int i = 0; i < hiddenWeights.length; i++){
+			for (int j = 0; j < hiddenWeights[i].length; j++){
+				saveHiddenWeights.println(hiddenWeights[i][j]);
+			}        
+		}
+		for (int i = 0; i < outerWeights.length; i++){
+			for (int j = 0; j < outerWeights[i].length; j++){
+				saveOuterWeights.println(outerWeights[i][j]);
+			}
+		}
+		saveHiddenWeights.close(); 
+		saveOuterWeights.close(); 
+	}
 }

@@ -23,7 +23,7 @@ public class backPropFinalTest{
 		for (int a = 0; a < 1; a ++){	 
 
 			/*Initiate variables */
-			int numInputs = 9; 		//6 states + 3 actions. 
+			int numInputs = 8; 			//5 states + 3 actions. 
 			int numHidden = 5;			//number of hidden inputs
 			int numTrials = 8641; 		//number of trials in the training set	
 			double lRate = 0.05; 			//learning rate
@@ -62,9 +62,8 @@ public class backPropFinalTest{
 		    BufferedReader readerACT = null;
 		    try {
 		    	String dir1 = "C:/Users/Andrea/github/robocode/robots/MyRobots/LUTTrackfire.data";
-		    	String dir2 = "C:/Users/Andrea/github/robocode/robots/MyRobots/LUTTrackfire.data";
 				readerLUT = new BufferedReader(new FileReader(dir1 + "/" + "LUTTrackfire.dat"));
-				readerSAV = new BufferedReader(new FileReader(dir2 + "/" + "stateAction.dat"));
+				readerSAV = new BufferedReader(new FileReader(dir1 + "/" + "stateAction.dat"));
 				readerACT = new BufferedReader(new FileReader("newActions.txt"));
 				try {
 					//store each line into output block, skipping the first line, which was the counter. 
@@ -251,7 +250,7 @@ public class backPropFinalTest{
 				normalizedOutputs[i] = outputs[i]/qMax; 
 			}
 			
-			System.out.println("normalizedOutputs " + Arrays.toString(normalizedOutputs));
+//			System.out.println("normalizedOutputs " + Arrays.toString(normalizedOutputs));
 			/* initialize myNeuralNet. 
 			 * */
 		    backPropFinal myNeuralNet = new backPropFinal(numInputs, numHidden, lRate, momentum, qMax, qMin);		/*Create new object of class "myBackProp */

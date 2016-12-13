@@ -238,15 +238,14 @@ public class LUTTrackfire extends AdvancedRobot{
     private short fileSettings_SA = 0; 
     
     // LUT table stored in memory.
-    private static int [][][][][][][] roboLUT 
+    private static int [][][][][][] roboLUT 
         = new int
         [num_actions]
         [myPositionDiscretized_states]
         [myHeadingDiscretized_states]		
         [enemyEnergy_states]
         [enemyDistance_states]
-        [enemyDirection_states]
-        [1];
+        [enemyDirection_states];
     
     // Dimensions of LUT table, used for iterations.
     private static int[] roboLUTDimensions = {
@@ -255,8 +254,7 @@ public class LUTTrackfire extends AdvancedRobot{
         myHeadingDiscretized_states,
         enemyEnergy_states,
         enemyDistance_states,
-        enemyDirection_states,
-        1};
+        enemyDirection_states};
     
     // Stores current reward for action.
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
@@ -783,7 +781,7 @@ public class LUTTrackfire extends AdvancedRobot{
         }   
         
         for (int i = 0; i < num_actions; i++){
-            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]];
+            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]];
             
             if (indexQVal > currMax){
             	currMax = indexQVal;
@@ -831,8 +829,7 @@ public class LUTTrackfire extends AdvancedRobot{
         						 [prevStateActionVector[2]]		 
         						 [prevStateActionVector[3]]
         						 [prevStateActionVector[4]]
-        						 [prevStateActionVector[5]]
-        						 [prevStateActionVector[6]];
+        						 [prevStateActionVector[5]];
         
         prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
         return (int)prevQVal;
@@ -856,13 +853,12 @@ public class LUTTrackfire extends AdvancedRobot{
          	   [prevStateActionVector[2]]
          	   [prevStateActionVector[3]]
          	   [prevStateActionVector[4]]
-         	   [prevStateActionVector[5]]
-         	   [prevStateActionVector[6]]	   
+         	   [prevStateActionVector[5]]	   
          					  = prevQVal;
         
         if (debug) {
 	        out.println("prev " + Arrays.toString(prevStateActionVector));
-	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]][prevStateActionVector[4]][prevStateActionVector[5]][prevStateActionVector[6]]);
+	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]][prevStateActionVector[4]][prevStateActionVector[5]]);
         }
         
         //Choosing next action based on policy.
@@ -1056,9 +1052,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
     		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
     	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-    	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = 0;
-    	                        					}
+    	                        					roboLUT[p0][p1][p2][p3][p4][p5] = 0;
     	                        				}
                             				}
                             			}
@@ -1074,9 +1068,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
     	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
     	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-    	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = Integer.parseInt(reader.readLine());
-    	                        					}
+    	                        					roboLUT[p0][p1][p2][p3][p4][p5] = Integer.parseInt(reader.readLine());
     	                        				}
     	                        			}
     	                        		}
@@ -1265,9 +1257,7 @@ public class LUTTrackfire extends AdvancedRobot{
 	                    		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
 	                    			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
 	                    				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-	                    					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-	                    						w.println(roboLUT[p0][p1][p2][p3][p4][p5][p6]);
-	                    					}
+	                    					w.println(roboLUT[p0][p1][p2][p3][p4][p5]);
 	                    				}
 	                				}
 	                    		}
@@ -1348,9 +1338,7 @@ public class LUTTrackfire extends AdvancedRobot{
                 		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
                 			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
                 				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-                					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-                						w.println("\t" + p0+p1+p2+p3+p4+p5+p6);
-                					}
+                					w.println("\t" + p0+p1+p2+p3+p4+p5);
                 				}
             				}
                 		}
