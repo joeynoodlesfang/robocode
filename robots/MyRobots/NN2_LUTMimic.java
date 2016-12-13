@@ -595,14 +595,29 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	}
 
     	//Dimension 3 - private static final int input_state1_myHeading_originalPossilibities = 4;
-    	currentStateActionVector[4] = myHeading;
+    	currentStateActionVector[4] = myHeading*(4/360);			//to normalize. 
     	
     	//Dimension 4 - enemyEnergy
-    	currentStateActionVector[5] = enemyEnergy;
-
-    	//Dimension 5: is enemy moving right, left, or within the angle of my gun?
+    	if (enemyEnergy < 30){
+    		currentStateActionVector[5] = enemyEnergy/60;
+    	}
+    	
+    	else if (enemyEnergy >= 30){
+    		currentStateActionVector[5] =((enemyEnergy-30)/70)+0.5;
+    	}
+    	//Dimension 5:  //<150, <350, >=350(to1000)
     	currentStateActionVector[6] = enemyDistance;
-   
+    	if (enemyDistance < 150){
+    		currentStateActionVector[6] = enemyDistance/100;
+    	}
+    	
+    	else if (enemyDistance <= 350){
+    		currentStateActionVector[6] =((enemyDistance-150)/200);
+    	}
+    	else if (enemyDistance > 350){
+    		currentStateActionVector[6] = (enemyDistance/2000); 
+    	}
+    	
 		//Dimension 5: is enemy moving right, left, or within the angle of my gun?
 		//requires mygunheading, enemyheading, enemyvelocity
     	if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
@@ -825,9 +840,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     	
     public void doAction(){
-    	
-
-    	
     	//maneuver behaviour (chase-offensive/defensive)
     	if ((currentStateActionVector[0])%4 == 0) {
     		setTurnRight(enemyBearingFromHeading);
