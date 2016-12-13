@@ -123,7 +123,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //head-on (still (abs <30 || >150), 
     //left (<0 relative dir w/ positive velo || >0 with negative velo), 
     //right (<0 dir w/ negative velo || >0 with positive velo)
-
+    
     
    
     /**
@@ -189,7 +189,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //State vector (no actions) where copy currentSV to prevSV 
     private double currentStateActionVector[] = new double [numInputsTotal];
     private double prevStateActionVector[]    = new double [numInputsTotal]; 
-     
+	
+    //array to store the q values from net. 
+    private double [][][] qFromNet = new double [input_action0_moveReferringToEnemy_possibilities][input_action1_fire_possibilities][input_action2_fireDirection_possibilities];
+
+	
     //variables used for getMax.
     int num_actions = 3; 
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
@@ -622,11 +626,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
 
 	public void getQfromNet() {
-		for (int i = 0; i < num_actions; i++){
-			//Call function for forward propagation
-			double[] Ycalc = forwardProp(currentStateActionVector, flag, i);
-			out.println("YCalc " + Ycalc);
+		for (int i = 0; i < input_action0_moveReferringToEnemy_possibilities; i++){
+			for (int j = 0; j < input_action1_fire_possibilities; j++){
+				for(int k = 0; k < input_action2_fireDirection_possibilities; k++){
+					double Ycalc = forwardProp(currentStateActionVector, flagActivation);
+					qFromNet[i][j][k] = Ycalc; 
+				}
 			}
+		}
+		out.println("YCalc " + Arrays.toString(qFromNet));
 	}
 	
     /**
@@ -679,24 +687,25 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return: 	n
      */
     public void getMax() {
-        double currMax = -100.0;
+    	double currMax = qFromNet[0][0][0];
+    	for (int i = 0; i < qFromNet.length; i++){
+		    for (int j = 0; j < qFromNet[0].length; j++){
+		    	for (int k = 0; k < qFromNet[0][0].length; k++){
+		    		if (qFromNet[i][j][k] > maxQ) {
+		    			currMax = qFromNet[i][j][k];
+		    	}
+    		}
+    	}
+		    
+//        double currMax = -100.0;
         double indexQVal = 0.0;
         int numMaxActions = 0;
         int randMaxAction = 0;
-
-        if (debug) {
-        	out.println("@getMax()");
-        	out.println("reward " + reward);
-        	out.println("Cycling actions in currSAV for maxQ: ");
-        }   
         
         for (int i = 0; i < num_actions; i++){
-//        	indexQVal = (double)
-//            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]][currentStateActionVector[7]];
-            
             if (indexQVal > currMax){
             	currMax = indexQVal;
-            	numMaxActions = 1;
+            	numMaxActions = 1	;
             	arrAllMaxActions[numMaxActions-1] = i;
             }
             else if (indexQVal == currMax){
@@ -1309,14 +1318,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
 	double [] delta_out = new double[numOutputsTotal];
 	double [] delta_hidden = new double[numHiddensTotal];
-	boolean flag = false;  
+	boolean flagActivation = false;  
 	private final int bias = 1; 
 	
 	/** function for forwardpropagation
 	 * @purpose: does forwardPropagation on the inputs from the robot. 
 	 * @return: an array of Y values for all the state pairs. 
 	 **/
-    public double[] forwardProp(double [] currentStateVector, boolean flag, int numTrial) {
+    public double forwardProp(double [] currentStateVector, boolean flag) {
 		for (int j = 1; j < numHiddensTotal; j++){
 			double sumIn = 0.0; 
 			for (int i= 0; i < numInputsTotal; i++){	
@@ -1344,7 +1353,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			else
 				Y[k] = bipolarActivation(Y_in[k]);				
 		}		
-		return Y; 
+		return Y[0]; 
 	}
     /**binaryActivation function
      * @param x
