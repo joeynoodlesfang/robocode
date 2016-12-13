@@ -179,29 +179,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		[numOutputsTotal]
 		;   
 	
-    // LUT table stored in memory.
-//    private static int [][][][][][][][] roboLUT 
-//        = new int
-//        [input_action0_moveReferringToEnemy_possibilities]
-//        [input_action1_fire_possibilities]
-//        [input_action2_fireDirection_possibilities]		
-//        [input_state0_myPos_possibilities]
-//        [input_state1_myHeading_originalPossilibities]
-//        [input_state2_enemyEnergy_originalPossibilities]
-//        [input_state3_enemyDistance_originalPossibilities]
-//        [input_state4_enemyDirection_originalPossibilities];
-//    
-//    // Dimensions of LUT table, used for iterations.
-//    private static int[] roboLUTDimensions = {
-//    	input_action0_moveReferringToEnemy_possibilities, 
-//    	input_action1_fire_possibilities,
-//    	input_action2_fireDirection_possibilities,
-//    	input_state0_myPos_possibilities,
-//    	input_state1_myHeading_originalPossilibities,
-//    	input_state2_enemyEnergy_originalPossibilities,
-//    	input_state3_enemyDistance_originalPossibilities,
-//    	input_state4_enemyDirection_originalPossibilities};
-//    
     // Stores current reward for action.
     
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
@@ -210,10 +187,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     // Stores current and previous stateAction vectors.
     //State vector (no actions) where copy currentSV to prevSV 
-    private double currentStateVector[] = new double [8641]; 
-    private double prevStateVector [] = new double [8641]; 
-//    private int currentStateActionVector[] = new int [roboLUTDimensions.length];
-//    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
+    private double currentStateActionVector[] = new double [numInputsTotal];
+    private double prevStateActionVector[]    = new double [numInputsTotal]; 
      
     //variables used for getMax.
     int num_actions = 3; 
@@ -566,8 +541,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public void copyCurrentSVIntoPrevSV(){
-    	for (int i = 0; i < currentStateVector.length; i++) {
-    		prevStateVector[i] = currentStateVector[i];
+    	for (int i = 0; i < currentStateActionVector.length; i++) {
+    		prevStateActionVector[i] = currentStateActionVector[i];
     	}
     }
     
@@ -578,66 +553,49 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				3. Update array of current stateAction vector.  
      * @param: 		n
      * @return: 	none
+     * currentStateVector positions [0][1][2] are all the actions. 
      */
     public void generateCurrentStateVector(){
-    	//INPUT 0: ACTION
+    	//INPUTS 0, 1 and 2 are ACTION
         
     	//Dimension 1 - private static final int input_state0_myPos_possibilities = 5;
     	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					//left
-    		currentStateVector[1] = 1;						
+    		currentStateActionVector[3] = 1;						
     	}
     	else if (  (myPosX>=750)  &&  ( ((800-myPosX) <= myPosY) || ((800-myPosX) <= (600-myPosY)) )  ){		//right
-    		currentStateVector[1] = 2;						
+    		currentStateActionVector[3] = 2;						
     	}
     	else if (myPosY<=50) {		//top 
-    		currentStateVector[1] = 3;
+    		currentStateActionVector[3] = 3;
     	}
     	else if (myPosY>=550) {		//bottom				
-    		currentStateVector[1] = 4;
+    		currentStateActionVector[3] = 4;
     	}
     	else {
-    		currentStateVector[1] = 0; 
+    		currentStateActionVector[3] = 0; 
     	}
 
-    	//Dimension 2 - private static final int input_state1_myHeading_originalPossilibities = 4;
-    	currentStateVector[2] = myHeading;
+    	//Dimension 3 - private static final int input_state1_myHeading_originalPossilibities = 4;
+    	currentStateActionVector[4] = myHeading;
     	
-//    	if (myHeading < 90) {
-//    		currentStateVector[2] = myHeading;
-//    	}
-//    	else if (myHeading < 180) {
-//    		currentStateVector[2] = 1;
-//    	}
-//    	else if (myHeading < 270) {
-//    		currentStateVector[2] = 2;
-//    	}
-//    	else {
-//    		currentStateVector[2] = 3;
-//    	}
+    	//Dimension 4 - enemyEnergy
+    	currentStateActionVector[5] = enemyEnergy;
 
-//      Dimension 3: private static final int input_state2_enemyEnergy_originalPossibilities = 2;
-//      //>30, <30
-    	currentStateVector[3] = enemyEnergy;
-
-//      Dimension 4: private static final int input_state3_enemyDistance_originalPossibilities = 3;
-    	currentStateVector[4] = enemyDistance;
-//      private static final int input_state4_enemyDirection_originalPossibilities = 3;
+    	//Dimension 5: is enemy moving right, left, or within the angle of my gun?
+    	currentStateActionVector[6] = enemyDistance;
    
 		//Dimension 5: is enemy moving right, left, or within the angle of my gun?
 		//requires mygunheading, enemyheading, enemyvelocity
     	if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
-			currentStateVector[5] = 0; //within angle of gun
+			currentStateActionVector[7] = 0; //within angle of gun
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity > 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity < 0)) ) {
-			currentStateVector[5] = 1; //enemy moving left
+			currentStateActionVector[7] = 1; //enemy moving left
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity < 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity > 0)) ){
-			currentStateVector[5] = 2; //enemy moving right
+			currentStateActionVector[7] = 2; //enemy moving right
 		}
-		else {
-			out.println("Error! CSAV[5]");
-		}
-    	out.println("currentStateVector " + Arrays.toString(currentStateVector));
+    	out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
     }
  
     /** 
@@ -651,9 +609,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	public void getQfromNet() {
 		for (int i = 0; i < num_actions; i++){
 			//Call function for forward propagation
-			double[] Ycalc = forwardProp(currentStateVector[i], flag, i);
-//			if (i == (numTrials-2)){
-//				finalTrial = true; 
+			double[] Ycalc = forwardProp(currentStateActionVector, flag, i);
+			out.println("YCalc " + Ycalc);
 			}
 	}
 	
@@ -762,7 +719,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return		prevQVal
      */
     public int calcNewPrevQVal(){
-
         double prevQVal = roboLUT[prevStateActionVector[0]]
         						 [prevStateActionVector[1]]
         						 [prevStateActionVector[2]]		 
@@ -1348,7 +1304,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 * @purpose: does forwardPropagation on the inputs from the robot. 
 	 * @return: an array of Y values for all the state pairs. 
 	 **/
-    public double[] forwardProp(double currentStateVector, boolean flag, int numTrial) {
+    public double[] forwardProp(double [] currentStateVector, boolean flag, int numTrial) {
 		for (int j = 1; j < numHiddensTotal; j++){
 			double sumIn = 0.0; 
 			for (int i= 0; i < numInputsTotal; i++){	
