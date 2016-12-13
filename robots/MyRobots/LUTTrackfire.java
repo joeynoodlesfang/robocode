@@ -575,21 +575,47 @@ public class LUTTrackfire extends AdvancedRobot{
     	}
     }
 
+    /* Training online: 
+     *  step (1) - need a vector of just states "copyCurrentSV into prev SV". 
+        step (2) - get weights array - neural net do forwardpropagation for each action in the "CurrentSV"  , remembering all outputs "Y" in an array
+        step (3) - choose maximum "Y" from array 
+        step (4) - call qFunction() below using prevSAV as qOld and qNew is the SAV with max Y (chosen in step (3)) 
+        		   - with return being the qOld_(new) 
+        step (5) - with prevSAV (inputs) and qOld_new (correct target)  and qOld (calculated output), run backpropagation & save weights 
+        step (6) - save error for graph
+        step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
+        
+     */
     public void learning() {
-    	if (tick%3 == 0) {
-	    	calculateReward();
-	    	copyCurrentSAVIntoPrevSAV();
-	    	generateCurrentStateVector();
-	    	qFunction(); 
-	    	resetReward();
-	    	doAction();
-    	}
-    	else {
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-    	}
-    	setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-    	scan();
-    	execute();
+    	//tick%3 is possible new state. 
+        if (tick%3 == 0) {
+
+             calculateReward();
+             copyCurrentSAVIntoPrevSAV();
+
+             generateCurrentStateVector();
+
+
+             qFunction();
+
+             resetReward();
+
+             doAction();
+
+        }
+
+        else {
+
+            setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+
+        }
+
+        setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+
+        scan();
+
+        execute();
+
     }
 
 	/**
