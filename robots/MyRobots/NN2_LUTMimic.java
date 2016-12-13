@@ -74,6 +74,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     private static final int SUCCESS_importData = 					0x00;
     private static final int SUCCESS_exportData = 					0x00;
+    private static final int SUCCESS_importDataWeights =			0x00;
+    private static final int SUCCESS_exportDataWeights =			0x00;
     
 //    private static final int ERROR_1_import_IOException = 				1;
 //    private static final int ERROR_2_import_typeConversionOrBlank = 	2;
@@ -86,6 +88,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //    private static final int ERROR_9_export_dump =						9;
 //    private static final int ERROR_10_export_mismatchedStringName =		10;
 //    private static final int ERROR_11_import_wrongFileName_LUT = 		11;
+    //TODO YOLO;
+    private static final int ERROR_12_importWeights_IOException = 12;
+    private static final int ERROR_13_importWeights_typeConversionOrBlank = 13;
+    private static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
+    private static final int ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput = 15;
+    private static final int ERROR_16_exportWeights_IOException = 16;
     
     //strings used for importing or extracting files 
     String strStringTest = "stringTest.dat";    
@@ -107,6 +115,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int input_action2_fireDirection_possibilities = 3;
     //-10deg, 0, 10deg
     
+    private static final int numActions = 3;
+    
     private static final int input_state0_myPos_possibilities = 5;
     //center, left, right, top, bottom
     private static final int input_state1_myHeading_originalPossilibities = 4;
@@ -119,9 +129,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //head-on (still (abs <30 || >150), 
     //left (<0 relative dir w/ positive velo || >0 with negative velo), 
     //right (<0 dir w/ negative velo || >0 with positive velo)
+    
+    private static final int numStates = 5;
 
-
-   
+    private static final int numInputBias = 0;
+    
+    
+    private static final int numHiddenBias = 1;
+    private static final int numHiddenNeuron = 4;
+    private static final int numInputsTotal = ( numInputBias + numActions + numStates );
+    private static final int numHiddensTotal = ( numHiddenBias + numHiddenNeuron);
+    private static final int numOutputsTotal = 1;
+    
     /**
      * FLAGS AND COUNTS
      */
@@ -149,6 +168,20 @@ public class NN2_LUTMimic extends AdvancedRobot{
      *  OTHER GLOBALS
      */
     
+    // weights connecting between input and hidden layers.
+    private static double[][] NNWeights_inputToHidden 
+        = new double
+        [numInputsTotal]
+        [numHiddensTotal - numHiddenBias] //no weights go from inputs to hidden bias.
+        ;
+    
+    // weights connecting
+    private static double[][] NNWeights_hiddenToOutput
+    	= new double
+    	[numHiddensTotal]
+    	[numOutputsTotal]
+    	;
+    
 
     // LUT table configuration information, stored in the first line of .dat
     private short fileSettings_default = 0;
@@ -157,35 +190,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private short fileSettings_WL = 0;
     private short fileSettings_SA = 0; 
     
-    // LUT table stored in memory.
-    private static int [][][][][][][] roboLUT 
-        = new int
-        [num_actions]
-        [myPositionDiscretized_states]
-        [myHeadingDiscretized_states]		
-        [enemyEnergy_states]
-        [enemyDistance_states]
-        [enemyDirection_states]
-        [1];
-    
-    // Dimensions of LUT table, used for iterations.
-    private static int[] roboLUTDimensions = {
-        num_actions, 
-        myPositionDiscretized_states,
-        myHeadingDiscretized_states,
-        enemyEnergy_states,
-        enemyDistance_states,
-        enemyDirection_states,
-        1};
     
     // Stores current reward for action.
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
     private int energyDiffCurr = 0;
     private int energyDiffPrev = 0;
     
-    // Stores current and previous stateAction vectors.
-    private int currentStateActionVector[] = new int [roboLUTDimensions.length];
-    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
+//    // Stores current and previous stateAction vectors.
+//    private int currentStateActionVector[] = new int [roboLUTDimensions.length];
+//    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
      
     //variables used for getMax.
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
@@ -861,9 +874,121 @@ public class NN2_LUTMimic extends AdvancedRobot{
       }
     }
     
-
-
-
+    /**
+     * @name:		importDataWeights
+     * @author:		partly written in sittingduckbot
+     * @purpose:	to extract neural net weights stored in finalHiddenWeights.txt 
+     * 				and finalOuterWeights.txt into arrays NNWeights_inputToHidden[][]
+     * 				and NNWeights_hiddenToOutput[][], respectively.
+     * @param:		n, but uses these globals:
+     * 				NNWeights_inputToHidden[][]
+     * 				NNWeights_hiddenToOutput[][]
+     * @return:		n
+     */
+    public int importDataWeights() {
+    	try {
+        	BufferedReader reader = null;
+        	BufferedReader reader2 = null;
+            try {
+                reader = new BufferedReader(new FileReader(getDataFile("finalHiddenWeights.txt")));
+            	for (int i = 0; i < numInputsTotal; i++) {
+            		for (int j = 0; j < numHiddenNeuron; j++) {
+            			NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
+	                }
+            	}
+            } 
+            finally {
+                if (reader != null) {
+                    reader.close();
+                }
+            }
+            
+            try {
+                reader2 = new BufferedReader(new FileReader(getDataFile("finalOuterWeights.txt")));
+            	for (int i = 0; i < numHiddensTotal; i++) {
+            		for (int j = 0; j < numOutputsTotal; j++) {
+            			NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader.readLine());
+	                }
+            	}
+            } 
+            finally {
+                if (reader2 != null) {
+                    reader2.close();
+                }
+            }
+        } 
+        //exception to catch when file is unreadable
+        catch (IOException e) {
+            return ERROR_12_importWeights_IOException;
+        } 
+        // type of exception where there is a wrong number format (type is wrong or blank)  
+        catch (NumberFormatException e) {
+            return ERROR_13_importWeights_typeConversionOrBlank;
+        }
+    	return SUCCESS_importDataWeights;
+    }
+    
+    /**
+     * @name: 		exportDataWeight
+     * @author: 	mostly sittingduckbot
+     * @purpose: 	1. stores the weights back into finalHiddenWeights.txt, 
+     * 				finalOuterWeights.txt from data NNWeights_inputToHidden[][]
+     * 				and NNWeights_hiddenToOutput[][], respectively.
+     * 
+     */
+    public int exportDataWeights() {
+		PrintStream w1 = null;
+		PrintStream w2 = null;
+    	try {
+    		w1 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalHiddenWeights.txt")));
+    		if (w1.checkError()) {
+                //Error 0x03: cannot write
+            	if (debug_export || debug) {
+            		out.println("Something done fucked up (Error 14 cannot write)");
+            	}
+            	return ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden;
+            	//TODO here
+    		}
+    		 
+    		for (int i = 0; i < numInputsTotal; i++) {
+         		for (int j = 0; j < numHiddenNeuron; j++) {
+         			w1.println(NNWeights_inputToHidden[i][j]);
+                }
+         	}
+    		
+    		w2 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalOuterWeights.txt")));
+    		if (w2.checkError()) {
+                //Error 0x03: cannot write
+            	if (debug_export || debug) {
+            		out.println("Something done fucked up (Error 15 cannot write)");
+            	}
+            	return ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput;
+    		 }
+    		 
+    		for (int i = 0; i < numHiddensTotal; i++) {
+         		for (int j = 0; j < numOutputsTotal; j++) {
+         			w2.println(NNWeights_hiddenToOutput[i][j]);
+                }
+         	}
+    	}
+    	catch (IOException e) {
+    		if (debug_export || debug) {
+    			out.println("IOException trying to write: ");
+    		}
+            e.printStackTrace(out); //Joey: lol no idea what this means
+            return ERROR_16_exportWeights_IOException;
+        } 
+        finally {
+            if (w1 != null) {
+                w1.close();
+            }
+            
+            if (w2 != null) {
+                w2.close();
+            }
+        }      
+    }
+    
     /**
      * @name:		importData
      * @author:		partly written in sittingduckbot
