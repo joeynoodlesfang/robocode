@@ -11,9 +11,13 @@ import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.Color;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import robocode.AdvancedRobot;
@@ -157,6 +161,24 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private short fileSettings_WL = 0;
     private short fileSettings_SA = 0; 
 
+    private static int numInputsTotal = 8; 
+    private static int numHiddensTotal = 4; 
+    private static int numHiddenBias = 1; 
+    private static int numOutputsTotal = 1; 
+    
+    private static double[][] NNWeights_inputToHidden 
+    = new double
+    [numInputsTotal]
+    [numHiddensTotal - numHiddenBias] //no weights go from inputs to hidden bias.
+    ;
+
+	// weights connecting
+	private static double[][] NNWeights_hiddenToOutput
+		= new double
+		[numHiddensTotal]
+		[numOutputsTotal]
+		;   
+	
     // LUT table stored in memory.
 //    private static int [][][][][][][][] roboLUT 
 //        = new int
@@ -620,16 +642,21 @@ public class NN2_LUTMimic extends AdvancedRobot{
  
     /** 
      * @name:		getQfromNet
-     * @purpose: 	Get NNWeights_inputToHidden and NNWeights_hiddenToOutput 
-     * 				Call forwardPropagation from "backPropFinal" 
+     * @input: 		currentStateVector 
+     * @purpose: 	For each state in "stateVector", call forwardPropagation to generate the output.  
      * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
-     * @return: 	The maximum value from 
+     * @return: 	not sure yet
      */
 
 	public void getQfromNet() {
-		// TODO Auto-generated method stub
-		
+		for (int i = 0; i < num_actions; i++){
+			//Call function for forward propagation
+			double[] Ycalc = forwardProp(currentStateVector[i], flag, i);
+//			if (i == (numTrials-2)){
+//				finalTrial = true; 
+			}
 	}
+	
     /**
      * @name:		qFunction
      * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
@@ -1283,4 +1310,142 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //	    } 
 //	    return SUCCESS_exportData;
 //	}
+    
+    
+    /** Neural net stuff 
+     * 
+     * */
+
+    
+    /*Initiate variables */
+		
+	double lRate = 0.05; 			//learning rate
+	double momentum = 0.2;  	//value of momentum 
+	boolean stopError = false; 	//if flag == false, then stop loop, else continue 
+	int maxEpoch = 1000; 	//if reach maximum number of Epochs, stop loop. 
+	double upperThres = 0.2; 	//upper threshold for random weights
+	double lowerThres = -0.2;	//lower threshold for random weights
+	
+	// initialize arrays 
+	double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
+	double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
+	double [][] vNow 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights.
+	double [][] wNow	= new double[numHiddensTotal][numOutputsTotal]; 
+	double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
+	double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
+	double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
+	double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
+	double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
+	double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
+	double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
+	double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
+	double [] delta_out = new double[numOutputsTotal];
+	double [] delta_hidden = new double[numHiddensTotal];
+	boolean flag = false;  
+	private final int bias = 1; 
+	
+	/** function for forwardpropagation
+	 * @purpose: does forwardPropagation on the inputs from the robot. 
+	 * @return: an array of Y values for all the state pairs. 
+	 **/
+    public double[] forwardProp(double currentStateVector, boolean flag, int numTrial) {
+		for (int j = 1; j < numHiddensTotal; j++){
+			double sumIn = 0.0; 
+			for (int i= 0; i < numInputsTotal; i++){	
+				sumIn += currentStateVector[i]*vNow[i][j]; 
+			}
+			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
+			Z_in[0] = bias; 									//set z_in[0] = bias 
+			if (flag == true){
+				Z[j] = binaryActivation(Z_in[j]); 
+				Z[0] = Z_in[0];
+			}
+			else{
+				Z[j] = bipolarActivation(Z_in[j]); 
+				Z[0] = Z_in[0];
+			}
+		}
+		for (int k = 0; k < numOutputsTotal; k++){
+			double sumOut = 0.0; 
+			for (int j= 0; j < numHiddensTotal; j++){	
+				sumOut += Z[j]*wNow[j][k]; 
+			}
+			Y_in[k] = sumOut; 	
+			if (flag == true)
+				Y[k] = binaryActivation(Y_in[k]); 
+			else
+				Y[k] = bipolarActivation(Y_in[k]);				
+		}		
+		return Y; 
+	}
+    /**binaryActivation function
+     * @param x
+     * @return squashedValue. 
+     */
+ 	public double binaryActivation(double x) {
+// 		System.out.println("BINARY ");
+ 		double newVal = 1/(1 + Math.exp(-x)); 
+// 		System.out.println("binary " + newVal );
+ 		return newVal;
+ 	}
+ 	
+ 	/**Function name: bipolarActivation 
+ 	 * @param: current hidden value "z"
+ 	 * @return: new value evaluated at the f(x) = (2/(1 + e(-x))) - 1 
+ 	**/ 	
+ 	public double bipolarActivation(double x) {
+ 		double newVal = (2/(1 + Math.exp(-x)))-1; 
+ 		return newVal; 
+ 	}
+ 	/** Function name: binaryDerivative
+ 	 * @param: input to take the derivative of based on f'(x) = f(x)*(1-f(x)). 
+ 	 * @return: derivative of value. 
+ 	 * 
+ 	 **/
+ 	public double binaryDerivative(double x) {
+ 		double binFunc = binaryActivation(x);
+ 		double binDeriv = binFunc*(1 - binFunc); 
+ 		return binDeriv;
+ 	}
+ 	/** Function name: bipolarDerivative
+ 	 * @param: input to take the derivative of. 
+ 	 * @return: derivative of value: f'(x) =  0.5*(1 + f(x))*(1 - f(x));
+ 	 * 
+ 	 **/
+ 	public double bipolarDerivative(double x) {
+ 		double bipFunc = bipolarActivation(x);
+ 		double bipDeriv = 0.5*(1 + bipFunc)*(1 - bipFunc);  
+ 		return bipDeriv;
+ 	}
+	
+ 	/** 
+ 	 * saveWeightFile. 
+ 	 * @param epochNum, numHiddenWeights, numOuterWeights. 
+ 	 */
+	public void saveWeightFile(int epochNum, double [][] hiddenWeights, double [][] outerWeights){
+		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights.txt"); 
+		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights.txt"); 
+		PrintStream saveHiddenWeights = null;
+		PrintStream saveOuterWeights = null;
+		try {
+			saveHiddenWeights = new PrintStream( new FileOutputStream(saveWeights));
+			saveOuterWeights = new PrintStream( new FileOutputStream(saveOutWeights));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+//		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
+//		System.out.println("final weights " + Arrays.deepToString(outerWeights));
+		for (int i = 0; i < hiddenWeights.length; i++){
+			for (int j = 0; j < hiddenWeights[i].length; j++){
+				saveHiddenWeights.println(hiddenWeights[i][j]);
+			}        
+		}
+		for (int i = 0; i < outerWeights.length; i++){
+			for (int j = 0; j < outerWeights[i].length; j++){
+				saveOuterWeights.println(outerWeights[i][j]);
+			}
+		}
+		saveHiddenWeights.close(); 
+		saveOuterWeights.close(); 
+	}
 }
