@@ -200,8 +200,8 @@ public class backPropFinal implements NeuralNetInterface{
 	}
 	
 	public void saveFile(int epochNum, double [][] hiddenWeights, double [][] outerWeights){
-		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\finalHiddenWeights.txt"); 
-		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\finalOuterWeights.txt"); 
+		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights.txt"); 
+		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights.txt"); 
 		PrintStream saveHiddenWeights = null;
 		PrintStream saveOuterWeights = null;
 		try {
@@ -210,8 +210,8 @@ public class backPropFinal implements NeuralNetInterface{
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
-		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
-		System.out.println("final weights " + Arrays.deepToString(outerWeights));
+//		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
+//		System.out.println("final weights " + Arrays.deepToString(outerWeights));
 		for (int i = 0; i < hiddenWeights.length; i++){
 			for (int j = 0; j < hiddenWeights[i].length; j++){
 				saveHiddenWeights.println(hiddenWeights[i][j]);

@@ -618,8 +618,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
  
     /**
      * @name:		qFunction
-     * @purpose: 	1. Obtain the action in current state with the highest q-value, 
-     * 				   and its associated q-value. 
+     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
+     * 				2. The q value is the maximum "Y" from array
      * 				2. Calculate new prev q-value. 
      * 				3. Update prevSAV with this q-value in LUT. 
      * @param: 		none, but uses:
@@ -678,7 +678,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
         }   
         
         for (int i = 0; i < num_actions; i++){
-            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]][currentStateActionVector[7]];
+//        	indexQVal = (double)
+//            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]][currentStateActionVector[7]];
             
             if (indexQVal > currMax){
             	currMax = indexQVal;
