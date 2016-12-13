@@ -200,27 +200,31 @@ public class backPropFinal implements NeuralNetInterface{
 	}
 	
 	public void saveFile(int epochNum, double [][] hiddenWeights, double [][] outerWeights){
-		File saveWeights = new File ("finalWeights.txt"); 
-		PrintStream saveWeightFile = null;
+		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\finalHiddenWeights.txt"); 
+		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\finalOuterWeights.txt"); 
+		PrintStream saveHiddenWeights = null;
+		PrintStream saveOuterWeights = null;
 		try {
-			saveWeightFile = new PrintStream( new FileOutputStream(saveWeights));
+			saveHiddenWeights = new PrintStream( new FileOutputStream(saveWeights));
+			saveOuterWeights = new PrintStream( new FileOutputStream(saveOutWeights));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
-//		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
-//		System.out.println("final weights " + Arrays.deepToString(outerWeights));
+		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
+		System.out.println("final weights " + Arrays.deepToString(outerWeights));
 		for (int i = 0; i < hiddenWeights.length; i++){
 			for (int j = 0; j < hiddenWeights[i].length; j++){
-				saveWeightFile.println("hiddenWeight " + hiddenWeights[i][j]);
-			}
+				saveHiddenWeights.println(hiddenWeights[i][j]);
+			}        
 		}
 		for (int i = 0; i < outerWeights.length; i++){
 			for (int j = 0; j < outerWeights[i].length; j++){
-				saveWeightFile.println("outerWeight " + outerWeights[i][j]);
+				saveOuterWeights.println(outerWeights[i][j]);
 			}
 		}
 //		saveWeightFile.println("Epoch\t " + epochNum + "\nhiddenWeights\t " + Arrays.deepToString(hiddenWeights)+ "\nouterWeights\t " + Arrays.deepToString(outerWeights));
-		saveWeightFile.close(); 
+		saveHiddenWeights.close(); 
+		saveOuterWeights.close(); 
 	}
 	public void save (double totalError, int epochNum, PrintStream saveFile, boolean lastOne) {
 		saveFile.println("Epoch\t " + epochNum + "\terror\t " + totalError);

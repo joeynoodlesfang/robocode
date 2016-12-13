@@ -108,7 +108,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //-10deg, 0, 10deg
     
     private static final int input_state0_myPos_possibilities = 5;
-    //center, left, right, top, bottom
+    //center, left, right, top, bottom (cannot be undiscretized) 
     private static final int input_state1_myHeading_originalPossilibities = 4;
     //0-89deg, 90-179, 180-269, 270-359
     private static final int input_state2_enemyEnergy_originalPossibilities = 2;
@@ -158,36 +158,40 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private short fileSettings_SA = 0; 
 
     // LUT table stored in memory.
-    private static int [][][][][][][][] roboLUT 
-        = new int
-        [input_action0_moveReferringToEnemy_possibilities]
-        [input_action1_fire_possibilities]
-        [input_action2_fireDirection_possibilities]		
-        [input_state0_myPos_possibilities]
-        [input_state1_myHeading_originalPossilibities]
-        [input_state2_enemyEnergy_originalPossibilities]
-        [input_state3_enemyDistance_originalPossibilities]
-        [input_state4_enemyDirection_originalPossibilities];
-    
-    // Dimensions of LUT table, used for iterations.
-    private static int[] roboLUTDimensions = {
-    	input_action0_moveReferringToEnemy_possibilities, 
-    	input_action1_fire_possibilities,
-    	input_action2_fireDirection_possibilities,
-    	input_state0_myPos_possibilities,
-    	input_state1_myHeading_originalPossilibities,
-    	input_state2_enemyEnergy_originalPossibilities,
-    	input_state3_enemyDistance_originalPossibilities,
-    	input_state4_enemyDirection_originalPossibilities};
-    
+//    private static int [][][][][][][][] roboLUT 
+//        = new int
+//        [input_action0_moveReferringToEnemy_possibilities]
+//        [input_action1_fire_possibilities]
+//        [input_action2_fireDirection_possibilities]		
+//        [input_state0_myPos_possibilities]
+//        [input_state1_myHeading_originalPossilibities]
+//        [input_state2_enemyEnergy_originalPossibilities]
+//        [input_state3_enemyDistance_originalPossibilities]
+//        [input_state4_enemyDirection_originalPossibilities];
+//    
+//    // Dimensions of LUT table, used for iterations.
+//    private static int[] roboLUTDimensions = {
+//    	input_action0_moveReferringToEnemy_possibilities, 
+//    	input_action1_fire_possibilities,
+//    	input_action2_fireDirection_possibilities,
+//    	input_state0_myPos_possibilities,
+//    	input_state1_myHeading_originalPossilibities,
+//    	input_state2_enemyEnergy_originalPossibilities,
+//    	input_state3_enemyDistance_originalPossibilities,
+//    	input_state4_enemyDirection_originalPossibilities};
+//    
     // Stores current reward for action.
+    
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
     private int energyDiffCurr = 0;
     private int energyDiffPrev = 0;
     
     // Stores current and previous stateAction vectors.
-    private int currentStateActionVector[] = new int [roboLUTDimensions.length];
-    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
+    //State vector (no actions) where copy currentSV to prevSV 
+    private double currentStateVector[] = new double [8641]; 
+    private double prevStateVector [] = new double [8641]; 
+//    private int currentStateActionVector[] = new int [roboLUTDimensions.length];
+//    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
      
     //variables used for getMax.
     int num_actions = 3; 
@@ -198,15 +202,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //chosen policy. greedy or exploratory or SARSA 
     private static int policy = exploratory; 
 
-    
     //enemy information
     private int enemyDistance = 0;
-//    private int enemyHeading = 0;
     private int enemyHeadingRelative = 0;
     private int enemyHeadingRelativeAbs = 0;
-    private int enemyVelocity = 0;
-//    private int enemyDirection = 0;
-    
+    private int enemyVelocity = 0;    
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
@@ -502,9 +502,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
         
      */
     public void learning() {
-    	//tick%3 is possible new state. 
+    		//tick%3 is possible new state. 
              calculateReward();
-             copyCurrentSAVIntoPrevSAV();
+             copyCurrentSVIntoPrevSV();
              generateCurrentStateVector();
              qFunction();
              resetReward();
@@ -541,9 +541,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				1. currentStateActionVector
      * @return:		n
      */
-    public void copyCurrentSAVIntoPrevSAV(){
-    	for (int i = 0; i < prevStateActionVector.length; i++) {
-    		prevStateActionVector[i] = currentStateActionVector[i];
+    public void copyCurrentSVIntoPrevSV(){
+    	for (int i = 0; i < currentStateVector.length; i++) {
+    		prevStateVector[i] = currentStateVector[i];
     	}
     }
     
@@ -557,74 +557,63 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     public void generateCurrentStateVector(){
     	//INPUT 0: ACTION
-    	
-    	//Dimension 1: input: myXPosDiscretized = 0-4: center, left, right, top, bot
+        
+    	//Dimension 1 - private static final int input_state0_myPos_possibilities = 5;
     	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					//left
-    		currentStateActionVector[1] = 1;						
+    		currentStateVector[1] = 1;						
     	}
     	else if (  (myPosX>=750)  &&  ( ((800-myPosX) <= myPosY) || ((800-myPosX) <= (600-myPosY)) )  ){		//right
-    		currentStateActionVector[1] = 2;						
+    		currentStateVector[1] = 2;						
     	}
     	else if (myPosY<=50) {		//top 
-    		currentStateActionVector[1] = 3;
+    		currentStateVector[1] = 3;
     	}
     	else if (myPosY>=550) {		//bottom				
-    		currentStateActionVector[1] = 4;
+    		currentStateVector[1] = 4;
     	}
     	else {
-    		currentStateActionVector[1] = 0; 
+    		currentStateVector[1] = 0; 
     	}
 
-    	//Dimension 2: input: myHeading = 0-3: 0-89, 90-179, 180-269, 270-359
-    	if (myHeading < 90) {
-    		currentStateActionVector[2] = 0;
-    	}
-    	else if (myHeading < 180) {
-    		currentStateActionVector[2] = 1;
-    	}
-    	else if (myHeading < 270) {
-    		currentStateActionVector[2] = 2;
-    	}
-    	else {
-    		currentStateActionVector[2] = 3;
-    	}
-		
-		//Dimension 3: input: enemyEnergy: 0-1
-		if (enemyEnergy > 30) {
-			currentStateActionVector[3] = 0;
-		}
-		else {
-			currentStateActionVector[3] = 1;
-		}
-		
-		//Dimension 4: input: enemyDistance: 0-2
-		if (enemyDistance < 150) {
-			currentStateActionVector[4] = 0;
-		}
-		else if (enemyDistance < 350) {
-			currentStateActionVector[4] = 1;
-		}
-		else {
-			currentStateActionVector[4] = 2;
-		}
-		
+    	//Dimension 2 - private static final int input_state1_myHeading_originalPossilibities = 4;
+    	currentStateVector[2] = myHeading;
+    	
+//    	if (myHeading < 90) {
+//    		currentStateVector[2] = myHeading;
+//    	}
+//    	else if (myHeading < 180) {
+//    		currentStateVector[2] = 1;
+//    	}
+//    	else if (myHeading < 270) {
+//    		currentStateVector[2] = 2;
+//    	}
+//    	else {
+//    		currentStateVector[2] = 3;
+//    	}
+
+//      Dimension 3: private static final int input_state2_enemyEnergy_originalPossibilities = 2;
+//      //>30, <30
+    	currentStateVector[3] = enemyEnergy;
+
+//      Dimension 4: private static final int input_state3_enemyDistance_originalPossibilities = 3;
+    	currentStateVector[4] = enemyDistance;
+//      private static final int input_state4_enemyDirection_originalPossibilities = 3;
+   
 		//Dimension 5: is enemy moving right, left, or within the angle of my gun?
 		//requires mygunheading, enemyheading, enemyvelocity
-		if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
-			currentStateActionVector[5] = 0; //within angle of gun
+    	if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
+			currentStateVector[5] = 0; //within angle of gun
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity > 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity < 0)) ) {
-			currentStateActionVector[5] = 1; //enemy moving left
+			currentStateVector[5] = 1; //enemy moving left
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity < 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity > 0)) ){
-			currentStateActionVector[5] = 2; //enemy moving right
+			currentStateVector[5] = 2; //enemy moving right
 		}
 		else {
 			out.println("Error! CSAV[5]");
 		}
-		
-		//Dimension 6: null 
-		currentStateActionVector[6] = 0;
+    	out.println("currentStateVector " + Arrays.toString(currentStateVector));
     }
  
     /**
@@ -643,6 +632,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void qFunction(){
        getMax(); 
        int prevQVal = (int)calcNewPrevQVal();
+       out.println("prevQVal " + prevQVal);
        updateLUT(prevQVal);
     }
 
