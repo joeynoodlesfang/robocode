@@ -35,13 +35,4 @@ public interface CommonInterface{
 	 */
 	public void save(double error, int numTrial, PrintStream saveFile, boolean flag); 
 	
-
-	/** Function: "load" 
-	 * Loads the LUT or NN weights from a file. The load must have knowledge of how the data was written out
-	 * by the save method. 
-	 * An error is raised in the case that an attempt is made to load data into a LUT or NN whose structures does not match
-	 * the data in the file (e.g. wrong number of hidden neurons). 
-	 * @throws IOException
-	 */
-	public void load(String argFileName) throws IOException;
 }
