@@ -115,7 +115,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //>30, <30
     private static final int input_state3_enemyDistance_originalPossibilities = 3;
     //<150, <350, >=350
-    private static final int input_states4_enemyDirection_originalPossibilities = 3;
+    private static final int input_state4_enemyDirection_originalPossibilities = 3;
     //head-on (still (abs <30 || >150), 
     //left (<0 relative dir w/ positive velo || >0 with negative velo), 
     //right (<0 dir w/ negative velo || >0 with positive velo)
