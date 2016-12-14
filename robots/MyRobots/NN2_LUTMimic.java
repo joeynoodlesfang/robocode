@@ -81,18 +81,17 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int SUCCESS_importDataWeights =			0x00;
     private static final int SUCCESS_exportDataWeights =			0x00;
     
-//    private static final int ERROR_1_import_IOException = 				1;
-//    private static final int ERROR_2_import_typeConversionOrBlank = 	2;
-//    private static final int ERROR_3_import_verification = 				3;
-//    private static final int ERROR_4_import_wrongFileName_stringTest =	4;
-//    private static final int ERROR_5_import_wrongFileName_WL =			5;
-//    private static final int ERROR_6_export_cannotWrite =				6;
-//    private static final int ERROR_7_export_IOException =				7;
-//    private static final int ERROR_8_import_dump =						8;
-//    private static final int ERROR_9_export_dump =						9;
-//    private static final int ERROR_10_export_mismatchedStringName =		10;
-//    private static final int ERROR_11_import_wrongFileName_LUT = 		11;
-    //TODO YOLO;
+    private static final int ERROR_1_import_IOException = 				1;
+    private static final int ERROR_2_import_typeConversionOrBlank = 	2;
+    private static final int ERROR_3_import_verification = 				3;
+    private static final int ERROR_4_import_wrongFileName_stringTest =	4;
+    private static final int ERROR_5_import_wrongFileName_WL =			5;
+    private static final int ERROR_6_export_cannotWrite =				6;
+    private static final int ERROR_7_export_IOException =				7;
+    private static final int ERROR_8_import_dump =						8;
+    private static final int ERROR_9_export_dump =						9;
+    private static final int ERROR_10_export_mismatchedStringName =		10;
+    private static final int ERROR_11_import_wrongFileName_LUT = 		11;
     private static final int ERROR_12_importWeights_IOException = 12;
     private static final int ERROR_13_importWeights_typeConversionOrBlank = 13;
     private static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
@@ -1124,6 +1123,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	}
     }
     
+    
     /**
      * @name:		importData
      * @author:		partly written in sittingduckbot
@@ -1149,183 +1149,126 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		1. int importLUTDATA success/error;
      */
     public int importData(String strName){
-//    	if (debug_import || debug) {
-//    		out.println("@importData: at beginning of fxn");
-//    		out.println("printing fileSettings: ");
-//    		out.println("fileSettings_default: " + fileSettings_default);
-//    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
-//    		out.println("fileSettings_LUT: " + fileSettings_LUT);
-//    		out.println("fileSettings_WL: "+ fileSettings_WL); 
-//    	}
-//    	
-//        try {
-//        	BufferedReader reader = null;
-//            try {
-//                reader = new BufferedReader(new FileReader(getDataFile(strName)));
-//                fileSettings_default = (short)Integer.parseInt(reader.readLine());			//reads first line of code to obtain what is in "fileSettings_default"
-//                
-//                if (debug_import || debug) {
-//            		out.println("extracted fileSettings into default: ");
-//            		out.println("fileSettings_default: " + fileSettings_default);
-//            	}
-//                // CONFIGMASK_VERIFYSETTINGSAVAIL = 0x4000
-//                // & is bit-wise "and" to compare every single bit of CONFIGMASK with fileSettings_default
-//                // to ensure that a first line exists. 
-//                if ((fileSettings_default & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
-//                	if (debug_import || debug) {
-//                		out.println("Import aborted (file not configured properly)");
-//                	}
-//                	
-//                	return ERROR_3_import_verification;
-//                }
-//                else {
-//                	//this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
-//                	//flag prevents multiple imports and data overwrite since array is static
-//                	if ( ((fileSettings_default & CONFIGMASK_FILETYPE_stringTest) == CONFIGMASK_FILETYPE_stringTest)
-//                		&& (flag_stringTestImported == false) )
-//                	{
-//                		if (strName != "stringTest.dat") {
-//            				if (debug_import || debug) {
-//            					out.println ("Import aborted (Imported wrong file - file declared stringTest.dat in settings)");
-//            				}
-//                			return ERROR_4_import_wrongFileName_stringTest;
-//                		}
-//                		
-//                		fileSettings_stringTest = fileSettings_default;
-//                		flag_stringTestImported = true;
-//                	}
-//                	
-//                	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
-//                	//flag prevents multiple file imports (mostly for preventing export bugs)
-//                	else if ( ((fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire) == CONFIGMASK_FILETYPE_LUTTrackfire)
-//                	&& (flag_LUTImported == false) )
-//                	{
-//                		if (strName != "LUTTrackfire.dat") {
-//            				if (debug_import || debug) {
-//            					out.println ("Import aborted (Imported wrong file - file declared LUTTrackfire.dat in settings)");
-//            				}
-//                			return ERROR_11_import_wrongFileName_LUT;
-//                		}
-//                		// confirmed filename matches filetype reported by settings in file for LUT. 
-//                		
-//                    	if ((fileSettings_default & CONFIGMASK_ZEROLUT) == CONFIGMASK_ZEROLUT) {
-//                    		if (debug_import || debug) {
-//                    			out.println("starting loop of zeroLUT:");
-//                    		}
-//    	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-//    	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-//    	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-//    	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-//    		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-//    	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-//    	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = 0;
-//    	                        					}
-//    	                        				}
-//                            				}
-//                            			}
-//    	                        	}
-//    	                        }
-//    	                    }
-//                    	} // end of configmask_zeroLUT for LUTTrackfire
-//                    	else {
-//                    		int i = 0; 
-//                    		for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-//    	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-//    	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-//    	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-//    	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-//    	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-//    	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = Integer.parseInt(reader.readLine());
-//    	                        					}
-//    	                        				}
-//    	                        			}
-//    	                        		}
-//    	                        	}
-//    	                        }
-//    	                    } // end of data extraction for LUTTrackfire
-//                    		if (debug_import || debug) {
-//                            	out.println("Imported LUT data (zeroLUT or normal)");
-//                            }
-//                    	}
-//                    	//fileSettings copied individually into LUT for exporting purposes.
-//                		fileSettings_LUT = fileSettings_default;
-//                		flag_LUTImported = true; //sets flag to prevent multiple instances of robot importing(and exporting) from same .dat (and causing weird interactions(?)).
-//                	} // end of LUTTrackfire
-//                	
-//                	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
-//                		if (strName != "winlose.dat") {
-//                			if (debug_import || debug) {
-//                				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
-//                			}
-//                			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
-//                		}
-//                		totalFights = Integer.parseInt(reader.readLine());
-//                    	for (int i = 0; i < battleResults.length; i++){
-//                    		if (i < totalFights) {
-//                    			battleResults[i] = Integer.parseInt(reader.readLine());
-//                    		}
-//                    		else {
-//                    			battleResults[i] = 0;
-//                    		}
-//                    	}
-//                    	fileSettings_WL = fileSettings_default;
-//                    	flag_WLImported = true;
-//                	} // end of WinLose
-//                	
-//                	//write code for new file uses here. 
-//                	//also change the string being called 
-//                	//ctr+f: Import data. ->Change imported filename here<- 
-//                	
-//                	//file is undefined - so returns error 8
-//                	else {
-//                		if (debug_import || debug) {
-//                    		out.println("error 8:");
-//                    		out.println("fileSettings_default: " + fileSettings_default);
-//                    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
-//                    		out.println("fileSettings_LUT: " + fileSettings_LUT);
-//                    		out.println("fileSettings_WL: "+ fileSettings_WL);
-//                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire|verisett: " + (CONFIGMASK_FILETYPE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL));
-//                    		out.println("CONFIGMASK_FILETYPE_WinLose|versett: " + (CONFIGMASK_FILETYPE_WinLose | CONFIGMASK_VERIFYSETTINGSAVAIL));
-//                    		out.println("flag_LUTImported: " + flag_LUTImported);
-//                    		out.println("fileSettings_default & CONFIGMASK_ZEROLUT: " + (fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire));
-//                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire: " + CONFIGMASK_FILETYPE_LUTTrackfire);
-//                    	}
-//                		return ERROR_8_import_dump; //error 8 - missed settings/file dump.
-//                	}
-//                }
-//            } 
-//            finally {
-//                if (reader != null) {
-//                    reader.close();
-//                }
-//            }
-//        } 
-//        //exception to catch when file is unreadable
-//        catch (IOException e) {
-//        	if (debug_import || debug) {
-//        		out.println("Something done fucked up (Error0x01 error in file reading)");
-//        	}
-//            return ERROR_1_import_IOException;
-//        } 
-//        // type of exception where there is a wrong number format (type is wrong or blank)  
-//        catch (NumberFormatException e) {
-//            if (debug_import || debug) {
-//            	out.println("Something done fucked up (Error0x02 error in type conversion - check class throw for more details)");
-//            }
-//            return ERROR_2_import_typeConversionOrBlank;
-//        }
-//       
-//    	if (debug_import || debug) {
-//    		out.println("end of fxn fileSettings check (succeeded):");
-//    		out.println("fileSettings_default: " + fileSettings_default);
-//    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
-//    		out.println("fileSettings_LUT: " + fileSettings_LUT);
-//    		out.println("fileSettings_WL: "+ fileSettings_WL);
-//    	}
-//        return SUCCESS_importData;
-        return 0;
+    	if (debug_import || debug) {
+    		out.println("@importData: at beginning of fxn");
+    		out.println("printing fileSettings: ");
+    		out.println("fileSettings_default: " + fileSettings_default);
+    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+    		out.println("fileSettings_LUT: " + fileSettings_LUT);
+    		out.println("fileSettings_WL: "+ fileSettings_WL); 
+    	}
+    	
+        try {
+        	BufferedReader reader = null;
+            try {
+                reader = new BufferedReader(new FileReader(getDataFile(strName)));
+                fileSettings_default = (short)Integer.parseInt(reader.readLine());			//reads first line of code to obtain what is in "fileSettings_default"
+                
+                if (debug_import || debug) {
+            		out.println("extracted fileSettings into default: ");
+            		out.println("fileSettings_default: " + fileSettings_default);
+            	}
+                // CONFIGMASK_VERIFYSETTINGSAVAIL = 0x4000
+                // & is bit-wise "and" to compare every single bit of CONFIGMASK with fileSettings_default
+                // to ensure that a first line exists. 
+                if ((fileSettings_default & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
+                	if (debug_import || debug) {
+                		out.println("Import aborted (file not configured properly)");
+                	}
+                	
+                	return ERROR_3_import_verification;
+                }
+                else {
+                	//this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
+                	//flag prevents multiple imports and data overwrite since array is static
+                	if ( ((fileSettings_default & CONFIGMASK_FILETYPE_stringTest) == CONFIGMASK_FILETYPE_stringTest)
+                		&& (flag_stringTestImported == false) )
+                	{
+                		if (strName != "stringTest.dat") {
+            				if (debug_import || debug) {
+            					out.println ("Import aborted (Imported wrong file - file declared stringTest.dat in settings)");
+            				}
+                			return ERROR_4_import_wrongFileName_stringTest;
+                		}
+                		
+                		fileSettings_stringTest = fileSettings_default;
+                		flag_stringTestImported = true;
+                	}
+                	
+                	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
+                	//flag prevents multiple file imports (mostly for preventing export bugs)
+                	
+                	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
+                		if (strName != "winlose.dat") {
+                			if (debug_import || debug) {
+                				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
+                			}
+                			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
+                		}
+                		totalFights = Integer.parseInt(reader.readLine());
+                    	for (int i = 0; i < battleResults.length; i++){
+                    		if (i < totalFights) {
+                    			battleResults[i] = Integer.parseInt(reader.readLine());
+                    		}
+                    		else {
+                    			battleResults[i] = 0;
+                    		}
+                    	}
+                    	fileSettings_WL = fileSettings_default;
+                    	flag_WLImported = true;
+                	} // end of WinLose
+                	
+                	//write code for new file uses here. 
+                	//also change the string being called 
+                	//ctr+f: Import data. ->Change imported filename here<- 
+                	
+                	//file is undefined - so returns error 8
+                	else {
+                		if (debug_import || debug) {
+                    		out.println("error 8:");
+                    		out.println("fileSettings_default: " + fileSettings_default);
+                    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+                    		out.println("fileSettings_LUT: " + fileSettings_LUT);
+                    		out.println("fileSettings_WL: "+ fileSettings_WL);
+                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire|verisett: " + (CONFIGMASK_FILETYPE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL));
+                    		out.println("CONFIGMASK_FILETYPE_WinLose|versett: " + (CONFIGMASK_FILETYPE_WinLose | CONFIGMASK_VERIFYSETTINGSAVAIL));
+                    		out.println("flag_LUTImported: " + flag_LUTImported);
+                    		out.println("fileSettings_default & CONFIGMASK_ZEROLUT: " + (fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire));
+                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire: " + CONFIGMASK_FILETYPE_LUTTrackfire);
+                    	}
+                		return ERROR_8_import_dump; //error 8 - missed settings/file dump.
+                	}
+                }
+            } 
+            finally {
+                if (reader != null) {
+                    reader.close();
+                }
+            }
+        } 
+        //exception to catch when file is unreadable
+        catch (IOException e) {
+        	if (debug_import || debug) {
+        		out.println("Something done fucked up (Error0x01 error in file reading)");
+        	}
+            return ERROR_1_import_IOException;
+        } 
+        // type of exception where there is a wrong number format (type is wrong or blank)  
+        catch (NumberFormatException e) {
+            if (debug_import || debug) {
+            	out.println("Something done fucked up (Error0x02 error in type conversion - check class throw for more details)");
+            }
+            return ERROR_2_import_typeConversionOrBlank;
+        }
+       
+    	if (debug_import || debug) {
+    		out.println("end of fxn fileSettings check (succeeded):");
+    		out.println("fileSettings_default: " + fileSettings_default);
+    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+    		out.println("fileSettings_LUT: " + fileSettings_LUT);
+    		out.println("fileSettings_WL: "+ fileSettings_WL);
+    	}
+        return SUCCESS_importData;
     }
     
     /**
@@ -1354,147 +1297,99 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
 
     public int exportData(String strName) {
-//    	if (debug_export || debug) {
-//    		out.println("@exportData: beginning");
-//    		out.println("printing fileSettings: ");
-//    		out.println("fileSettings_default: " + fileSettings_default);
-//    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
-//    		out.println("fileSettings_LUT: " + fileSettings_LUT);
-//    		out.println("fileSettings_WL: "+ fileSettings_WL);
-//    	}
-//    	
-//    	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
-//    	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
-//    	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
-//    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )){
-//	    	
-//    		PrintStream w = null;
-//	        
-//	        try {
-//	            w = new PrintStream(new RobocodeFileOutputStream(getDataFile(strName)));
-//	            // different commands between files
-//	            if (w.checkError()) {
-//	                //Error 0x03: cannot write
-//	            	if (debug_export || debug) {
-//	            		out.println("Something done fucked up (Error 6 cannot write)");
-//	            	}
-//	            	return ERROR_6_export_cannotWrite;
-//	            }
-//	            
-//	            //if scope for exporting files to stringTest
-//	            if ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) {
-//	            	
-//	            	//debug
-//	            	if (debug_export || debug) {
-//	            		out.println("writing into strStringTest");
-//	            	}
-//	            	
-//	            	w.println(fileSettings_stringTest);
-//	            	flag_stringTestImported = false;
-//	            	
-//	            } //end of testString
-//	            
-//	        	//update LUT
-//	            else if ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) {
-//	            	
-//	            	//DEBUG
-//	            	if (debug_export || debug) {
-//	            		out.println("writing into strLUT");
-//	            	}
-//	            	
-//	            	//both zeroLUT and correct LUT will be written here
-//	        		//following if prevents repeat zeroLUT from occurring by editing the zero flag.
-//	        		if ((fileSettings_LUT & CONFIGMASK_ZEROLUT) == CONFIGMASK_ZEROLUT) {
-//	        			
-//	        			//DEBUG
-//	        			if (debug_export || debug) {
-//	        				out.println("attempting to write zeroes to LUT: ");
-//	        				out.println("fileSettings_LUT before zeroing:" + fileSettings_LUT);
-//	        			}
-//	        			
-//	        			//only this line in this if
-//	        			fileSettings_LUT -= CONFIGMASK_ZEROLUT;
-//	        			
-//	        			//DEBUG
-//	        			if (debug_export || debug) {
-//	        				out.println("fileSettings_LUT after zeroing:" + fileSettings_LUT);
-//	        			}
-//	        		}
-//	        		
-//	        		w.println(fileSettings_LUT);
-//	                for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-//	                    for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-//	                    	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-//	                    		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-//	                    			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-//	                    				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-//	                    					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//	                    						w.println(roboLUT[p0][p1][p2][p3][p4][p5][p6]);
-//	                    					}
-//	                    				}
-//	                				}
-//	                    		}
-//	                    	}
-//	                    }
-//	                }
-//	                flag_LUTImported = false;
-//	                
-//	        	} //endof trackfire
-//
-//	            //winlose
-//	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
-//	            	if (debug_export || debug) {
-//	            		out.println("writing into winLose");
-//	            	}
-//	            	w.println(fileSettings_WL);
-//	            	w.println(totalFights+1);
-//	            	for (int i = 0; i < totalFights; i++){
-//	        			w.println(battleResults[i]);
-//	            	}
-//	        			w.println(currentBattleResult);
-//	            	flag_WLImported = false;
-//	            }// end winLose
-//	            
-//	            
-//	            /* to add new files for exporting data
-//	             * such as saveData
-//	             */
-//	                        
-//	            
-//	            else {
-//	            	if (debug_export || debug) {
-//	            		out.println("error 9");
-//	            		
-//	            	}
-//	            	return ERROR_9_export_dump;
-//	            }
-//	        }
-//	        
-//	        //OC: PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
-//	        catch (IOException e) {
-//	    		if (debug_export || debug) {
-//	    			out.println("IOException trying to write: ");
-//	    		}
-//	            e.printStackTrace(out); //Joey: lol no idea what this means
-//	            return ERROR_7_export_IOException;
-//	        } 
-//	        finally {
-//	            if (w != null) {
-//	                w.close();
-//	            }
-//	        }      
-//	        if (debug_export || debug) {
-//	        	out.println("(succeeded export)");
-//	        }
-//	        return SUCCESS_exportData;
-//    	}
-//    	
-//    	//this should prevent wiping INDIRECTLY if import error. If import was successful, then config flag was set.
-//    	//goal is to prevent accidentally wiping irrelevant file
-//    	else {
-//    		return ERROR_10_export_mismatchedStringName;
-//    	}
-    	return 0;
+    	if (debug_export || debug) {
+    		out.println("@exportData: beginning");
+    		out.println("printing fileSettings: ");
+    		out.println("fileSettings_default: " + fileSettings_default);
+    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+    		out.println("fileSettings_LUT: " + fileSettings_LUT);
+    		out.println("fileSettings_WL: "+ fileSettings_WL);
+    	}
+    	
+    	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
+    	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
+    	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
+    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )){
+	    	
+    		PrintStream w = null;
+	        
+	        try {
+	            w = new PrintStream(new RobocodeFileOutputStream(getDataFile(strName)));
+	            // different commands between files
+	            if (w.checkError()) {
+	                //Error 0x03: cannot write
+	            	if (debug_export || debug) {
+	            		out.println("Something done fucked up (Error 6 cannot write)");
+	            	}
+	            	return ERROR_6_export_cannotWrite;
+	            }
+	            
+	            //if scope for exporting files to stringTest
+	            if ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) {
+	            	
+	            	//debug
+	            	if (debug_export || debug) {
+	            		out.println("writing into strStringTest");
+	            	}
+	            	
+	            	w.println(fileSettings_stringTest);
+	            	flag_stringTestImported = false;
+	            	
+	            } //end of testString
+
+	            //winlose
+	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
+	            	if (debug_export || debug) {
+	            		out.println("writing into winLose");
+	            	}
+	            	w.println(fileSettings_WL);
+	            	w.println(totalFights+1);
+	            	for (int i = 0; i < totalFights; i++){
+	        			w.println(battleResults[i]);
+	            	}
+	        			w.println(currentBattleResult);
+	            	flag_WLImported = false;
+	            }// end winLose
+	            
+	            
+	            /* to add new files for exporting data
+	             * such as saveData
+	             */
+	                        
+	            
+	            else {
+	            	if (debug_export || debug) {
+	            		out.println("error 9");
+	            		
+	            	}
+	            	return ERROR_9_export_dump;
+	            }
+	        }
+	        
+	        //OC: PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
+	        catch (IOException e) {
+	    		if (debug_export || debug) {
+	    			out.println("IOException trying to write: ");
+	    		}
+	            e.printStackTrace(out); //Joey: lol no idea what this means
+	            return ERROR_7_export_IOException;
+	        } 
+	        finally {
+	            if (w != null) {
+	                w.close();
+	            }
+	        }      
+	        if (debug_export || debug) {
+	        	out.println("(succeeded export)");
+	        }
+	        return SUCCESS_exportData;
+    	}
+    	
+    	//this should prevent wiping INDIRECTLY if import error. If import was successful, then config flag was set.
+    	//goal is to prevent accidentally wiping irrelevant file
+    	else {
+    		return ERROR_10_export_mismatchedStringName;
+    	}
     }
 
     
