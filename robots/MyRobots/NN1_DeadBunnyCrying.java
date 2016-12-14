@@ -74,6 +74,8 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     
     private static final int SUCCESS_importData = 					0x00;
     private static final int SUCCESS_exportData = 					0x00;
+    private static final int SUCCESS_importDataWeights =			0x00;
+    private static final int SUCCESS_exportDataWeights =			0x00;
     
 //    private static final int ERROR_1_import_IOException = 				1;
 //    private static final int ERROR_2_import_typeConversionOrBlank = 	2;
@@ -86,6 +88,12 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 //    private static final int ERROR_9_export_dump =						9;
 //    private static final int ERROR_10_export_mismatchedStringName =		10;
 //    private static final int ERROR_11_import_wrongFileName_LUT = 		11;
+    
+    private static final int ERROR_12_importWeights_IOException = 12;
+    private static final int ERROR_13_importWeights_typeConversionOrBlank = 13;
+    private static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
+    private static final int ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput = 15;
+    private static final int ERROR_16_exportWeights_IOException = 16;
     
     //strings used for importing or extracting files 
     String strStringTest = "stringTest.dat";    

@@ -98,6 +98,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
     private static final int ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput = 15;
     private static final int ERROR_16_exportWeights_IOException = 16;
+    private static final int ERROR_17 = 17;
+    private static final int ERROR_18 = 18;
+    
     
     //strings used for importing or extracting files 
     String strStringTest = "stringTest.dat";    
@@ -136,16 +139,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
 
     private static final int numStates = 5;
-
-
+    
     private static final int numInputBias = 0;
-
-    
-    
     private static final int numHiddenBias = 1;
     private static final int numHiddenNeuron = 4;
     private static final int numInputsTotal = ( numInputBias + numActions + numStates );
-    private static final int numHiddensTotal = ( numHiddenBias + numHiddenNeuron);
+    private static final int numHiddensTotal = ( numHiddenBias + numHiddenNeuron );
     private static final int numOutputsTotal = 1;
 
     /**
@@ -158,6 +157,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     static private boolean debug_import = false;
     static private boolean debug_export = false;
     
+    
     // Flag used for functions importData and exportData.
     // primary role is to maintain 1 import -> at most 1 export
     // secondary goals: Assists in preventing overwrite, and protection against wrong file entries.
@@ -165,6 +165,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private boolean flag_stringTestImported = false;
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
+    private boolean flag_weightsImported = false;
+    
+    private static boolean flag_useOfflineTraining = false;
     // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
@@ -189,14 +192,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	[numOutputsTotal]
     	;
     
-
+    
+    
     // LUT table configuration information, stored in the first line of .dat
     private short fileSettings_default = 0;
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
     private short fileSettings_SA = 0; 
-
+    
 
     // Stores current reward for action.
     
@@ -279,15 +283,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //        	out.println("ERROR: " + flag_error);
 //        }
         
-        flag_error = importData(strLUT);
+        flag_error = importDataWeights();
         if(flag_error != SUCCESS_importData) {
         	out.println("ERROR @run LUT: " + flag_error);
         }
         
-        flag_error = importData(strWL);
-        if( flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run WL: " + flag_error);
-        }
+
             
         //set gun and radar for robot turn separate gun, radar and robot (robocode properties). 
         setAdjustGunForRobotTurn(true);
@@ -311,16 +312,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-        flag_error = exportData(strLUT);				//strLUT = "LUTTrackfire.dat"
+        flag_error = exportDataWeights();				//strLUT = "LUTTrackfire.dat"
         if(flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
         	//LUT is 0'd, causing error 9 (export_dump)
         }
         
-        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR: " + flag_error);
-        }
+//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR: " + flag_error);
+//        }
         
 //        flag_error =  exportData(strSA); 
 //        flag_error = saveData(strSA); 
@@ -340,16 +341,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public void onDeath(DeathEvent event){
-    	currentBattleResult = 0;    					//global variable. 
-        flag_error = exportData(strLUT);
+//    	currentBattleResult = 0;    					//global variable. 
+        flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onDeath: " + flag_error);
         }
-        
-        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR: " + flag_error);
-        }
+//        
+//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR: " + flag_error);
+//        }
 //        flag_error =  exportData(strSA); 
 //        flag_error = saveData(strSA); 
 //        if( flag_error != SUCCESS_exportData) {
@@ -538,9 +539,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //        }
 
         setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-
         scan();
-
         execute();
 
     }
@@ -712,7 +711,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	for (int i = 0; i < qFromNet.length; i++){
 		    for (int j = 0; j < qFromNet[0].length; j++){
 		    	for (int k = 0; k < qFromNet[0][0].length; k++){
-		    		if (qFromNet[i][j][k] > maxQ) {
+		    		if (qFromNet[i][j][k] > currMax) {
 		    			currMax = qFromNet[i][j][k];
 		    	}
     		}
@@ -908,46 +907,66 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public int importDataWeights() {
-    	try {
-        	BufferedReader reader = null;
-        	BufferedReader reader2 = null;
-            try {
-                reader = new BufferedReader(new FileReader(getDataFile("finalHiddenWeights.txt")));
-            	for (int i = 0; i < numInputsTotal; i++) {
-            		for (int j = 0; j < numHiddenNeuron; j++) {
-            			NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
+    	if (flag_weightsImported == false) {
+	    	try {
+	        	BufferedReader reader = null;
+	        	BufferedReader reader2 = null;
+	            try {
+	            	if (flag_useOfflineTraining) {
+	            		reader = new BufferedReader(new FileReader(getDataFile("inToHiddenWeights_OfflineTraining.txt")));
+	            	}
+	            	else {
+	            		reader = new BufferedReader(new FileReader(getDataFile("finalHiddenWeights.txt")));
+	            	}
+	            	for (int i = 0; i < numInputsTotal; i++) {
+	            		for (int j = 0; j < numHiddenNeuron; j++) {
+	            			NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
+		                }
+	            	}
+	            } 
+	            finally {
+	                if (reader != null) {
+	                    reader.close();
 	                }
-            	}
-            } 
-            finally {
-                if (reader != null) {
-                    reader.close();
-                }
-            }
-            
-            try {
-                reader2 = new BufferedReader(new FileReader(getDataFile("finalOuterWeights.txt")));
-            	for (int i = 0; i < numHiddensTotal; i++) {
-            		for (int j = 0; j < numOutputsTotal; j++) {
-            			NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader.readLine());
+	            }
+	            
+	            try {
+	            	if (flag_useOfflineTraining) {
+	            		reader2 = new BufferedReader(new FileReader(getDataFile("hiddenToOutWeights_OfflineTraining.txt")));
+	            	}
+	            	else {
+	            		reader2 = new BufferedReader(new FileReader(getDataFile("finalOuterWeights.txt")));
+	            	}
+	            	for (int i = 0; i < numHiddensTotal; i++) {
+	            		for (int j = 0; j < numOutputsTotal; j++) {
+	            			NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader.readLine());
+		                }
+	            	}
+	            } 
+	            finally {
+	                if (reader2 != null) {
+	                    reader2.close();
 	                }
-            	}
-            } 
-            finally {
-                if (reader2 != null) {
-                    reader2.close();
-                }
-            }
-        } 
-        //exception to catch when file is unreadable
-        catch (IOException e) {
-            return ERROR_12_importWeights_IOException;
-        } 
-        // type of exception where there is a wrong number format (type is wrong or blank)  
-        catch (NumberFormatException e) {
-            return ERROR_13_importWeights_typeConversionOrBlank;
-        }
-    	return SUCCESS_importDataWeights;
+	            }
+	        } 
+	        //exception to catch when file is unreadable
+	        catch (IOException e) {
+	            return ERROR_12_importWeights_IOException;
+	        } 
+	        // type of exception where there is a wrong number format (type is wrong or blank)  
+	        catch (NumberFormatException e) {
+	            return ERROR_13_importWeights_typeConversionOrBlank;
+	        }
+	    	flag_weightsImported = true;
+	    	if (flag_useOfflineTraining) {
+	    		flag_useOfflineTraining = false;
+	    	}
+	    	return SUCCESS_importDataWeights;
+    	}
+    	
+    	else {
+    		return ERROR_17;
+    	}
     }
     
     /**
@@ -959,57 +978,63 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 
      */
     public int exportDataWeights() {
-		PrintStream w1 = null;
-		PrintStream w2 = null;
-    	try {
-    		w1 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalHiddenWeights.txt")));
-    		if (w1.checkError()) {
-                //Error 0x03: cannot write
-            	if (debug_export || debug) {
-            		out.println("Something done fucked up (Error 14 cannot write)");
-            	}
-            	return ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden;
-            	//TODO here
-    		}
-    		 
-    		for (int i = 0; i < numInputsTotal; i++) {
-         		for (int j = 0; j < numHiddenNeuron; j++) {
-         			w1.println(NNWeights_inputToHidden[i][j]);
-                }
-         	}
-    		
-    		w2 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalOuterWeights.txt")));
-    		if (w2.checkError()) {
-                //Error 0x03: cannot write
-            	if (debug_export || debug) {
-            		out.println("Something done fucked up (Error 15 cannot write)");
-            	}
-            	return ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput;
-    		 }
-    		 
-    		for (int i = 0; i < numHiddensTotal; i++) {
-         		for (int j = 0; j < numOutputsTotal; j++) {
-         			w2.println(NNWeights_hiddenToOutput[i][j]);
-                }
-         	}
+    	if(flag_weightsImported == true) {
+			PrintStream w1 = null;
+			PrintStream w2 = null;
+	    	try {
+	    		w1 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalHiddenWeights.txt")));
+	    		if (w1.checkError()) {
+	                //Error 0x03: cannot write
+	            	if (debug_export || debug) {
+	            		out.println("Something done fucked up (Error 14 cannot write)");
+	            	}
+	            	return ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden;
+	            	//TODO here
+	    		}
+	    		 
+	    		for (int i = 0; i < numInputsTotal; i++) {
+	         		for (int j = 0; j < numHiddenNeuron; j++) {
+	         			w1.println(NNWeights_inputToHidden[i][j]);
+	                }
+	         	}
+	    		
+	    		w2 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalOuterWeights.txt")));
+	    		if (w2.checkError()) {
+	                //Error 0x03: cannot write
+	            	if (debug_export || debug) {
+	            		out.println("Something done fucked up (Error 15 cannot write)");
+	            	}
+	            	return ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput;
+	    		 }
+	    		 
+	    		for (int i = 0; i < numHiddensTotal; i++) {
+	         		for (int j = 0; j < numOutputsTotal; j++) {
+	         			w2.println(NNWeights_hiddenToOutput[i][j]);
+	                }
+	         	}
+	    	}
+	    	catch (IOException e) {
+	    		if (debug_export || debug) {
+	    			out.println("IOException trying to write: ");
+	    		}
+	            e.printStackTrace(out); //Joey: lol no idea what this means
+	            return ERROR_16_exportWeights_IOException;
+	        } 
+	        finally {
+	            if (w1 != null) {
+	                w1.close();
+	            }
+	            
+	            if (w2 != null) {
+	                w2.close();
+	            }
+	        }      
+	    	flag_weightsImported = false;
+	    	return SUCCESS_exportDataWeights;
     	}
-    	catch (IOException e) {
-    		if (debug_export || debug) {
-    			out.println("IOException trying to write: ");
-    		}
-            e.printStackTrace(out); //Joey: lol no idea what this means
-            return ERROR_16_exportWeights_IOException;
-        } 
-        finally {
-            if (w1 != null) {
-                w1.close();
-            }
-            
-            if (w2 != null) {
-                w2.close();
-            }
-        }      
-    	return SUCCESS_exportDataWeights;
+    	else {
+    		return ERROR_18;
+    	}
     }
     
     /**
