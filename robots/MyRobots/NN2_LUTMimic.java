@@ -306,14 +306,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
         
         // Import data. ->Change imported filename here<-
         
-//        flag_error = importData("strStringTest.dat");
-//        if( flag_error != SUCCESS_importData) {
-//        	out.println("ERROR: " + flag_error);
-//        }
+        flag_error = importData(strWL);
+        if( flag_error != SUCCESS_importData) {
+        	out.println("ERROR @run WL: " + flag_error);
+        }
         
         flag_error = importDataWeights();
         if(flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run LUT: " + flag_error);
+        	out.println("ERROR @run weights: " + flag_error);
         }
         
 
@@ -342,14 +342,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void onBattleEnded(BattleEndedEvent event){
         flag_error = exportDataWeights();				//strLUT = "LUTTrackfire.dat"
         if(flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
+        	out.println("ERROR @onBattleEnded weights: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
         	//LUT is 0'd, causing error 9 (export_dump)
         }
         
-//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-//        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR: " + flag_error);
-//        }
+        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded WL: " + flag_error);
+        }
         
 //        flag_error =  exportData(strSA); 
 //        flag_error = saveData(strSA); 
@@ -369,16 +369,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public void onDeath(DeathEvent event){
-//    	currentBattleResult = 0;    					//global variable. 
+    	currentBattleResult = 0;    					//global variable. 
         flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath: " + flag_error);
+        	out.println("ERROR @onDeath weights: " + flag_error);
         }
-//        
-//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-//        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR: " + flag_error);
-//        }
+        
+        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onDeath WL: " + flag_error);
+        }
 //        flag_error =  exportData(strSA); 
 //        flag_error = saveData(strSA); 
 //        if( flag_error != SUCCESS_exportData) {
@@ -398,18 +398,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */    
 	public void onWin(WinEvent e) {
     	currentBattleResult = 1;
-        flag_error = exportData(strLUT);
-        
+    	
+        flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportData) {
-        	if (debug_export || debug) {
-        		
-        	}
-        	out.println("ERROR: " + flag_error);
+        	out.println("ERROR @onWin weights: " + flag_error);
         }
         
         flag_error = exportData(strWL);
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR: " + flag_error);
+        	out.println("ERROR @onWin WL: " + flag_error);
         }
 
 //        flag_error = saveData(strSA); 
