@@ -524,7 +524,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
         step (5) - with prevSAV (inputs) and qOld_new (correct target)  and qOld (calculated output), run backpropagation & save weights 
         step (6) - save error for graph
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
-        
      */
     public void learning() {
     		//tick%3 is possible new state. 
@@ -664,8 +663,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @name:		qFunction
      * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
      * 				2. The q value is the maximum "Y" from array
-     * 				2. Calculate new prev q-value. 
-     * 				3. Update prevSAV with this q-value in LUT. 
+     * 				3. currentNetQVal is assigned prevQVal 
+     * 				4. Ycalc is previousNetQ
+     * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Ycalc is prevNetQVal 
      * @param: 		none, but uses:
      * 				1.	double reward 
      * 				2.	int currentStateVector[] already discretized (size numStates)
@@ -680,8 +680,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //       updateLUT(prevQVal);\
        //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
        double[] Ycalc = new double [0]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
-       Ycalc[0] = previousNetQVal; 
-       runBackProp(currentStateActionVector, currentNetQVal, Ycalc, flagActivation); 
+       Ycalc[0] = previousNetQVal;
+       double expectedYVal = currentNetQVal; 
+       runBackProp(currentStateActionVector, expectedYVal, Ycalc, flagActivation); 
     }
 
     /**
@@ -793,13 +794,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //			System.out.println("delta " + delta_out[k]);
 			for (int j = 0; j < numHiddensTotal; j++){
 //				System.out.println("wPast[j][k] " + wPast[j][k]);
-//				System.out.println("wNow[j][k] " + wNow[j][k]);
+//				System.out.println("NNWeights_hiddenToOutput[j][k] " + NNWeights_hiddenToOutput[j][k]);
 				deltaW[j][k] = alpha*delta_out[k]*Z[j];
-				wNext[j][k] = wNow[j][k] + deltaW[j][k] + momentum*(wNow[j][k] - wPast[j][k]); 
-				wPast[j][k] = wNow[j][k]; 
-				wNow[j][k] = wNext[j][k]; 
+				wNext[j][k] = NNWeights_hiddenToOutput[j][k] + deltaW[j][k] + momentum*(NNWeights_hiddenToOutput[j][k] - wPast[j][k]); 
+				wPast[j][k] = NNWeights_hiddenToOutput[j][k]; 
+				NNWeights_hiddenToOutput[j][k] = wNext[j][k]; 
 //				System.out.println("wPast[j][k] " + wPast[j][k]);
-//				System.out.println("wNow[j][k] " + wNow[j][k]);
+//				System.out.println("NNWeights_hiddenToOutput[j][k] " + NNWeights_hiddenToOutput[j][k]);
 //				System.out.println("wNext[j][k] " + wNext[j][k]);
 			}
 		}
@@ -808,7 +809,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		for (int j = 0; j < numHiddensTotal; j++){
 			double sumDeltaInputs = 0.0;
 			for (int k = 0;  k < numOutputsTotal; k++){
-				sumDeltaInputs += delta_out[k]*wNow[j][k];
+				sumDeltaInputs += delta_out[k]*NNWeights_hiddenToOutput[j][k];
 				if (flag == true){
 					 delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
 				}
@@ -818,13 +819,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			}
 			for (int i = 0; i< numInputsTotal; i++){
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
-//				System.out.println("vNow[i][j] " + vNow[i][j]);
+//				System.out.println("NNWeights_inputToHidden[i][j] " + NNWeights_inputToHidden[i][j]);
 				deltaV[i][j] = alpha*delta_hidden[j]*X[i];
-				vNext[i][j]  = vNow[i][j] + deltaV[i][j] + momentum*(vNow[i][j] - vPast[i][j]); 
-				vPast[i][j] = vNow[i][j]; 
-				vNow[i][j] = vNext[i][j]; 
+				vNext[i][j]  = NNWeights_inputToHidden[i][j] + deltaV[i][j] + momentum*(NNWeights_inputToHidden[i][j] - vPast[i][j]); 
+				vPast[i][j] = NNWeights_inputToHidden[i][j]; 
+				NNWeights_inputToHidden[i][j] = vNext[i][j]; 
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
-//				System.out.println("vNow[i][j] " + vNow[i][j]);
+//				System.out.println("NNWeights_inputToHidden[i][j] " + NNWeights_inputToHidden[i][j]);
 //				System.out.println("vNext[i][j] " + vNext[i][j]);
 			}
 		}
@@ -833,48 +834,50 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		for (int k = 0; k < numOutputsTotal; k++){ 
 			error = 0.5*(java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
 		}
-		saveFile(vNow, wNow);
-		File saveErrors = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\backPropError.txt"); 
-		PrintStream saveLocalError = null;
+		//saveWeights
 		
-		try {
-			saveLocalError = new PrintStream( new FileOutputStream(saveErrors));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		saveLocalError.println(error);
-		saveLocalError.close(); 
+//		saveFile(NNWeights_inputToHidden, NNWeights_hiddenToOutput);
+//		File saveErrors = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\backPropError.txt"); 
+//		PrintStream saveLocalError = null;
+//		
+//		try {
+//			saveLocalError = new PrintStream( new FileOutputStream(saveErrors));
+//		} catch (FileNotFoundException e) {
+//			e.printStackTrace();
+//		}
+//		saveLocalError.println(error);
+//		saveLocalError.close(); 
 	}
     /* 
      * SaveFile - parameters include the epochNum, hiddenWeights and outerWeights
      * */
-    public void saveFile(double [][] hiddenWeights, double [][] outerWeights){
-		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights.txt"); 
-		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights.txt"); 
-		PrintStream saveHiddenWeights = null;
-		PrintStream saveOuterWeights = null;
-		try {
-			saveHiddenWeights = new PrintStream( new FileOutputStream(saveWeights));
-			saveOuterWeights = new PrintStream( new FileOutputStream(saveOutWeights));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-//		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
-//		System.out.println("final weights " + Arrays.deepToString(outerWeights));
-		for (int i = 0; i < hiddenWeights.length; i++){
-			for (int j = 0; j < hiddenWeights[i].length; j++){
-				saveHiddenWeights.println(hiddenWeights[i][j]);
-			}        
-		}
-		for (int i = 0; i < outerWeights.length; i++){
-			for (int j = 0; j < outerWeights[i].length; j++){
-				saveOuterWeights.println(outerWeights[i][j]);
-			}
-		}
-//		saveWeightFile.println("Epoch\t " + epochNum + "\nhiddenWeights\t " + Arrays.deepToString(hiddenWeights)+ "\nouterWeights\t " + Arrays.deepToString(outerWeights));
-		saveHiddenWeights.close(); 
-		saveOuterWeights.close(); 
-	}
+//    public void saveFile(double [][] hiddenWeights, double [][] outerWeights){
+//		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights.txt"); 
+//		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights.txt"); 
+//		PrintStream saveHiddenWeights = null;
+//		PrintStream saveOuterWeights = null;
+//		try {
+//			saveHiddenWeights = new PrintStream( new FileOutputStream(saveWeights));
+//			saveOuterWeights = new PrintStream( new FileOutputStream(saveOutWeights));
+//		} catch (FileNotFoundException e) {
+//			e.printStackTrace();
+//		}
+////		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
+////		System.out.println("final weights " + Arrays.deepToString(outerWeights));
+//		for (int i = 0; i < hiddenWeights.length; i++){
+//			for (int j = 0; j < hiddenWeights[i].length; j++){
+//				saveHiddenWeights.println(hiddenWeights[i][j]);
+//			}        
+//		}
+//		for (int i = 0; i < outerWeights.length; i++){
+//			for (int j = 0; j < outerWeights[i].length; j++){
+//				saveOuterWeights.println(outerWeights[i][j]);
+//			}
+//		}
+////		saveWeightFile.println("Epoch\t " + epochNum + "\nhiddenWeights\t " + Arrays.deepToString(hiddenWeights)+ "\nouterWeights\t " + Arrays.deepToString(outerWeights));
+//		saveHiddenWeights.close(); 
+//		saveOuterWeights.close(); 
+//	}
 	/**
      * @name:		resetReward
      * @purpose: 	Resets reward to 0.
@@ -1512,8 +1515,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	// initialize arrays 
 	double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
 	double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
-	double [][] vNow 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights.
-	double [][] wNow	= new double[numHiddensTotal][numOutputsTotal]; 
 	double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
 	double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
 	double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
@@ -1535,7 +1536,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		for (int j = 1; j < numHiddensTotal; j++){
 			double sumIn = 0.0; 
 			for (int i= 0; i < numInputsTotal; i++){	
-				sumIn += currentStateVector[i]*vNow[i][j]; 
+				sumIn += currentStateVector[i]*NNWeights_inputToHidden[i][j]; 
 			}
 			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
 			Z_in[0] = bias; 									//set z_in[0] = bias 
@@ -1551,7 +1552,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		for (int k = 0; k < numOutputsTotal; k++){
 			double sumOut = 0.0; 
 			for (int j= 0; j < numHiddensTotal; j++){	
-				sumOut += Z[j]*wNow[j][k]; 
+				sumOut += Z[j]*NNWeights_hiddenToOutput[j][k]; 
 			}
 			Y_in[k] = sumOut; 	
 			if (flag == true)
@@ -1600,35 +1601,4 @@ public class NN2_LUTMimic extends AdvancedRobot{
  		double bipDeriv = 0.5*(1 + bipFunc)*(1 - bipFunc);  
  		return bipDeriv;
  	}
-	
- 	/** 
- 	 * saveWeightFile. 
- 	 * @param epochNum, numHiddenWeights, numOuterWeights. 
- 	 */
-	public void saveWeightFile(int epochNum, double [][] hiddenWeights, double [][] outerWeights){
-		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights.txt"); 
-		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights.txt"); 
-		PrintStream saveHiddenWeights = null;
-		PrintStream saveOuterWeights = null;
-		try {
-			saveHiddenWeights = new PrintStream( new FileOutputStream(saveWeights));
-			saveOuterWeights = new PrintStream( new FileOutputStream(saveOutWeights));
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-//		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
-//		System.out.println("final weights " + Arrays.deepToString(outerWeights));
-		for (int i = 0; i < hiddenWeights.length; i++){
-			for (int j = 0; j < hiddenWeights[i].length; j++){
-				saveHiddenWeights.println(hiddenWeights[i][j]);
-			}        
-		}
-		for (int i = 0; i < outerWeights.length; i++){
-			for (int j = 0; j < outerWeights[i].length; j++){
-				saveOuterWeights.println(outerWeights[i][j]);
-			}
-		}
-		saveHiddenWeights.close(); 
-		saveOuterWeights.close(); 
-	}
 }
