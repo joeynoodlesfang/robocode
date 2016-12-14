@@ -106,6 +106,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     String strLUT = "LUTTrackfire.dat";
     String strWL = "winlose.dat";
     String strSA = "stateAction.dat"; 
+    String  strError = "saveErrorForActions.dat" ;
     
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
@@ -350,6 +351,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded WL: " + flag_error);
         }
+        flag_error = exportData(strError);					//"strWL" = winLose.dat
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded Error: " + flag_error);
+        }       
         
 //        flag_error =  exportData(strSA); 
 //        flag_error = saveData(strSA); 
@@ -379,6 +384,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onDeath WL: " + flag_error);
         }
+        flag_error = exportData(strError);					//"strWL" = winLose.dat
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onDeath WL: " + flag_error);
+        }        
 //        flag_error =  exportData(strSA); 
 //        flag_error = saveData(strSA); 
 //        if( flag_error != SUCCESS_exportData) {
@@ -408,7 +417,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onWin WL: " + flag_error);
         }
-
+        flag_error = exportData(strError);
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onWin WL: " + flag_error);
+        }
 //        flag_error = saveData(strSA); 
 //        if( flag_error != SUCCESS_exportData) {
 //        	out.println("ERROR @onDeath: " + flag_error);
@@ -660,7 +672,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity < 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity > 0)) ){
 			currentStateActionVector[7] = 2; //enemy moving right
 		}
-    	out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
+    	if (debug){
+    		out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
+    	}
     }
  
     /** 
@@ -682,7 +696,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 				}
 			}
 		}
-		out.println("YCalc " + Arrays.deepToString(qFromNet));
+    	if (debug){
+    		out.println("YCalc " + Arrays.deepToString(qFromNet));
+    	}
 	}
 	
 	
@@ -829,10 +845,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @param		n, but uses:
      * 				1. qValMax
      * @return		prevQVal
+     	Q(s’,a’)-Q(s,a)
      */
     public double calcNewPrevQVal(){
     	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
-    	out.println("currentNetQVal " + currentNetQVal);
+//    	out.println("currentNetQVal " + currentNetQVal);
+    	exportData(strError);
     	return currentNetQVal;
     }
     
@@ -1307,7 +1325,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
     	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
     	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
-    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )){
+    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )
+    	  || ( (strName == strError))){
 	    	
     		PrintStream w = null;
 	        
@@ -1349,6 +1368,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	flag_WLImported = false;
 	            }// end winLose
 	            
+	            //strError
+	            else if((strName == strError)){
+	        		w.println("currentNetQVal\t" + currentNetQVal);   
+	        		w.println("previousNetQVal\t" + previousNetQVal); 
+	            }
 	            
 	            /* to add new files for exporting data
 	             * such as saveData
@@ -1390,44 +1414,37 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	}
     }
 
-    
-//    public int saveData(String strName) {
-//    	PrintStream w = null;
-//        try {
-//            w = new PrintStream(new RobocodeFileOutputStream(getDataFile(strName)));
-////        	out.println("writing into strSA");
-//        	//DEBUG
-//        	if (debug_export || debug) {
-//        		out.println("writing into strSA");
-//        	}
-//            for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-//                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-//                	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-//                		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-//                			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-//                				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-//                					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//                						w.println("\t" + p0+p1+p2+p3+p4+p5+p6);
-//                					}
-//                				}
-//            				}
-//                		}
-//                	}
-//                }
+//	
+//    public int saveError(w1) {
+//		PrintStream w1 = null;
+//    	try {
+//    		
+//    		if (w1.checkError()) {
+//                //Error 0x03: cannot write
+//            	if (debug_export || debug) {
+//            		out.println("Something screwed up (Error 14 cannot write)");
+//            	}
+//            	return ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden;
+//    		}
+//    		w1.println("currentNetQVal\t" + currentNetQVal);   
+//    		w1.println("previousNetQVal\t" + previousNetQVal); 
+//    	}
+//    	catch (IOException e) {
+//    		if (debug_export || debug) {
+//    			out.println("IOException trying to write: ");
+//    		}
+//            e.printStackTrace(out); 
+//            return ERROR_16_exportWeights_IOException;
+//        } 
+//        finally {
+//            if (w1 != null) {
+//                w1.close();
 //            }
-//	    } catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//	    finally {
-//	        if (w != null) {
-//	            w.close();
-//	        }
-//	    } 
-//	    return SUCCESS_exportData;
+//        }  
+//    	return SUCCESS_exportData;
 //	}
-    
 
+ 
     /**binaryActivation function
      * @param x
      * @return squashedValue. 
