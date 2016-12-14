@@ -1149,7 +1149,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            if (w2 != null) {
 	                w2.close();
 	            }
-	        }      
+	        }    
+	    	
+	    	
 	    	flag_weightsImported = false;
 	    	return SUCCESS_exportDataWeights;
     	}
