@@ -99,6 +99,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int ERROR_16_exportWeights_IOException = 16;
     private static final int ERROR_17 = 17;
     private static final int ERROR_18 = 18;
+    private static final int ERROR_19 = 19;
+    private static final int ERROR_20 = 20;
+    private static final int ERROR_21 = 21;
     
     
     //strings used for importing or extracting files 
@@ -1020,10 +1023,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	        	
 	            try {
 	            	if (flag_useOfflineTraining) {
-	            		reader = new BufferedReader(new FileReader(getDataFile("inToHiddenWeights_OfflineTraining.dat")));
+	            		reader = new BufferedReader(new FileReader(getDataFile("inToHiddenWeights_OfflineTraining.txt")));
 	            	}
 	            	else {
-	            		reader = new BufferedReader(new FileReader(getDataFile("finalHiddenWeights2.txt")));
+	            		reader = new BufferedReader(new FileReader(getDataFile("finalHiddenWeights.txt")));
 	            	}
 	            	for (int i = 0; i < numInputsTotal; i++) {
 	            		for (int j = 0; j < numHiddenNeuron; j++) {
@@ -1040,14 +1043,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            BufferedReader reader2 = null;
 	            try {
 	            	if (flag_useOfflineTraining) {
-	            		reader2 = new BufferedReader(new FileReader(getDataFile("hiddenToOutWeights_OfflineTraining.dat")));
+	            		reader2 = new BufferedReader(new FileReader(getDataFile("hiddenToOutWeights_OfflineTraining.txt")));
 	            	}
 	            	else {
-	            		reader2 = new BufferedReader(new FileReader(getDataFile("finalOuterWeights2.txt")));
+	            		reader2 = new BufferedReader(new FileReader(getDataFile("finalOuterWeights.txt")));
 	            	}
 	            	for (int i = 0; i < numHiddensTotal; i++) {
 	            		for (int j = 0; j < numOutputsTotal; j++) {
-	            			NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader.readLine());
+	            			NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader2.readLine());
 		                }
 	            	}
 	            } 
@@ -1089,9 +1092,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public int exportDataWeights() {
     	if(flag_weightsImported == true) {
 			PrintStream w1 = null;
-			PrintStream w2 = null;
 	    	try {
-	    		w1 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalHiddenWeights2.txt")));
+	    		w1 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalHiddenWeights.txt")));
 	    		if (w1.checkError()) {
 	                //Error 0x03: cannot write
 	            	if (debug_export || debug) {
@@ -1104,9 +1106,24 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	         		for (int j = 0; j < numHiddenNeuron; j++) {
 	         			w1.println(NNWeights_inputToHidden[i][j]);
 	                }
-	         	}
+	         	} 
+	    	}
+	    	catch (IOException e) {
+	    		if (debug_export || debug) {
+	    			out.println("IOException trying to write: ");
+	    		}
+	            e.printStackTrace(out); //Joey: lol no idea what this means
+	            return ERROR_16_exportWeights_IOException;
+	        } 
+	        finally {
+	            if (w1 != null) {
+	                w1.close();
+	            }
+	        }      
+	    	PrintStream w2 = null;
+	    	try {
 	    		
-	    		w2 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalOuterWeights2.txt")));
+	    		w2 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalOuterWeights.txt")));
 	    		if (w2.checkError()) {
 	                //Error 0x03: cannot write
 	            	if (debug_export || debug) {
@@ -1129,10 +1146,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            return ERROR_16_exportWeights_IOException;
 	        } 
 	        finally {
-	            if (w1 != null) {
-	                w1.close();
-	            }
-	            
 	            if (w2 != null) {
 	                w2.close();
 	            }
