@@ -255,6 +255,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private int currentBattleResult = 0;
 	
 
+    private static double[] QErrors = new double [520000];
+    private static int currentRoundOfError = 0;
+    //TODO here
     /** Neural net stuff 
      * 
      * */
@@ -341,7 +344,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-        flag_error = exportDataWeights();				//strLUT = "LUTTrackfire.dat"
+        flag_error = exportDataWeights();	
         if(flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded weights: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
         	//LUT is 0'd, causing error 9 (export_dump)
@@ -850,7 +853,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public double calcNewPrevQVal(){
     	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
 //    	out.println("currentNetQVal " + currentNetQVal);
-    	exportData(strError);
+    	//TODO
+    	
+    	QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
+    	//out.println(currentRoundOfError + " " + QErrors[currentRoundOfError-1] + " " + currentNetQVal + " " + previousNetQVal);
     	return currentNetQVal;
     }
     
@@ -1091,7 +1097,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            		out.println("Something done fucked up (Error 14 cannot write)");
 	            	}
 	            	return ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden;
-	            	//TODO here
 	    		}
 	    		 
 	    		for (int i = 0; i < numInputsTotal; i++) {
@@ -1370,8 +1375,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            
 	            //strError
 	            else if((strName == strError)){
-	        		w.println("currentNetQVal\t" + currentNetQVal);   
-	        		w.println("previousNetQVal\t" + previousNetQVal); 
+	            	w.println("contains currentNetQVal-previousNetQVal for each tick");
+	            	for (int i = 0; i < currentRoundOfError; i++) {
+	            		w.println(QErrors[i]);
+	            	}
 	            }
 	            
 	            /* to add new files for exporting data
