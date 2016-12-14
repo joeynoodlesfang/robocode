@@ -182,7 +182,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static double[][] NNWeights_inputToHidden 
         = new double
         [numInputsTotal]
-        [numHiddensTotal - numHiddenBias] //no weights go from inputs to hidden bias.
+        [numHiddensTotal] //no weights go from inputs to hidden bias.
         ;
     
     // weights connecting
@@ -222,7 +222,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
 	
     //variables used for getMax.
-    int num_actions = 3; 
+    int num_actions = 24; 
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
     private int actionChosenForQValMax = 0; //stores the chosen currSAV with maxqval before policy
     private double qValMax = 0.0; // stores the maximum currSAV QMax
@@ -656,7 +656,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 				}
 			}
 		}
-		out.println("YCalc " + Arrays.toString(qFromNet));
+		out.println("YCalc " + Arrays.deepToString(qFromNet));
 	}
 	
     /**
@@ -679,7 +679,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
        out.println("prevQVal " + currentNetQVal);
 //       updateLUT(prevQVal);\
        //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
-       double[] Ycalc = new double [0]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
+       double[] Ycalc = new double [1]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
        Ycalc[0] = previousNetQVal;
        double expectedYVal = currentNetQVal; 
        runBackProp(currentStateActionVector, expectedYVal, Ycalc, flagActivation); 
@@ -718,19 +718,20 @@ public class NN2_LUTMimic extends AdvancedRobot{
         double qVal = 0.0;
         int numMaxActions = 0;
         int randMaxAction = 0;
-        
+        out.println("qFromNet.length " + qFromNet.length); 
     	for (int i = 0; i < qFromNet.length; i++){
 		    for (int j = 0; j < qFromNet[0].length; j++){
 		    	for (int k = 0; k < qFromNet[0][0].length; k++){
-		    		//qFromNet[i][j][k] is a value 
+		    		//qFromNet[i][j][k] is a value
+		    		out.println("qFromNet" + qFromNet[i][j][k]);
 		    		if (qFromNet[i][j][k] > currMax){
-
 		    			currMax = qFromNet[i][j][k];
 		            	numMaxActions = 1;
 		            	arrAllMaxActions[numMaxActions-1] = (i+1)*(j+1)*(k+1)-1;		//all possible combinations (i*j*k)
 		            }
 		            else if (qVal == currMax){
 		            	numMaxActions++;
+		            	out.println("arrAllMaxActions[numMaxActions-1] " + arrAllMaxActions[numMaxActions-1]); 
 		            	arrAllMaxActions[numMaxActions-1] = (i+1)*(j+1)*(k+1)-1;
 		            }
 		            
@@ -1533,7 +1534,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 * @return: an array of Y values for all the state pairs. 
 	 **/
     public double forwardProp(double [] currentStateVector, boolean flag) {
-		for (int j = 1; j < numHiddensTotal; j++){
+		for (int j = 1; j < numHiddenNeuron; j++){
 			double sumIn = 0.0; 
 			for (int i= 0; i < numInputsTotal; i++){	
 				sumIn += currentStateVector[i]*NNWeights_inputToHidden[i][j]; 
