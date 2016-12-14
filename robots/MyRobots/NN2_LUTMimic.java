@@ -166,7 +166,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
     
-    private static boolean flag_useOfflineTraining = false;
+    private static boolean flag_useOfflineTraining = true;
     // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
@@ -549,7 +549,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
      */
     public void learning() {
-    		//tick%3 is possible new state. 
+    	if (tick%4 == 0) {
              calculateReward();
              copyCurrentSVIntoPrevSV();
              generateCurrentStateVector();
@@ -557,10 +557,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
              qFunction();
              resetReward();
              doAction();
+    	}
 
-//        else {
-//            setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-//        }
+        else {
+            setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+        }
 
         setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
         scan();
@@ -742,8 +743,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
        double[] Ycalc = new double [1]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
        Ycalc[0] = previousNetQVal;
        double expectedYVal = currentNetQVal; 
-       out.println("expectedYVal " + expectedYVal);
-       out.println("Ycalc " + Arrays.toString(Ycalc));
+//       out.println("expectedYVal " + expectedYVal);
+//       out.println("Ycalc " + Arrays.toString(Ycalc));
        runBackProp(currentStateActionVector, expectedYVal, Ycalc, flagActivation); 
     }
 
@@ -780,12 +781,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
         double qVal = 0.0;
         int numMaxActions = 0;
         int randMaxAction = 0;
-        out.println("qFromNet.length " + qFromNet.length); 
+//        out.println("qFromNet.length " + qFromNet.length); 
     	for (int i = 0; i < qFromNet.length; i++){
 		    for (int j = 0; j < qFromNet[0].length; j++){
 		    	for (int k = 0; k < qFromNet[0][0].length; k++){
 		    		//qFromNet[i][j][k] is a value
-		    		out.println("qFromNet" + qFromNet[i][j][k]);
+//		    		out.println("qFromNet" + qFromNet[i][j][k]);
 		    		if (qFromNet[i][j][k] > currMax){
 		    			currMax = qFromNet[i][j][k];
 		            	numMaxActions = 1;
@@ -819,7 +820,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         if (debug) {
         	System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
         }
-        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
+//        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
     }
     
     /**
