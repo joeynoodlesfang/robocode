@@ -210,7 +210,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private double currentStateActionVector[] = new double [numInputsTotal];
     private double prevStateActionVector[]    = new double [numInputsTotal]; 
 
-	
+    private double currentNetQVal = 0.0;
+    private double previousNetQVal= 0.0; 
+    
     //array to store the q values from net. 
     private double [][][] qFromNet = new double [input_action0_moveReferringToEnemy_possibilities][input_action1_fire_possibilities][input_action2_fireDirection_possibilities];
 
@@ -569,6 +571,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	for (int i = 0; i < currentStateActionVector.length; i++) {
     		prevStateActionVector[i] = currentStateActionVector[i];
     	}
+    	previousNetQVal = currentNetQVal; 
     }
     
     /**
@@ -673,9 +676,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     public void qFunction(){
        getMax(); 
-       int prevQVal = (int)calcNewPrevQVal();
-       out.println("prevQVal " + prevQVal);
-       updateLUT(prevQVal);
+       currentNetQVal =  calcNewPrevQVal();
+       out.println("prevQVal " + currentNetQVal);
+//       updateLUT(prevQVal);\
+       //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
+       double[] Ycalc = new double [0]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
+       Ycalc[0] = previousNetQVal; 
+       runBackProp(currentStateActionVector, currentNetQVal, Ycalc, flagActivation); 
     }
 
     /**
@@ -687,14 +694,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 *						i. if indexQVal > currMax:
 	 *							(1) Update currMax
 	 *							(2) Set numMaxActions = 1.
-	 *							(3) Store the action index into arrAllMaxActions[numMaxActions-1]
+	 *							(3) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
 	 *						ii. if indexQVal == currMax:
 	 *							(1) numMaxActions++
-	 *							(2) Store the action index into arrAllMaxActions[numMaxActions-1]
+	 *							(2) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
 	 *						iii. if indexQVal < currMax:
 	 *							ignore.
-	 *					c. record chosen action. If multiple actions with max q-values, 
-	 *					   randomize chosen action.
+	 *					c. record chosen action. If multiple actions with max q-values, randomize chosen action.
 	 *						i. if numMaxActions > 1, 
 	 *						   randomly select between 0 and numMaxActions - 1. The randomed 
 	 *						   number will correspond to the array location of the chosen
@@ -704,40 +710,36 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @param: 		none, but uses:
      * 				1.	current SAV[].
      * 				2.	roboLUT 
-     * 				3.	currQArrayMax(Joey: can we get replace this) 
+     * 				3.	currQArrayMax
      * @return: 	n
      */
     public void getMax() {
-    	double currMax = qFromNet[0][0][0];
-    	for (int i = 0; i < qFromNet.length; i++){
-		    for (int j = 0; j < qFromNet[0].length; j++){
-		    	for (int k = 0; k < qFromNet[0][0].length; k++){
-		    		if (qFromNet[i][j][k] > maxQ) {
-		    			currMax = qFromNet[i][j][k];
-		    	}
-    		}
-    	}
-		    
-//        double currMax = -100.0;
-        double indexQVal = 0.0;
+    	double currMax = qFromNet[0][0][0];  
+        double qVal = 0.0;
         int numMaxActions = 0;
         int randMaxAction = 0;
         
-        for (int i = 0; i < num_actions; i++){
-            if (indexQVal > currMax){
-            	currMax = indexQVal;
-            	numMaxActions = 1	;
-            	arrAllMaxActions[numMaxActions-1] = i;
-            }
-            else if (indexQVal == currMax){
-            	numMaxActions++;
-            	arrAllMaxActions[numMaxActions-1] = i;
-            }
-            
-            if (debug) {
-            	out.print(i + ": " + indexQVal + "  ");
-            }
-        } 
+    	for (int i = 0; i < qFromNet.length; i++){
+		    for (int j = 0; j < qFromNet[0].length; j++){
+		    	for (int k = 0; k < qFromNet[0][0].length; k++){
+		    		//qFromNet[i][j][k] is a value 
+		    		if (qFromNet[i][j][k] > currMax){
+		    			currMax = qFromNet[i][j][k];
+		            	numMaxActions = 1;
+		            	arrAllMaxActions[numMaxActions-1] = (i+1)*(j+1)*(k+1)-1;		//all possible combinations (i*j*k)
+		            }
+		            else if (qVal == currMax){
+		            	numMaxActions++;
+		            	arrAllMaxActions[numMaxActions-1] = (i+1)*(j+1)*(k+1)-1;
+		            }
+		            
+		            if (debug) {
+		            	out.print(i + ": " + qVal + "  ");
+		            }
+		    	}
+    		}
+    	}
+        qValMax = currMax;
         
         if (numMaxActions > 1) {
         	randMaxAction = (int)(Math.random()*(numMaxActions)); //math.random randoms btwn 0.0 and 0.999. Add 1 to avoid truncation after typecasting to int.
@@ -748,12 +750,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
         }
         
         actionChosenForQValMax = arrAllMaxActions[randMaxAction];
-        qValMax = currMax;
+
         
         if (debug) {
         	System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
         }
-//        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
+        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
     }
     
     /**
@@ -763,72 +765,116 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				1. qValMax
      * @return		prevQVal
      */
-    public int calcNewPrevQVal(){
-        double prevQVal = roboLUT[prevStateActionVector[0]]
-        						 [prevStateActionVector[1]]
-        						 [prevStateActionVector[2]]		 
-        						 [prevStateActionVector[3]]
-        						 [prevStateActionVector[4]]
-        						 [prevStateActionVector[5]]
-        						 [prevStateActionVector[6]]
-        						 [prevStateActionVector[7]]		 ;
-        
-        prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
-        return (int)prevQVal;
-        
+    public double calcNewPrevQVal(){
+    	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
+    	
+    	return currentNetQVal;
     }
     
     /**
-     * @name:		updateLUT
+     * @name:		runbackProp
      * @purpose:	1. Update prevSAV in LUT with the calculated prevQVal.
      * 				2. Update curr state with correct action based on policy (greedy or exploratory).
      * @param:		1. prevQVal
      * @return:		n
      */
-    public void updateLUT(int prevQVal){
-        int valueRandom = 0;
-        
-        double selectRandom = 0;
-        
-        roboLUT[prevStateActionVector[0]]
-         	   [prevStateActionVector[1]]
-         	   [prevStateActionVector[2]]
-         	   [prevStateActionVector[3]]
-         	   [prevStateActionVector[4]]
-         	   [prevStateActionVector[5]]
-         	   [prevStateActionVector[6]]	   
-         	   [prevStateActionVector[7]]
-         					  = prevQVal;
-        
-        if (debug) {
-	        out.println("prev " + Arrays.toString(prevStateActionVector));
-	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]][prevStateActionVector[4]][prevStateActionVector[5]][prevStateActionVector[6]]);
-        }
-        
-        //Choosing next action based on policy.
-        valueRandom = (int)(Math.random()*(num_actions));
-        if (policy == SARSA) {
-        	currentStateActionVector[0] = valueRandom;
-        }
-        
-        else if(policy == exploratory) {
-        	currentStateActionVector[0] = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
-        }
-        
-        else{ 
-        	currentStateActionVector[0] = actionChosenForQValMax;
-        }
-        //Choosing next action based on policy.
-//        valueRandom = (int)(Math.random()*(num_actions));
-//     
-//        if (policy == exploratory) {
-//        	currentStateActionVector[0] = valueRandom;
-//        }
-//        else if (policy == SARSA){ 
-//        	currentStateActionVector[0] = actionChosenForQValMax;
-//        }
-    }
-    
+    public void runBackProp(double [] X, double Yreal, double[] Ycalc, boolean flag) {
+//		System.out.println("z_in " + Arrays.toString(Z_in));
+//		System.out.println("Y_in " + Arrays.toString(Y_in));	
+		for (int k = 0; k <numOutputsTotal; k++){
+//			delta_out[k]  =  (Yreal - Ycalc[k])*customActivationDerivation(Y_in[k],maxQ, minQ);
+			if (flag == true){
+				delta_out[k] = (Yreal - Ycalc[k])*binaryDerivative(Y_in[k]); 
+			}
+			else{
+				delta_out[k] = (Yreal - Ycalc[k])*bipolarDerivative(Y_in[k]);	
+			}
+//			System.out.println("\n");
+//			System.out.println("delta " + delta_out[k]);
+			for (int j = 0; j < numHiddensTotal; j++){
+//				System.out.println("wPast[j][k] " + wPast[j][k]);
+//				System.out.println("wNow[j][k] " + wNow[j][k]);
+				deltaW[j][k] = alpha*delta_out[k]*Z[j];
+				wNext[j][k] = wNow[j][k] + deltaW[j][k] + momentum*(wNow[j][k] - wPast[j][k]); 
+				wPast[j][k] = wNow[j][k]; 
+				wNow[j][k] = wNext[j][k]; 
+//				System.out.println("wPast[j][k] " + wPast[j][k]);
+//				System.out.println("wNow[j][k] " + wNow[j][k]);
+//				System.out.println("wNext[j][k] " + wNext[j][k]);
+			}
+		}
+		
+		//for hidden layer
+		for (int j = 0; j < numHiddensTotal; j++){
+			double sumDeltaInputs = 0.0;
+			for (int k = 0;  k < numOutputsTotal; k++){
+				sumDeltaInputs += delta_out[k]*wNow[j][k];
+				if (flag == true){
+					 delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
+				}
+				else{
+					delta_hidden[j] = sumDeltaInputs*bipolarDerivative(Z_in[j]);	
+				}
+			}
+			for (int i = 0; i< numInputsTotal; i++){
+//				System.out.println("vPast[i][j] " + vPast[i][j]);
+//				System.out.println("vNow[i][j] " + vNow[i][j]);
+				deltaV[i][j] = alpha*delta_hidden[j]*X[i];
+				vNext[i][j]  = vNow[i][j] + deltaV[i][j] + momentum*(vNow[i][j] - vPast[i][j]); 
+				vPast[i][j] = vNow[i][j]; 
+				vNow[i][j] = vNext[i][j]; 
+//				System.out.println("vPast[i][j] " + vPast[i][j]);
+//				System.out.println("vNow[i][j] " + vNow[i][j]);
+//				System.out.println("vNext[i][j] " + vNext[i][j]);
+			}
+		}
+		//Step 9 - Calculate local error. 
+		double error = 0.0;
+		for (int k = 0; k < numOutputsTotal; k++){ 
+			error = 0.5*(java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
+		}
+		saveFile(vNow, wNow);
+		File saveErrors = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\backPropError.txt"); 
+		PrintStream saveLocalError = null;
+		
+		try {
+			saveLocalError = new PrintStream( new FileOutputStream(saveErrors));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		saveLocalError.println(error);
+		saveLocalError.close(); 
+	}
+    /* 
+     * SaveFile - parameters include the epochNum, hiddenWeights and outerWeights
+     * */
+    public void saveFile(double [][] hiddenWeights, double [][] outerWeights){
+		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights.txt"); 
+		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights.txt"); 
+		PrintStream saveHiddenWeights = null;
+		PrintStream saveOuterWeights = null;
+		try {
+			saveHiddenWeights = new PrintStream( new FileOutputStream(saveWeights));
+			saveOuterWeights = new PrintStream( new FileOutputStream(saveOutWeights));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+//		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
+//		System.out.println("final weights " + Arrays.deepToString(outerWeights));
+		for (int i = 0; i < hiddenWeights.length; i++){
+			for (int j = 0; j < hiddenWeights[i].length; j++){
+				saveHiddenWeights.println(hiddenWeights[i][j]);
+			}        
+		}
+		for (int i = 0; i < outerWeights.length; i++){
+			for (int j = 0; j < outerWeights[i].length; j++){
+				saveOuterWeights.println(outerWeights[i][j]);
+			}
+		}
+//		saveWeightFile.println("Epoch\t " + epochNum + "\nhiddenWeights\t " + Arrays.deepToString(hiddenWeights)+ "\nouterWeights\t " + Arrays.deepToString(outerWeights));
+		saveHiddenWeights.close(); 
+		saveOuterWeights.close(); 
+	}
 	/**
      * @name:		resetReward
      * @purpose: 	Resets reward to 0.
