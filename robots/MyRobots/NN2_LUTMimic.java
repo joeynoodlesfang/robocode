@@ -254,7 +254,34 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
+
+    /** Neural net stuff 
+     * 
+     * */
+
     
+    /*Initiate variables */
+		
+	double lRate = 0.05; 			//learning rate
+	double momentum = 0.2;  	//value of momentum 
+	boolean stopError = false; 	//if flag == false, then stop loop, else continue 
+	int maxEpoch = 1000; 	//if reach maximum number of Epochs, stop loop. 
+	
+	// initialize arrays 
+	double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
+	double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
+	double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
+	double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
+	double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
+	double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
+	double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
+	double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
+	double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
+	double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
+	double [] delta_out = new double[numOutputsTotal];
+	double [] delta_hidden = new double[numHiddensTotal];
+	boolean flagActivation = false;  
+	private final int bias = 1; 
 
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
@@ -648,10 +675,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
 
 	public void getQfromNet() {
+		//need to get the Ycalc from all the states
 		for (int i = 0; i < input_action0_moveReferringToEnemy_possibilities; i++){
 			for (int j = 0; j < input_action1_fire_possibilities; j++){
 				for(int k = 0; k < input_action2_fireDirection_possibilities; k++){
 					double Ycalc = forwardProp(currentStateActionVector, flagActivation);
+					//error is here
 					qFromNet[i][j][k] = Ycalc; 
 				}
 			}
@@ -659,6 +688,42 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		out.println("YCalc " + Arrays.deepToString(qFromNet));
 	}
 	
+	
+	/** function for forwardpropagation
+	 * @purpose: does forwardPropagation on the inputs from the robot. 
+	 * @return: an array of Y values for all the state pairs. 
+	 **/
+    public double forwardProp(double [] currentStateVector, boolean flag) {
+		for (int j = 1; j < numHiddenNeuron; j++){
+			double sumIn = 0.0; 
+			for (int i= 0; i < numInputsTotal; i++){	
+				sumIn += currentStateVector[i]*NNWeights_inputToHidden[i][j]; 
+			}
+			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
+			Z_in[0] = bias; 									//set z_in[0] = bias 
+			if (flag == true){
+				Z[j] = binaryActivation(Z_in[j]); 
+				Z[0] = Z_in[0];
+			}
+			else{
+				Z[j] = bipolarActivation(Z_in[j]); 
+				Z[0] = Z_in[0];
+			}
+		}
+		for (int k = 0; k < numOutputsTotal; k++){
+			double sumOut = 0.0; 
+			for (int j= 0; j < numHiddensTotal; j++){	
+				sumOut += Z[j]*NNWeights_hiddenToOutput[j][k]; 
+			}
+			Y_in[k] = sumOut; 	
+			if (flag == true)
+				Y[k] = binaryActivation(Y_in[k]); 
+			else
+				Y[k] = bipolarActivation(Y_in[k]);				
+		}		
+		return Y[0]; 
+	}
+    
     /**
      * @name:		qFunction
      * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
@@ -676,12 +741,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void qFunction(){
        getMax(); 
        currentNetQVal =  calcNewPrevQVal();
-       out.println("prevQVal " + currentNetQVal);
-//       updateLUT(prevQVal);\
+//      
        //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
        double[] Ycalc = new double [1]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
        Ycalc[0] = previousNetQVal;
        double expectedYVal = currentNetQVal; 
+       out.println("expectedYVal " + expectedYVal);
+       out.println("Ycalc " + Arrays.toString(Ycalc));
        runBackProp(currentStateActionVector, expectedYVal, Ycalc, flagActivation); 
     }
 
@@ -731,7 +797,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		            }
 		            else if (qVal == currMax){
 		            	numMaxActions++;
-		            	out.println("arrAllMaxActions[numMaxActions-1] " + arrAllMaxActions[numMaxActions-1]); 
+//		            	out.println("arrAllMaxActions[numMaxActions-1] " + arrAllMaxActions[numMaxActions-1]); 
 		            	arrAllMaxActions[numMaxActions-1] = (i+1)*(j+1)*(k+1)-1;
 		            }
 		            
@@ -769,7 +835,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     public double calcNewPrevQVal(){
     	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
-    	
+    	out.println("currentNetQVal " + currentNetQVal);
     	return currentNetQVal;
     }
     
@@ -849,36 +915,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //		saveLocalError.println(error);
 //		saveLocalError.close(); 
 	}
-    /* 
-     * SaveFile - parameters include the epochNum, hiddenWeights and outerWeights
-     * */
-//    public void saveFile(double [][] hiddenWeights, double [][] outerWeights){
-//		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights.txt"); 
-//		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights.txt"); 
-//		PrintStream saveHiddenWeights = null;
-//		PrintStream saveOuterWeights = null;
-//		try {
-//			saveHiddenWeights = new PrintStream( new FileOutputStream(saveWeights));
-//			saveOuterWeights = new PrintStream( new FileOutputStream(saveOutWeights));
-//		} catch (FileNotFoundException e) {
-//			e.printStackTrace();
-//		}
-////		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
-////		System.out.println("final weights " + Arrays.deepToString(outerWeights));
-//		for (int i = 0; i < hiddenWeights.length; i++){
-//			for (int j = 0; j < hiddenWeights[i].length; j++){
-//				saveHiddenWeights.println(hiddenWeights[i][j]);
-//			}        
-//		}
-//		for (int i = 0; i < outerWeights.length; i++){
-//			for (int j = 0; j < outerWeights[i].length; j++){
-//				saveOuterWeights.println(outerWeights[i][j]);
-//			}
-//		}
-////		saveWeightFile.println("Epoch\t " + epochNum + "\nhiddenWeights\t " + Arrays.deepToString(hiddenWeights)+ "\nouterWeights\t " + Arrays.deepToString(outerWeights));
-//		saveHiddenWeights.close(); 
-//		saveOuterWeights.close(); 
-//	}
 	/**
      * @name:		resetReward
      * @purpose: 	Resets reward to 0.
@@ -1498,71 +1534,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //	    return SUCCESS_exportData;
 //	}
     
-    
-    /** Neural net stuff 
-     * 
-     * */
 
-    
-    /*Initiate variables */
-		
-	double lRate = 0.05; 			//learning rate
-	double momentum = 0.2;  	//value of momentum 
-	boolean stopError = false; 	//if flag == false, then stop loop, else continue 
-	int maxEpoch = 1000; 	//if reach maximum number of Epochs, stop loop. 
-	double upperThres = 0.2; 	//upper threshold for random weights
-	double lowerThres = -0.2;	//lower threshold for random weights
-	
-	// initialize arrays 
-	double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
-	double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
-	double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
-	double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
-	double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
-	double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
-	double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
-	double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
-	double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
-	double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
-	double [] delta_out = new double[numOutputsTotal];
-	double [] delta_hidden = new double[numHiddensTotal];
-	boolean flagActivation = false;  
-	private final int bias = 1; 
-	
-	/** function for forwardpropagation
-	 * @purpose: does forwardPropagation on the inputs from the robot. 
-	 * @return: an array of Y values for all the state pairs. 
-	 **/
-    public double forwardProp(double [] currentStateVector, boolean flag) {
-		for (int j = 1; j < numHiddenNeuron; j++){
-			double sumIn = 0.0; 
-			for (int i= 0; i < numInputsTotal; i++){	
-				sumIn += currentStateVector[i]*NNWeights_inputToHidden[i][j]; 
-			}
-			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
-			Z_in[0] = bias; 									//set z_in[0] = bias 
-			if (flag == true){
-				Z[j] = binaryActivation(Z_in[j]); 
-				Z[0] = Z_in[0];
-			}
-			else{
-				Z[j] = bipolarActivation(Z_in[j]); 
-				Z[0] = Z_in[0];
-			}
-		}
-		for (int k = 0; k < numOutputsTotal; k++){
-			double sumOut = 0.0; 
-			for (int j= 0; j < numHiddensTotal; j++){	
-				sumOut += Z[j]*NNWeights_hiddenToOutput[j][k]; 
-			}
-			Y_in[k] = sumOut; 	
-			if (flag == true)
-				Y[k] = binaryActivation(Y_in[k]); 
-			else
-				Y[k] = bipolarActivation(Y_in[k]);				
-		}		
-		return Y[0]; 
-	}
     /**binaryActivation function
      * @param x
      * @return squashedValue. 
