@@ -18,6 +18,7 @@ import java.util.Arrays;
 
 /* Main Testing Class */
 public class backPropFinalTest{
+	
 	public static void main(String args[])
 	{
 		for (int a = 0; a < 1; a ++){	 
@@ -26,12 +27,11 @@ public class backPropFinalTest{
 			int numInputs = 8; 			//5 states + 3 actions. 
 			int numHidden = 5;			//number of hidden inputs
 			int numTrials = 8641; 		//number of trials in the training set	
-			double lRate = 0.05; 			//learning rate
+			double lRate = 0.01; 			//learning rate
 			double momentum = 0.2;  	//value of momentum 
 			boolean stopError = false; 	//if flag == false, then stop loop, else continue 
-			int maxEpoch = 1000; 	//if reach maximum number of Epochs, stop loop. 
-			double upperThres = 0.2; 	//upper threshold for random weights
-			double lowerThres = -0.2;	//lower threshold for random weights
+			int maxEpoch = 3000; 	//if reach maximum number of Epochs, stop loop. 
+
 			
 			/* Neural net state action pair*/
 			boolean flag = false;  
@@ -43,15 +43,11 @@ public class backPropFinalTest{
 			
 			/* define files to save data */
 			File robotFile = new File ("robotFile.txt");
-			File NNFile = new File ("savingInputs.txt"); 
 
 			PrintStream saveFile1 = null;
-			PrintStream saveFile2 = null; 
 			try {
 				saveFile1 = new PrintStream( new FileOutputStream(robotFile));
-				saveFile2 = new PrintStream( new FileOutputStream(NNFile));
 
-				
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			}			
@@ -61,7 +57,8 @@ public class backPropFinalTest{
 		    BufferedReader readerSAV = null;
 		    BufferedReader readerACT = null;
 		    try {
-		    	String dir1 = "C:/Users/Andrea/github/robocode/robots/MyRobots/LUTTrackfire.data";
+		    	String dir1 = "C:/Users/Andy/github/robocode/robots/MyRobots/LUTTrackfire.data";
+//		    	String dir1 = "C:/Users/Andrea/github/robocode/robots/MyRobots/LUTTrackfire.data";
 				readerLUT = new BufferedReader(new FileReader(dir1 + "/" + "LUTTrackfire.dat"));
 				readerSAV = new BufferedReader(new FileReader(dir1 + "/" + "stateAction.dat"));
 				readerACT = new BufferedReader(new FileReader("newActions.txt"));
@@ -128,7 +125,7 @@ public class backPropFinalTest{
 				e.printStackTrace();
 			}
 //		    System.out.println( "Whole list=" + inputToNN);
-
+//		    System.out.println("outputs " + Arrays.toString(outputs));
 			//reformat the input as a string without '[], or space'
 			String [] inputNNRe  = new String [inputToNN.size()];
 			Integer [] inputAsInteger = new Integer[inputToNN.size()];
@@ -138,15 +135,15 @@ public class backPropFinalTest{
 			for (int i = 0; i < inputToNN.size(); i++){
 				inputNNRe[i] = ((String) inputToNN.get(i)).replaceAll("\\D+","");
 				inputAsInteger[i] = Integer.parseInt(inputNNRe[i]);
-				if (inputNNRe[i].length() == 7){
+				if (inputNNRe[i].length() == 6){
 					firstDigits[i] = Integer.parseInt(inputNNRe[i].substring(0, 1));
 				}
-				else if (inputNNRe[i].length() == 8){
+				else if (inputNNRe[i].length() == 7){
 					firstDigits[i] = Integer.parseInt(inputNNRe[i].substring(0, 2));
 				}
 			}
-			
-			for (int i = 0; i <(updatedInputs.length); i++){
+//			System.out.println("firstDigits " + Arrays.toString(inputNNRe)); 
+			for (int i = 0; i <(inputNNRe.length); i++){
 				if (firstDigits[i] == 0){
 					updatedInputs[i] = inputsACT[0]+inputNNRe[i].substring(1);
 				}
@@ -230,7 +227,7 @@ public class backPropFinalTest{
 			/* preprocess outputs 
 			 * 
 			 */
-			
+//			System.out.println("updatedInputs " + Arrays.toString(updatedInputs)); 
 //			System.out.println("output " + Arrays.toString(outputs));
 			double qMax = outputs[0];
 			for (int i = 1; i < outputs.length; i++) {
@@ -249,7 +246,22 @@ public class backPropFinalTest{
 			for (int i = 0; i < outputs.length; i++){
 				normalizedOutputs[i] = outputs[i]/qMax; 
 			}
-			
+			//obtain the max and min from normalized outputs and use them to initialize the random weights upper and lower thresholds
+			double upperThres = 0.5; 	//upper threshold for random weights
+			double lowerThres = -0.5;	//lower threshold for random weights
+//			double upperThres = outputs[0];
+//			for (int i = 1; i < outputs.length; i++) {
+//			    if (outputs[i] > upperThres) {
+//			    	upperThres = outputs[i];
+//			    }
+//			}
+//			double lowerThres = outputs[0];
+//			for (int i = 1; i < outputs.length; i++) {
+//			    if (outputs[i] <lowerThres) {
+//			    	lowerThres = outputs[i];
+//			    }
+//			}		
+//			System.out.println("lowerThres " + lowerThres + "uppderThres " + upperThres); 
 //			System.out.println("normalizedOutputs " + Arrays.toString(normalizedOutputs));
 			/* initialize myNeuralNet. 
 			 * */
@@ -272,12 +284,10 @@ public class backPropFinalTest{
 					error = myNeuralNet.train(updatedInputs[i], normalizedOutputs[i], Ycalc, flag, i, finalTrial, numEpoch);	
 //					System.out.println("error " + error);
 					totalError += error;
-//					saveFile2.println("StateActionVector \t " + updatedInputs[i] + "\t error \t " + error);
 				}
 				if (numEpoch > maxEpoch){
 //					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
 					stopError = true;
-//					saveFile2.close();	
 				}	
 //				System.out.println("total error " + totalError);
 				myNeuralNet.save (totalError, numEpoch, saveFile1, stopError);
@@ -286,7 +296,7 @@ public class backPropFinalTest{
 			 
 			//rmsError is the 1/k*(sum from 1 - k of the sqrt((y-t)^2))
 //			rmsError =  sqrt(Etotal/2), where Etotal is 1/2*sum(xi-yi)^2 for i from 0 - maxTrials
-			rmsError = Math.sqrt(285.72906385145296/2);
+//			rmsError = Math.sqrt(285.72906385145296/2);
 //			System.out.println("rmsError " + rmsError);
 //			myNeuralNet.save (rmsError, numEpoch, saveFile1, stopError);
 //			System.out.println("numTrial " + numEpoch);

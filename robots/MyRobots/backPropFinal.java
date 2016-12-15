@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.util.Arrays;
 
 /** 
  * @date: October 17, 2016
@@ -22,7 +23,7 @@ public class backPropFinal implements NeuralNetInterface{
 	 */
 	// define variables 
 	int numOutput = 1; 			//number of outputs per training set. 
-	int numInputs = 9; 			//number of inputs for training set
+	int numInputs = 8; 			//number of inputs for training set
 	int numHidden = 5;			//number of hidden inputs
 	double mom = 0.0; 
 	double alpha = 0.0; 
@@ -196,8 +197,10 @@ public class backPropFinal implements NeuralNetInterface{
 	}
 	
 	public void saveFile(int epochNum, double [][] hiddenWeights, double [][] outerWeights){
-		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights.txt"); 
-		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights.txt"); 
+		File saveWeights = new File ("C:\\Users\\Andy\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights_OfflineTraining.txt"); 
+		File saveOutWeights = new File ("C:\\Users\\Andy\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights_OfflineTraining.txt"); 
+//		File saveWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\inToHiddenWeights_OfflineTraining.txt"); 
+//		File saveOutWeights = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\hiddenToOutWeights_OfflineTraining.txt"); 
 		PrintStream saveHiddenWeights = null;
 		PrintStream saveOuterWeights = null;
 		try {
@@ -209,7 +212,7 @@ public class backPropFinal implements NeuralNetInterface{
 //		System.out.println("final weights " + Arrays.deepToString(hiddenWeights));
 //		System.out.println("final weights " + Arrays.deepToString(outerWeights));
 		for (int i = 0; i < hiddenWeights.length; i++){
-			for (int j = 0; j < hiddenWeights[i].length; j++){
+			for (int j = 1; j < hiddenWeights[i].length; j++){
 				saveHiddenWeights.println(hiddenWeights[i][j]);
 			}        
 		}

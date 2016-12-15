@@ -140,10 +140,9 @@ public class LUTTrackfire extends AdvancedRobot{
 	 * FINALS (defines)
 	 */
 	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
-    private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
-    private static final double gamma = 0.7;                //importance of future rewards
-    private static final double epsilon = 0.80; 				//degree of exploration 
-    
+    private static final double alpha = 0.6;                //to what extent the newly acquired information will override the old information.
+    private static final double gamma = 0.5;                //importance of future rewards
+    private static final double epsilon = 0.80; 			//degree of exploration     
     private static final int exploratory = 1;
     private static final int SARSA = 2;
     
