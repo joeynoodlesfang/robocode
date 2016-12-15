@@ -144,10 +144,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int numStates = 5;
     
     private static final int numInputBias = 0;
-    private static final int numHiddenBias = 1;
-    private static final int numHiddenNeuron = 4;
+//    private static final int numHiddenBias = 1;
+//    private static final int numHiddenNeuron = 4;
     private static final int numInputsTotal = ( numInputBias + numActions + numStates );
-    private static final int numHiddensTotal = ( numHiddenNeuron + numHiddenBias );
+    private static final int numHiddensTotal = 5; 
+//    private static final int numHiddensTotal = ( numHiddenNeuron + numHiddenBias );
     private static final int numOutputsTotal = 1;
 
     /**
@@ -160,7 +161,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
     static private boolean debug_import = false;
     static private boolean debug_export = false;
     
-    
     // Flag used for functions importData and exportData.
     // primary role is to maintain 1 import -> at most 1 export
     // secondary goals: Assists in preventing overwrite, and protection against wrong file entries.
@@ -170,7 +170,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
     
-    private static boolean flag_useOfflineTraining = false;
+    private static boolean flag_useOfflineTraining = true; 
     // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
@@ -218,16 +218,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
     private double currentNetQVal = 0.0;
     private double previousNetQVal= 0.0; 
-    
+    private double[] Ycalc = new double [1]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
+    private double expectedYVal = 0.0; 
     //array to store the q values from net. 
     private double [][][] qFromNet = new double [input_action0_moveReferringToEnemy_possibilities][input_action1_fire_possibilities][input_action2_fireDirection_possibilities];
 
-	
     //variables used for getMax.
     int num_actions = 24; 
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
-    private int actionChosenForQValMax = 0; //stores the chosen currSAV with maxqval before policy
-    private double qValMax = 0.0; // stores the maximum currSAV QMax
+    private int actionChosenForQValMax = 0; 				//stores the chosen currSAV with maxqval before policy
+    private double qValMax = 0.0; 							// stores the maximum currSAV QMax
 
     //chosen policy. greedy or exploratory or SARSA 
     private static int policy = exploratory; 
@@ -257,8 +257,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private int currentBattleResult = 0;
 	
 
-    private static double[] QErrors = new double [520000];
-    private static double [][] QErrorSAV = new double [520000][100];
+//    private static double[] QErrors = new double [520000];
     private static int currentRoundOfError = 0;
     
     /** Neural net stuff 
@@ -268,25 +267,23 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     /*Initiate variables */
 		
-	double lRate = 0.05; 			//learning rate
-	double momentum = 0.2;  	//value of momentum 
-	boolean stopError = false; 	//if flag == false, then stop loop, else continue 
-	int maxEpoch = 1000; 	//if reach maximum number of Epochs, stop loop. 
+	private double lRate = 0.05; 			//learning rate
+	private double momentum = 0.0;  		//value of momentum 
 	
 	// initialize arrays 
-	double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
-	double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
-	double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
-	double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
-	double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
-	double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
-	double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
-	double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
-	double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
-	double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
-	double [] delta_out = new double[numOutputsTotal];
-	double [] delta_hidden = new double[numHiddensTotal];
-	boolean flagActivation = false;  
+	private double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
+	private double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
+	private double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
+	private double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
+	private double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
+	private double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
+	private double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
+	private double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
+	private double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
+	private double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
+	private double [] delta_out = new double[numOutputsTotal];
+	private double [] delta_hidden = new double[numHiddensTotal];
+	private boolean flagActivation = false;  
 	private final int bias = 1; 
 
     
@@ -357,6 +354,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded WL: " + flag_error);
         }
+        
         flag_error = exportData(strError);					//"strError" = saveError.dat
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded Error: " + flag_error);
@@ -424,7 +422,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	/**
      * @name:		onScannedRobot
      * @purpose:	1. determine enemy bearing and distance
-     * 				2. call learningloop to update the LUT
+     * 				2. call learning to learn from NN
      * @param:		ScannedRobotEvent event
      * @return:		none, but updates:
      * 				1. getGunBearing
@@ -449,70 +447,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	learning();
     }
 
-	/* 
-	 * If want to emphasize a certain event, then call the event and add external reward. 
-	 * */
-//	/**
-//	* @name: 		onBulletMissed
-//	* @purpose: 	1. Updates reward. -10 if bullet misses enemy
-//	* @param:		1. HItBulletEvent class from Robot
-//	* @return:		n
-//	*/      
-//    public void onBulletMissed(BulletMissedEvent event){
-////    	reward += -5;    
-////    	learningLoop(); 
-////    	out.println("Missed Bullet" + reward);
-//    }
-    
-//	/**
-//	* @name: 		onBulletHit
-//	* @purpose: 	1. Updates reward. +30 if bullet hits enemy
-//	* 				2. Update the values of heading and energy of my robot 
-//	* @param:		1. HItBulletEvent class from Robot
-//	* @return:		n
-//	*/     
-//    public void onBulletHit(BulletHitEvent e){
-//    	reward += 5; 
-////    	out.println("Hit Bullet" + reward);
-//    }
-//    
-//    /**
-//     * @name: 		onHitWall
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-//    public void onHitWall(HitWallEvent e) {
-//    	reward = -5; 
-////    	out.println("Hit Wall" + reward);
-//    }
-    
-//    /**
-//     * @name: 		onHitByBullet
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-////    public void onHitByBullet(HitByBulletEvent e) {
-////    	reward += -5;
-////    //	learningLoop();
-////    }   
-    
-//    /**
-//     * @name: 		onHitRobot
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-////    public void onHitRobot(HitRobotEvent e) {
-////    	reward = -1;
-////    //	learningLoop();
-////    }  
-//	
-	
+
 	
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
@@ -554,20 +489,20 @@ public class NN2_LUTMimic extends AdvancedRobot{
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
      */
     public void learning() {
-    	if (tick%4 == 0) {
-    		
+//    	if (tick%4 == 0) {
+//    		
              calculateReward();
              copyCurrentSVIntoPrevSV();
              generateCurrentStateVector();
-             getQfromNet(); 
+             getQfromNet(); 			//in here we do forward propagation
              qFunction();
              resetReward();
              doAction();
-    	}
+//    	}
 
-        else {
+//        else {
             setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-        }
+//        }
 
         setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
         scan();
@@ -670,6 +605,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	if (debug){
     		out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
     	}
+//    	out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
     }
  
     /** 
@@ -686,28 +622,28 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		for (int i = 0; i < input_action0_moveReferringToEnemy_possibilities; i++){
 			for (int j = 0; j < input_action1_fire_possibilities; j++){
 				for(int k = 0; k < input_action2_fireDirection_possibilities; k++){
-					double Ycalc = forwardProp(currentStateActionVector, flagActivation);
+					double Ycalc = forwardProp(flagActivation);
 					//error is here
 					qFromNet[i][j][k] = Ycalc; 
 				}
 			}
 		}
+//		out.println("YCalc " + Arrays.deepToString(qFromNet));
     	if (debug){
     		out.println("YCalc " + Arrays.deepToString(qFromNet));
     	}
 	}
 	
-	
+
 	/** function for forwardpropagation
 	 * @purpose: does forwardPropagation on the inputs from the robot. 
 	 * @return: an array of Y values for all the state pairs. 
 	 **/
-    public double forwardProp(double [] currentStateActionVector, boolean flag) {
-    	 
-		for (int j = 1; j < numHiddenNeuron; j++){
+    public double forwardProp(boolean flag) {
+//    	out.println("in forward prop " + Arrays.toString(currentStateActionVector));
+		for (int j = 0; j < numHiddensTotal; j++){
 			double sumIn = 0.0; 
 			for (int i= 0; i < numInputsTotal; i++){	
-				out.println("state here " + currentStateActionVector[i]);
 				sumIn += currentStateActionVector[i]*NNWeights_inputToHidden[i][j]; 
 			}
 			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
@@ -753,23 +689,25 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void qFunction(){
        getMax(); 
        currentNetQVal =  calcNewPrevQVal();
-//       out.println("qVal " + currentNetQVal); 
        //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
-       double[] Ycalc = new double [1]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
        Ycalc[0] = previousNetQVal;
-       double expectedYVal = currentNetQVal; 
+       expectedYVal = currentNetQVal; 
+//       updateLUT(expectedYVal);
 //       out.println("expectedYVal " + expectedYVal);
 //       out.println("Ycalc " + Arrays.toString(Ycalc));
-   	if (currentStateActionVector[0] == 0 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
-		&& currentStateActionVector[3] == 0 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0 
-		&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 0){
-   		
-        QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
-        QErrorSAV[currentRoundOfError++] = currentStateActionVector; 
-//        out.println("expectedYVal " + QErrors[currentRoundOfError-1]);
-//        out.println("Ycalc " + Arrays.toString(QErrorSAV));       
-   	}       
-       runBackProp(currentStateActionVector, expectedYVal, Ycalc, flagActivation); 
+
+   	preProcessOutputs(); 
+    runBackProp(expectedYVal, Ycalc, flagActivation); 
+    }
+
+    /** 
+     * 
+     */
+	/* preprocess outputs 
+	 * 
+	 */
+    public void preProcessOutputs() {
+    	expectedYVal = expectedYVal/0.5; 
     }
 
     /**
@@ -801,7 +739,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return: 	n
      */
     public void getMax() {
-    	double currMax = qFromNet[0][0][0];  
+    	double currMax = -100.0;
+//    	double currMax = qFromNet[0][0][0];  
         double qVal = 0.0;
         int numMaxActions = 0;
         int randMaxAction = 0;
@@ -809,7 +748,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	for (int i = 0; i < qFromNet.length; i++){
 		    for (int j = 0; j < qFromNet[0].length; j++){
 		    	for (int k = 0; k < qFromNet[0][0].length; k++){
-		    		//qFromNet[i][j][k] is a value
+		    		qVal = (double)qFromNet[i][j][k];
 //		    		out.println("qFromNet" + qFromNet[i][j][k]);
 		    		if (qFromNet[i][j][k] > currMax){
 		    			currMax = qFromNet[i][j][k];
@@ -859,20 +798,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
 //    	out.println("currentNetQVal " + currentNetQVal);
     	//TODO
-//    	if (currentStateActionVector[0] == 0 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
-//    			&& currentStateActionVector[3] == 0 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0 
-//    			&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 0){
-////        	out.println("Current state vector " + Arrays.toString(currentStateActionVector));
-//        	out.println("QErrors[currentRoundOfError++]"  + QErrors[currentRoundOfError-1]);
-//    	}
-//		QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
-		
-//		QErrorSAV[currentRoundOfError++] = currentStateActionVector[0]; 
-//    		QErrors[currentRoundOfError++] = currentNetQVal;
-//		out.println("QErrorSAV " + currentStateActionVector[0]);
-//    	out.println("Current state vector " + Arrays.toString(currentStateActionVector));
-//    	out.println("QErrors[currentRoundOfError++]"  + QErrors[currentRoundOfError-1]); 
-//    	out.println(currentRoundOfError + " " + QErrors[currentRoundOfError-1] + " " + currentNetQVal + " " + previousNetQVal);
+//   	if (currentStateActionVector[0] == 0 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
+//		&& currentStateActionVector[3] == 0 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0 
+//		&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 0){
+//   		
+//        QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
+//        out.println("QErrorSAV " + Arrays.toString(currentStateActionVector));
+////        QErrorSAV[currentRoundOfError++] = currentStateActionVector; 
+////        out.println("expectedYVal " + QErrors[currentRoundOfError-1]);
+////        out.println("QErrorSAV " + Arrays.toString(QErrorSAV));       
+//   	}  
     	return currentNetQVal;
     }
     
@@ -883,9 +818,25 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @param:		1. prevQVal
      * @return:		n
      */
-    public void runBackProp(double [] X, double Yreal, double[] Ycalc, boolean flag) {
-//		System.out.println("z_in " + Arrays.toString(Z_in));
-//		System.out.println("Y_in " + Arrays.toString(Y_in));	
+    public void runBackProp(double Yreal, double[] Ycalc, boolean flag) {
+    	//first choose action. 
+    	int valueRandom = 0;
+    	//Choosing next action based on policy.
+        valueRandom = (int)(Math.random()*(num_actions));
+        if (policy == SARSA) {
+        	currentStateActionVector[0] = valueRandom;
+        }
+        
+        else if(policy == exploratory) {
+        	currentStateActionVector[0] = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
+        }
+        
+        else{ 
+        	currentStateActionVector[0] = actionChosenForQValMax;
+        }
+        
+//        out.println("Yreal" + Yreal);
+//        out.println("YCalc " + Ycalc[0]);
 		for (int k = 0; k <numOutputsTotal; k++){
 
 			if (flag == true){
@@ -924,7 +875,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			for (int i = 0; i< numInputsTotal; i++){
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
 //				System.out.println("NNWeights_inputToHidden[i][j] " + NNWeights_inputToHidden[i][j]);
-				deltaV[i][j] = alpha*delta_hidden[j]*X[i];
+				deltaV[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i];
 				vNext[i][j]  = NNWeights_inputToHidden[i][j] + deltaV[i][j] + momentum*(NNWeights_inputToHidden[i][j] - vPast[i][j]); 
 				vPast[i][j] = NNWeights_inputToHidden[i][j]; 
 				NNWeights_inputToHidden[i][j] = vNext[i][j]; 
@@ -938,19 +889,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		for (int k = 0; k < numOutputsTotal; k++){ 
 			error = 0.5*(java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
 		}
-		//saveWeights
-		
-//		saveFile(NNWeights_inputToHidden, NNWeights_hiddenToOutput);
-//		File saveErrors = new File ("C:\\Users\\Andrea\\github\\robocode\\robots\\MyRobots\\NN2_LUTMimic.data\\backPropError.txt"); 
-//		PrintStream saveLocalError = null;
-//		
-//		try {
-//			saveLocalError = new PrintStream( new FileOutputStream(saveErrors));
-//		} catch (FileNotFoundException e) {
-//			e.printStackTrace();
-//		}
-//		saveLocalError.println(error);
-//		saveLocalError.close(); 
 	}
 	/**
      * @name:		resetReward
@@ -1042,8 +980,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	else {
 	            		reader = new BufferedReader(new FileReader(getDataFile("finalHiddenWeights.txt")));
 	            	}
+	            	
 	            	for (int i = 0; i < numInputsTotal; i++) {
-	            		for (int j = 0; j < numHiddenNeuron; j++) {
+	            		for (int j = 0; j < numHiddensTotal; j++) {
+	            			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader.readLine()));
+//	            			out.println("i " + i); 
+//	            			out.println("j " + j); 
 	            			NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
 		                }
 	            	}
@@ -1117,7 +1059,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    		}
 	    		 
 	    		for (int i = 0; i < numInputsTotal; i++) {
-	         		for (int j = 0; j < numHiddenNeuron; j++) {
+	         		for (int j = 0; j < numHiddensTotal; j++) {
 	         			w1.println(NNWeights_inputToHidden[i][j]);
 	                }
 	         	} 
@@ -1408,9 +1350,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            else if((strName == strError)){
 	            	w.println("contains currentNetQVal-previousNetQVal for each tick");
 	            	for (int i = 0; i < currentRoundOfError; i++) {
-	            		out.println("QErrorSAV[i]" + Arrays.toString(QErrorSAV[i]));
-	            		w.println(QErrors[i]);
-	            		w.println(Arrays.toString(QErrorSAV[i]));
+//	            		w.println(QErrors[i]);
+//	            		w.println(Arrays.toString(QErrorSAV[i]));
 	            	}
 	            }
 	            
@@ -1493,4 +1434,69 @@ public class NN2_LUTMimic extends AdvancedRobot{
  		double bipDeriv = 0.5*(1 + bipFunc)*(1 - bipFunc);  
  		return bipDeriv;
  	}
+	/* 
+	 * If want to emphasize a certain event, then call the event and add external reward. 
+	 * */
+//	/**
+//	* @name: 		onBulletMissed
+//	* @purpose: 	1. Updates reward. -10 if bullet misses enemy
+//	* @param:		1. HItBulletEvent class from Robot
+//	* @return:		n
+//	*/      
+//    public void onBulletMissed(BulletMissedEvent event){
+////    	reward += -5;    
+////    	learningLoop(); 
+////    	out.println("Missed Bullet" + reward);
+//    }
+    
+//	/**
+//	* @name: 		onBulletHit
+//	* @purpose: 	1. Updates reward. +30 if bullet hits enemy
+//	* 				2. Update the values of heading and energy of my robot 
+//	* @param:		1. HItBulletEvent class from Robot
+//	* @return:		n
+//	*/     
+//    public void onBulletHit(BulletHitEvent e){
+//    	reward += 5; 
+////    	out.println("Hit Bullet" + reward);
+//    }
+//    
+//    /**
+//     * @name: 		onHitWall
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+//    public void onHitWall(HitWallEvent e) {
+//    	reward = -5; 
+////    	out.println("Hit Wall" + reward);
+//    }
+    
+//    /**
+//     * @name: 		onHitByBullet
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+////    public void onHitByBullet(HitByBulletEvent e) {
+////    	reward += -5;
+////    //	learningLoop();
+////    }   
+    
+//    /**
+//     * @name: 		onHitRobot
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+////    public void onHitRobot(HitRobotEvent e) {
+////    	reward = -1;
+////    //	learningLoop();
+////    }  
+//	
+	
+ 	
 }

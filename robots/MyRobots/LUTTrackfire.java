@@ -800,7 +800,7 @@ public class LUTTrackfire extends AdvancedRobot{
         if (debug) {
         	System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
         }
-//        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
+        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
     }
     
     /**
