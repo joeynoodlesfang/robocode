@@ -139,9 +139,9 @@ public class LUTTrackfire extends AdvancedRobot{
 	 * FINALS (defines)
 	 */
 	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
-    private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
+    private static final double alpha = 0.6;                //to what extent the newly acquired information will override the old information.
     private static final double gamma = 0.5;                //importance of future rewards
-    private static final double epsilon = 0.05; 				//degree of exploration 
+    private static final double epsilon = 0.80; 			//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
     private static final int greedy = 0;
@@ -715,9 +715,6 @@ public class LUTTrackfire extends AdvancedRobot{
 		else {
 			out.println("Error! CSAV[5]");
 		}
-		
-		//Dimension 6: null 
-		currentStateActionVector[6] = 0;
     }
  
     /**

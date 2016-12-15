@@ -164,26 +164,26 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private short fileSettings_WL = 0;
     private short fileSettings_SA = 0; 
     
-    // LUT table stored in memory.
-    private static int [][][][][][][] roboLUT 
-        = new int
-        [num_actions]
-        [myPositionDiscretized_states]
-        [myHeadingDiscretized_states]		
-        [enemyEnergy_states]
-        [enemyDistance_states]
-        [enemyDirection_states]
-        [1];
-    
-    // Dimensions of LUT table, used for iterations.
-    private static int[] roboLUTDimensions = {
-        num_actions, 
-        myPositionDiscretized_states,
-        myHeadingDiscretized_states,
-        enemyEnergy_states,
-        enemyDistance_states,
-        enemyDirection_states,
-        1};
+//    // LUT table stored in memory.
+//    private static int [][][][][][][] roboLUT 
+//        = new int
+//        [num_actions]
+//        [myPositionDiscretized_states]
+//        [myHeadingDiscretized_states]		
+//        [enemyEnergy_states]
+//        [enemyDistance_states]
+//        [enemyDirection_states]
+//        [1];
+//    
+//    // Dimensions of LUT table, used for iterations.
+//    private static int[] roboLUTDimensions = {
+//        num_actions, 
+//        myPositionDiscretized_states,
+//        myHeadingDiscretized_states,
+//        enemyEnergy_states,
+//        enemyDistance_states,
+//        enemyDirection_states,
+//        1};
     
     // Stores current reward for action.
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers

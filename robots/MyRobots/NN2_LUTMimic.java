@@ -49,9 +49,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 * FINALS (defines)
 	 */
 	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
-    private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
+    private static final double alpha = 0.6;                //to what extent the newly acquired information will override the old information.
     private static final double gamma = 0.5;                //importance of future rewards
-    private static final double epsilon = 0.05; 				//degree of exploration 
+    private static final double epsilon = 0.80; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
     private static final int greedy = 0;
@@ -147,7 +147,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int numHiddenBias = 1;
     private static final int numHiddenNeuron = 4;
     private static final int numInputsTotal = ( numInputBias + numActions + numStates );
-    private static final int numHiddensTotal = ( numHiddenBias + numHiddenNeuron );
+    private static final int numHiddensTotal = ( numHiddenNeuron + numHiddenBias );
     private static final int numOutputsTotal = 1;
 
     /**
@@ -170,7 +170,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
     
-    private static boolean flag_useOfflineTraining = false;
+    private static boolean flag_useOfflineTraining = true;
     // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
@@ -180,7 +180,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     /**
      *  OTHER GLOBALS
      */
-    
+    	
     // weights connecting between input and hidden layers.
     private static double[][] NNWeights_inputToHidden 
         = new double
@@ -356,10 +356,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded WL: " + flag_error);
         }
-        flag_error = exportData(strError);					//"strWL" = winLose.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded Error: " + flag_error);
-        }       
+//        flag_error = exportData(strError);					//"strWL" = winLose.dat
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onBattleEnded Error: " + flag_error);
+//        }       
         
 //        flag_error =  exportData(strSA); 
 //        flag_error = saveData(strSA); 
@@ -389,15 +389,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onDeath WL: " + flag_error);
         }
-        flag_error = exportData(strError);					//"strWL" = winLose.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath WL: " + flag_error);
-        }        
-//        flag_error =  exportData(strSA); 
-//        flag_error = saveData(strSA); 
+//        flag_error = exportData(strError);					//"strWL" = winLose.dat
 //        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onDeath: " + flag_error);
-//        }
+//        	out.println("ERROR @onDeath WL: " + flag_error);
+//        }        
+
     }
     
     /**
@@ -422,14 +418,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onWin WL: " + flag_error);
         }
-        flag_error = exportData(strError);
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onWin WL: " + flag_error);
-        }
-//        flag_error = saveData(strSA); 
+//        flag_error = exportData(strError);
 //        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onDeath: " + flag_error);
+//        	out.println("ERROR @onWin WL: " + flag_error);
 //        }
+
 	}
 	
 
@@ -566,7 +559,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
      */
     public void learning() {
-    	if (tick%4 == 0) {
+//    	if (tick%4 == 0) {
              calculateReward();
              copyCurrentSVIntoPrevSV();
              generateCurrentStateVector();
@@ -574,11 +567,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
              qFunction();
              resetReward();
              doAction();
-    	}
+//    	}
 
-        else {
+//        else {
             setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-        }
+//        }
 
         setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
         scan();
