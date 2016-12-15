@@ -577,7 +577,7 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void learning() {
     	//tick%3 is possible new state. 
-        if (tick%3 == 0) {
+//        if (tick%3 == 0) {
 
              calculateReward();
              copyCurrentSAVIntoPrevSAV();
@@ -591,13 +591,13 @@ public class LUTTrackfire extends AdvancedRobot{
 
              doAction();
 
-        }
-
-        else {
+//        }
+//
+//        else {
 
             setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
 
-        }
+//        }
 
         setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
 
