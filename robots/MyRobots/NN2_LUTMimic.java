@@ -258,8 +258,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	
 
     private static double[] QErrors = new double [520000];
-    private static double [] QErrorSAV = new double [520000];
+    private static double [][] QErrorSAV = new double [520000][100];
     private static int currentRoundOfError = 0;
+    
     /** Neural net stuff 
      * 
      * */
@@ -592,6 +593,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
      * @param:		n, but uses:
      * 				1. currentStateActionVector
+     * 				2. previous and current Net Q Val 
      * @return:		n
      */
     public void copyCurrentSVIntoPrevSV(){
@@ -679,6 +681,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
 
 	public void getQfromNet() {
+//		out.println("state here " + Arrays.toString(currentStateActionVector));
 		//need to get the Ycalc from all the states
 		for (int i = 0; i < input_action0_moveReferringToEnemy_possibilities; i++){
 			for (int j = 0; j < input_action1_fire_possibilities; j++){
@@ -699,11 +702,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 * @purpose: does forwardPropagation on the inputs from the robot. 
 	 * @return: an array of Y values for all the state pairs. 
 	 **/
-    public double forwardProp(double [] currentStateVector, boolean flag) {
+    public double forwardProp(double [] currentStateActionVector, boolean flag) {
+    	 
 		for (int j = 1; j < numHiddenNeuron; j++){
 			double sumIn = 0.0; 
 			for (int i= 0; i < numInputsTotal; i++){	
-				sumIn += currentStateVector[i]*NNWeights_inputToHidden[i][j]; 
+				out.println("state here " + currentStateActionVector[i]);
+				sumIn += currentStateActionVector[i]*NNWeights_inputToHidden[i][j]; 
 			}
 			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
 			Z_in[0] = bias; 									//set z_in[0] = bias 
@@ -727,6 +732,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			else
 				Y[k] = bipolarActivation(Y_in[k]);				
 		}		
+//		out.println("Yactual " + Y[0]); 
 		return Y[0]; 
 	}
     
@@ -747,13 +753,22 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void qFunction(){
        getMax(); 
        currentNetQVal =  calcNewPrevQVal();
-//      
+//       out.println("qVal " + currentNetQVal); 
        //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
        double[] Ycalc = new double [1]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
        Ycalc[0] = previousNetQVal;
        double expectedYVal = currentNetQVal; 
 //       out.println("expectedYVal " + expectedYVal);
 //       out.println("Ycalc " + Arrays.toString(Ycalc));
+   	if (currentStateActionVector[0] == 0 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
+		&& currentStateActionVector[3] == 0 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0 
+		&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 0){
+   		
+        QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
+        QErrorSAV[currentRoundOfError++] = currentStateActionVector; 
+//        out.println("expectedYVal " + QErrors[currentRoundOfError-1]);
+//        out.println("Ycalc " + Arrays.toString(QErrorSAV));       
+   	}       
        runBackProp(currentStateActionVector, expectedYVal, Ycalc, flagActivation); 
     }
 
@@ -844,13 +859,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
 //    	out.println("currentNetQVal " + currentNetQVal);
     	//TODO
-    	if (currentStateActionVector[0] == 0 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
-    			&& currentStateActionVector[3] == 0 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0 
-    			&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 0){
-//        	out.println("Current state vector " + Arrays.toString(currentStateActionVector));
-        	out.println("QErrors[currentRoundOfError++]"  + QErrors[currentRoundOfError-1]);
-    	}
-		QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
+//    	if (currentStateActionVector[0] == 0 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
+//    			&& currentStateActionVector[3] == 0 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0 
+//    			&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 0){
+////        	out.println("Current state vector " + Arrays.toString(currentStateActionVector));
+//        	out.println("QErrors[currentRoundOfError++]"  + QErrors[currentRoundOfError-1]);
+//    	}
+//		QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
 		
 //		QErrorSAV[currentRoundOfError++] = currentStateActionVector[0]; 
 //    		QErrors[currentRoundOfError++] = currentNetQVal;
@@ -872,7 +887,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //		System.out.println("z_in " + Arrays.toString(Z_in));
 //		System.out.println("Y_in " + Arrays.toString(Y_in));	
 		for (int k = 0; k <numOutputsTotal; k++){
-//			delta_out[k]  =  (Yreal - Ycalc[k])*customActivationDerivation(Y_in[k],maxQ, minQ);
+
 			if (flag == true){
 				delta_out[k] = (Yreal - Ycalc[k])*binaryDerivative(Y_in[k]); 
 			}
@@ -1096,7 +1111,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    		if (w1.checkError()) {
 	                //Error 0x03: cannot write
 	            	if (debug_export || debug) {
-	            		out.println("Something done fucked up (Error 14 cannot write)");
+	            		out.println("Something done messed up (Error 14 cannot write)");
 	            	}
 	            	return ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden;
 	    		}
@@ -1126,7 +1141,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    		if (w2.checkError()) {
 	                //Error 0x03: cannot write
 	            	if (debug_export || debug) {
-	            		out.println("Something done fucked up (Error 15 cannot write)");
+	            		out.println("Something done messed up (Error 15 cannot write)");
 	            	}
 	            	return ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput;
 	    		 }
@@ -1285,14 +1300,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
         //exception to catch when file is unreadable
         catch (IOException e) {
         	if (debug_import || debug) {
-        		out.println("Something done fucked up (Error0x01 error in file reading)");
+        		out.println("Something done messed up (Error0x01 error in file reading)");
         	}
             return ERROR_1_import_IOException;
         } 
         // type of exception where there is a wrong number format (type is wrong or blank)  
         catch (NumberFormatException e) {
             if (debug_import || debug) {
-            	out.println("Something done fucked up (Error0x02 error in type conversion - check class throw for more details)");
+            	out.println("Something done messed up (Error0x02 error in type conversion - check class throw for more details)");
             }
             return ERROR_2_import_typeConversionOrBlank;
         }
@@ -1357,7 +1372,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            if (w.checkError()) {
 	                //Error 0x03: cannot write
 	            	if (debug_export || debug) {
-	            		out.println("Something done fucked up (Error 6 cannot write)");
+	            		out.println("Something done messed up (Error 6 cannot write)");
 	            	}
 	            	return ERROR_6_export_cannotWrite;
 	            }
@@ -1393,10 +1408,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            else if((strName == strError)){
 	            	w.println("contains currentNetQVal-previousNetQVal for each tick");
 	            	for (int i = 0; i < currentRoundOfError; i++) {
-
+	            		out.println("QErrorSAV[i]" + Arrays.toString(QErrorSAV[i]));
 	            		w.println(QErrors[i]);
-	            		w.println(Arrays.toString(currentStateActionVector)); 
-//	            		w.println(QErrorSAV[i]);
+	            		w.println(Arrays.toString(QErrorSAV[i]));
 	            	}
 	            }
 	            
