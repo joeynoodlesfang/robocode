@@ -96,7 +96,8 @@
 		- `consider implementing reward system based on "change in health difference"
 		
 	-to zero data, go to the first line of LUTTrackfire and add 1 to the number. 
-
+	
+	This is the one that is used for offline training. 
  */
 
 package MyRobots;
@@ -140,11 +141,9 @@ public class LUTTrackfire extends AdvancedRobot{
 	 */
 	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
     private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
-    private static final double gamma = 0.5;                //importance of future rewards
-    private static final double epsilon = 0.05; 				//degree of exploration 
+    private static final double gamma = 0.7;                //importance of future rewards
+    private static final double epsilon = 0.80; 				//degree of exploration 
     
-    //policy:either greedy or exploratory or SARSA 
-    private static final int greedy = 0;
     private static final int exploratory = 1;
     private static final int SARSA = 2;
     
@@ -193,15 +192,11 @@ public class LUTTrackfire extends AdvancedRobot{
 	 */
     private static final int num_actions = 24; 
     private static final int myPositionDiscretized_states = 5;
-    private static final int myHeadingDiscretized_states = 4;
-//    private static final int enemyBearingFromGun_sine = 2; 						// 360 degrees / 4 for sine 
-//    private static final int enemyBearingFromGun_cosine = 2; 					// 360 degrees / 4 for cosine 
-    private static final int enemyDirection_states = 3; 								//velocitiy is close, mid, far 
-    private static final int enemyDistance_states = 3;							//<100, 100-200, 200-400, 400+
-    private static final int enemyEnergy_states = 2;							//low(<30) or other
-//    private static final int myEnergy_states = 2;								//low(<30) or other 
-
-   
+    private static final int myHeadingDiscretized_states = 4; 
+    private static final int enemyDirection_states = 3; 						
+    private static final int enemyDistance_states = 3;							
+    private static final int enemyEnergy_states = 2;		
+    
     /**
      * FLAGS AND COUNTS
      */
@@ -235,7 +230,6 @@ public class LUTTrackfire extends AdvancedRobot{
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
-    private short fileSettings_SA = 0; 
     
     // LUT table stored in memory.
     private static int [][][][][][] roboLUT 
@@ -276,11 +270,9 @@ public class LUTTrackfire extends AdvancedRobot{
     
     //enemy information
     private int enemyDistance = 0;
-//    private int enemyHeading = 0;
     private int enemyHeadingRelative = 0;
     private int enemyHeadingRelativeAbs = 0;
     private int enemyVelocity = 0;
-//    private int enemyDirection = 0;
     
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
@@ -715,9 +707,6 @@ public class LUTTrackfire extends AdvancedRobot{
 		else {
 			out.println("Error! CSAV[5]");
 		}
-		
-		//Dimension 6: null 
-		currentStateActionVector[6] = 0;
     }
  
     /**
@@ -845,8 +834,6 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void updateLUT(int prevQVal){
         int valueRandom = 0;
-        
-        double selectRandom = 0;
         
         roboLUT[prevStateActionVector[0]]
          	   [prevStateActionVector[1]]
@@ -1061,7 +1048,6 @@ public class LUTTrackfire extends AdvancedRobot{
     	                    }
                     	} // end of configmask_zeroLUT for LUTTrackfire
                     	else {
-                    		int i = 0; 
                     		for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
     	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
     	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
@@ -1135,14 +1121,14 @@ public class LUTTrackfire extends AdvancedRobot{
         //exception to catch when file is unreadable
         catch (IOException e) {
         	if (debug_import || debug) {
-        		out.println("Something done fucked up (Error0x01 error in file reading)");
+        		out.println("Something done messed up (Error0x01 error in file reading)");
         	}
             return ERROR_1_import_IOException;
         } 
         // type of exception where there is a wrong number format (type is wrong or blank)  
         catch (NumberFormatException e) {
             if (debug_import || debug) {
-            	out.println("Something done fucked up (Error0x02 error in type conversion - check class throw for more details)");
+            	out.println("Something done messed up (Error0x02 error in type conversion - check class throw for more details)");
             }
             return ERROR_2_import_typeConversionOrBlank;
         }
@@ -1205,7 +1191,7 @@ public class LUTTrackfire extends AdvancedRobot{
 	            if (w.checkError()) {
 	                //Error 0x03: cannot write
 	            	if (debug_export || debug) {
-	            		out.println("Something done fucked up (Error 6 cannot write)");
+	            		out.println("Something done messed up (Error 6 cannot write)");
 	            	}
 	            	return ERROR_6_export_cannotWrite;
 	            }
