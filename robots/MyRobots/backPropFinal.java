@@ -85,7 +85,7 @@ public class backPropFinal implements NeuralNetInterface{
 //		System.out.println(X.getClass().getName());
 		
 //		System.out.println("************************* " + numTrial + " ************************* ");
-		for (int j = 1; j < numHidden; j++){
+		for (int j = 0; j < numHidden; j++){
 			double sumIn = 0.0; 
 			//inner loop is to go through each X input
 			for (int i= 0; i < numInputs; i++){	

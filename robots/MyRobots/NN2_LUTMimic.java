@@ -144,13 +144,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int numStates = 5;
     
     private static final int numInputBias = 0;
-//    private static final int numHiddenBias = 1;
-//    private static final int numHiddenNeuron = 4;
+    private static final int numHiddenBias = 1;
+    private static final int numHiddenNeuron = 4;
     private static final int numInputsTotal = ( numInputBias + numActions + numStates );
-    private static final int numHiddensTotal = 5; 
-//    private static final int numHiddensTotal = ( numHiddenNeuron + numHiddenBias );
+    private static final int numHiddensTotal = ( numHiddenNeuron + numHiddenBias );
     private static final int numOutputsTotal = 1;
-
     /**
      * FLAGS AND COUNTS
      */
@@ -170,7 +168,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
     
-    private static boolean flag_useOfflineTraining = true; 
+    private static boolean flag_useOfflineTraining = false; 
     // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
@@ -253,11 +251,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     
     private int totalFights = 0;
-    private int[] battleResults = new int [520000];
+//    private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
 
-//    private static double[] QErrors = new double [520000];
+    private static double[] QErrors = new double [520000];
     private static int currentRoundOfError = 0;
     
     /** Neural net stuff 
@@ -798,16 +796,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
 //    	out.println("currentNetQVal " + currentNetQVal);
     	//TODO
-//   	if (currentStateActionVector[0] == 0 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
-//		&& currentStateActionVector[3] == 0 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0 
-//		&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 0){
-//   		
-//        QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
-//        out.println("QErrorSAV " + Arrays.toString(currentStateActionVector));
-////        QErrorSAV[currentRoundOfError++] = currentStateActionVector; 
-////        out.println("expectedYVal " + QErrors[currentRoundOfError-1]);
-////        out.println("QErrorSAV " + Arrays.toString(QErrorSAV));       
-//   	}  
+   	if (currentStateActionVector[0] == 0 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
+		&& currentStateActionVector[3] == 0 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0.5 
+		&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 0){
+   		
+        QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
+        out.println("QErrors[currentRoundOfError-1] " + QErrors[currentRoundOfError-1]);     
+   	}  
     	return currentNetQVal;
     }
     
@@ -983,7 +978,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	
 	            	for (int i = 0; i < numInputsTotal; i++) {
 	            		for (int j = 0; j < numHiddensTotal; j++) {
-	            			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader.readLine()));
+//	            			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader.readLine()));
 //	            			out.println("i " + i); 
 //	            			out.println("j " + j); 
 	            			NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
@@ -1006,6 +1001,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	}
 	            	for (int i = 0; i < numHiddensTotal; i++) {
 	            		for (int j = 0; j < numOutputsTotal; j++) {
+//	            			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader2.readLine()));
 	            			NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader2.readLine());
 		                }
 	            	}
@@ -1191,25 +1187,25 @@ public class NN2_LUTMimic extends AdvancedRobot{
                 	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
                 	//flag prevents multiple file imports (mostly for preventing export bugs)
                 	
-                	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
-                		if (strName != "winlose.dat") {
-                			if (debug_import || debug) {
-                				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
-                			}
-                			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
-                		}
-                		totalFights = Integer.parseInt(reader.readLine());
-                    	for (int i = 0; i < battleResults.length; i++){
-                    		if (i < totalFights) {
-                    			battleResults[i] = Integer.parseInt(reader.readLine());
-                    		}
-                    		else {
-                    			battleResults[i] = 0;
-                    		}
-                    	}
-                    	fileSettings_WL = fileSettings_default;
-                    	flag_WLImported = true;
-                	} // end of WinLose
+//                	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
+//                		if (strName != "winlose.dat") {
+//                			if (debug_import || debug) {
+//                				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
+//                			}
+//                			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
+//                		}
+//                		totalFights = Integer.parseInt(reader.readLine());
+//                    	for (int i = 0; i < battleResults.length; i++){
+//                    		if (i < totalFights) {
+//                    			battleResults[i] = Integer.parseInt(reader.readLine());
+//                    		}
+//                    		else {
+//                    			battleResults[i] = 0;
+//                    		}
+//                    	}
+//                    	fileSettings_WL = fileSettings_default;
+//                    	flag_WLImported = true;
+//                	} // end of WinLose
                 	
                 	//write code for new file uses here. 
                 	//also change the string being called 
@@ -1332,25 +1328,25 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	
 	            } //end of testString
 
-	            //winlose
-	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
-	            	if (debug_export || debug) {
-	            		out.println("writing into winLose");
-	            	}
-	            	w.println(fileSettings_WL);
-	            	w.println(totalFights+1);
-	            	for (int i = 0; i < totalFights; i++){
-	        			w.println(battleResults[i]);
-	            	}
-	        			w.println(currentBattleResult);
-	            	flag_WLImported = false;
-	            }// end winLose
+//	            //winlose
+//	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
+//	            	if (debug_export || debug) {
+//	            		out.println("writing into winLose");
+//	            	}
+//	            	w.println(fileSettings_WL);
+//	            	w.println(totalFights+1);
+//	            	for (int i = 0; i < totalFights; i++){
+//	        			w.println(battleResults[i]);
+//	            	}
+//	        			w.println(currentBattleResult);
+//	            	flag_WLImported = false;
+//	            }// end winLose
 	            
 	            //strError
 	            else if((strName == strError)){
 	            	w.println("contains currentNetQVal-previousNetQVal for each tick");
 	            	for (int i = 0; i < currentRoundOfError; i++) {
-//	            		w.println(QErrors[i]);
+	            		w.println(QErrors[i]);
 //	            		w.println(Arrays.toString(QErrorSAV[i]));
 	            	}
 	            }

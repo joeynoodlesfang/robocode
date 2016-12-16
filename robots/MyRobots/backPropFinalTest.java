@@ -30,7 +30,7 @@ public class backPropFinalTest{
 			double lRate = 0.01; 			//learning rate
 			double momentum = 0.2;  	//value of momentum 
 			boolean stopError = false; 	//if flag == false, then stop loop, else continue 
-			int maxEpoch = 3000; 	//if reach maximum number of Epochs, stop loop. 
+			int maxEpoch = 1000; 	//if reach maximum number of Epochs, stop loop. 
 
 			
 			/* Neural net state action pair*/
@@ -289,7 +289,7 @@ public class backPropFinalTest{
 //					System.out.println("Trial " + a + "\tEpoch " + numEpoch);
 					stopError = true;
 				}	
-//				System.out.println("total error " + totalError);
+				System.out.println("total error " + totalError);
 				myNeuralNet.save (totalError, numEpoch, saveFile1, stopError);
 				numEpoch +=1;
 			}
