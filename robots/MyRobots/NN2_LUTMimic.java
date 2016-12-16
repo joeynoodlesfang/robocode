@@ -168,7 +168,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
     
-    private static boolean flag_useOfflineTraining = false; 
+    private static boolean flag_useOfflineTraining = true; 
     // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
@@ -251,7 +251,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     
     private int totalFights = 0;
-//    private int[] battleResults = new int [520000];
+    private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
 
@@ -308,10 +308,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
         
         // Import data. ->Change imported filename here<-
         
-        flag_error = importData(strWL);
-        if( flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run WL: " + flag_error);
-        }
+//        flag_error = importData(strWL);
+//        if( flag_error != SUCCESS_importData) {
+//        	out.println("ERROR @run WL: " + flag_error);
+//        }
         
         flag_error = importDataWeights();
         if(flag_error != SUCCESS_importData) {
@@ -348,10 +348,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
         	//LUT is 0'd, causing error 9 (export_dump)
         }
         
-        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded WL: " + flag_error);
-        }
+//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onBattleEnded WL: " + flag_error);
+//        }
         
         flag_error = exportData(strError);					//"strError" = saveError.dat
         if( flag_error != SUCCESS_exportData) {
@@ -376,10 +376,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
         	out.println("ERROR @onDeath weights: " + flag_error);
         }
         
-        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath WL: " + flag_error);
-        }
+//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onDeath WL: " + flag_error);
+//        }
+        
         flag_error = exportData(strError);					//"strError" = saveError.dat
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onDeath WL: " + flag_error);
@@ -405,10 +406,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
         	out.println("ERROR @onWin weights: " + flag_error);
         }
         
-        flag_error = exportData(strWL);
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onWin WL: " + flag_error);
-        }
+//        flag_error = exportData(strWL);
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onWin WL: " + flag_error);
+//        }
+        
         flag_error = exportData(strError);
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onWin WL: " + flag_error);
@@ -487,8 +489,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
      */
     public void learning() {
-//    	if (tick%4 == 0) {
-//    		
+    	if (tick%4 == 0) {
+    		
              calculateReward();
              copyCurrentSVIntoPrevSV();
              generateCurrentStateVector();
@@ -496,11 +498,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
              qFunction();
              resetReward();
              doAction();
-//    	}
+    	}
 
-//        else {
+        else {
             setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-//        }
+        }
 
         setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
         scan();
@@ -603,7 +605,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	if (debug){
     		out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
     	}
-//    	out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
+    	out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
     }
  
     /** 
@@ -639,7 +641,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 **/
     public double forwardProp(boolean flag) {
 //    	out.println("in forward prop " + Arrays.toString(currentStateActionVector));
-		for (int j = 0; j < numHiddensTotal; j++){
+		for (int j = 1; j < numHiddensTotal; j++){
 			double sumIn = 0.0; 
 			for (int i= 0; i < numInputsTotal; i++){	
 				sumIn += currentStateActionVector[i]*NNWeights_inputToHidden[i][j]; 
@@ -796,9 +798,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
 //    	out.println("currentNetQVal " + currentNetQVal);
     	//TODO
-   	if (currentStateActionVector[0] == 0 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
-		&& currentStateActionVector[3] == 0 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0.5 
-		&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 0){
+//    	0.0, 0.0, 2.0, 0.0, 0.5, 0.0, 2.0
+   	if (currentStateActionVector[0] == 1 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
+		&& currentStateActionVector[3] == 2 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0.5 
+		&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 2){
    		
         QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
         out.println("QErrors[currentRoundOfError-1] " + QErrors[currentRoundOfError-1]);     
@@ -826,7 +829,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         	currentStateActionVector[0] = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
         }
         
-        else{ 
+        else if(policy == greedy){ 
         	currentStateActionVector[0] = actionChosenForQValMax;
         }
         
@@ -1187,25 +1190,25 @@ public class NN2_LUTMimic extends AdvancedRobot{
                 	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
                 	//flag prevents multiple file imports (mostly for preventing export bugs)
                 	
-//                	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
-//                		if (strName != "winlose.dat") {
-//                			if (debug_import || debug) {
-//                				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
-//                			}
-//                			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
-//                		}
-//                		totalFights = Integer.parseInt(reader.readLine());
-//                    	for (int i = 0; i < battleResults.length; i++){
-//                    		if (i < totalFights) {
-//                    			battleResults[i] = Integer.parseInt(reader.readLine());
-//                    		}
-//                    		else {
-//                    			battleResults[i] = 0;
-//                    		}
-//                    	}
-//                    	fileSettings_WL = fileSettings_default;
-//                    	flag_WLImported = true;
-//                	} // end of WinLose
+                	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
+                		if (strName != "winlose.dat") {
+                			if (debug_import || debug) {
+                				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
+                			}
+                			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
+                		}
+                		totalFights = Integer.parseInt(reader.readLine());
+                    	for (int i = 0; i < battleResults.length; i++){
+                    		if (i < totalFights) {
+                    			battleResults[i] = Integer.parseInt(reader.readLine());
+                    		}
+                    		else {
+                    			battleResults[i] = 0;
+                    		}
+                    	}
+                    	fileSettings_WL = fileSettings_default;
+                    	flag_WLImported = true;
+                	} // end of WinLose
                 	
                 	//write code for new file uses here. 
                 	//also change the string being called 
@@ -1328,7 +1331,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	
 	            } //end of testString
 
-//	            //winlose
+	            //winlose
 //	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
 //	            	if (debug_export || debug) {
 //	            		out.println("writing into winLose");
