@@ -1,1 +1,6 @@
+#default ignore(?)
 /bin/
+
+#ignore robocode.properties and window.properties, but track compiler.properties
+config/*.properties
+!config/compiler.properties
