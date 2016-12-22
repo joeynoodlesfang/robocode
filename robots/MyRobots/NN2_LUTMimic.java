@@ -1,103 +1,8 @@
-/** Plan of attack - have multiple battle plans. 
- *	THIS IS THE ROBOT TO TRAIN. 
- *  Two states and one action [offensive - trackfire, defensive -moveLeft, adjustAngleGun, action]
-	Exploratory 	- (1) search for enemy, if find enemy give highest reward. That way, go back to this state
-	Battle Plan 1.  - (1) Found enemy, attack . If hit enemy, award high reward. If miss enemy, award low reward. If get hit, negative reward
-	Battle Plan 2. 	- (1) Found enemy, check distance. If close, fire hard, if far, move closer. 
+/*
 	
-	Questions:
-	Joey: What sort of inputs?
-		e.getBearing  - these two combine for bearingFromGun
-		getGunHeading -
-		getHeading
-		getDistance
-	Joey: why does static vars keep their vals after every battle?
-	
-	Worklog
-	2016-11-14
-		- currently working on mimicking TrackFire's attacking abilities
-		in particular, variables (done), onScannedRobot() (done), generateCurrentStateVector(), doAction()
-		
-		- implement reward system
-		
-		- implement simple defensive strategy (eg: Fire.java moves when hit)
-		
-	6:52 pm - Andy
-		- added two more discretized levels for energy and distance: generateCurrentStateVector() (done)
-		- added action for doAction()
-		
-	2016-11-15
-		- added rewards for dying and winning 
-		- added "onHitBullet" event and "Hit" event to give rewards and to let TF learn. 
-		- added two more actions... not sure if any of this makes sense though.. it feels very random. 
-		- if gets hit by bullet, it should move away! 
-	New updates
-	
-	2:33 pm 
-		- execute plan from LUTplan.xlsx
-		- update scannedRobot(); 
-		- update onHitBullet() event. 
-		- update actions
-		
-	3:51 pm. 
-		- reward system 
-			-positiveReward for hitting an enemy
-			-negativeReward for getting hit. 
-			-negativeTerminalReward
-			-positiveTerminalReward
-	1:51 am
-		- added states  not really working. 
-		
+	december 12, 2016
+		- implement NN basic online training structure. 
 
-
-	2016-11-18 - j
-		- [done] rewrite imports
-		- [done] rewrite exports
-		- [done] add config lines in current txt
-		- `change run fxn
-	
-	2016-11-21 - j
-		- [done] switch around error labels to have number first
-		
-	2016-11-23 - j
-		- test imp/exp settings
-		- [done; too much time-wise to string convert both ways] explore possibilities of converting string-reading into hex 
-		- `learn about throws, catches, exceptions
-		- fixed: multiplefileflag not flipping in between - due to learningloop() invoked prior to export leaving static flag true and carry over
-		- [currently nonstatic] consider: changing flag to non-static to allow for proper import if export fails and battle ends.
-					- testing as non-staic currently
-					?Will this assist in preventing issues from multiple samebot invokes in importing and exporting data?
-					we want it to be static so that it will prevent multiple accesses, so that we keep 1 import -> 1 export format, 
-					and locked in the use of the import of the file. 
-					?Can robot2 export robot1's import? 
-					no matter
-					the point of flag is also to act as indicator if immediately previous import was successful. therefore should not be static.
-		- fixed: sometimes file gets wiped: check if accessing file during beginning of export clears file. - added multiple or's for 
-				 stringname, and thus will require editing for every new file added.
-		
-	2016-11-26 - j
-		- continue testing imp/exp
-		- `consider: static flag_error
-		- `test out zeroLUT
-		- tested out import export for LUT, zerolut, WL, all work.
-		
-	
-	November 28, 2016. 4:03 pm. 
-		implementing new state-action pairs. 
-		hope to train NN by tonight 
-		okay.. don't know how to implement states for the velocity and for the firing action.. not sure what this is
-	
-	december 1, 2016
-		hotfixed zeroLUT bug and an oob bug.
-	
-	december 2, 2016
-		working on new states branch.
-		- `figure out sine/cosine enemy angle
-		- `consider implementing reward system based on "change in health difference"
-		
-	-to zero data, go to the first line of LUTTrackfire and add 1 to the number. 
-	
-	This is the one that is used for offline training. 
  */
 
 package MyRobots;
@@ -106,9 +11,13 @@ import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 import java.awt.Color;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import robocode.AdvancedRobot;
@@ -121,7 +30,7 @@ import robocode.RobocodeFileOutputStream;
 import robocode.ScannedRobotEvent;
 import robocode.WinEvent;
 
-public class LUTTrackfire extends AdvancedRobot{
+public class NN2_LUTMimic extends AdvancedRobot{
 	/*
 	 * SAV Change Rules:
 	 * 1. update STATEACTION VARIABLES
@@ -140,9 +49,12 @@ public class LUTTrackfire extends AdvancedRobot{
 	 * FINALS (defines)
 	 */
 	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
-    private static final double alpha = 0.6;                //to what extent the newly acquired information will override the old information.
+    private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
     private static final double gamma = 0.5;                //importance of future rewards
-    private static final double epsilon = 0.80; 			//degree of exploration     
+    private static final double epsilon = 0.80; 				//degree of exploration 
+    
+    //policy:either greedy or exploratory or SARSA 
+    private static final int greedy = 0;
     private static final int exploratory = 1;
     private static final int SARSA = 2;
     
@@ -166,6 +78,8 @@ public class LUTTrackfire extends AdvancedRobot{
     
     private static final int SUCCESS_importData = 					0x00;
     private static final int SUCCESS_exportData = 					0x00;
+    private static final int SUCCESS_importDataWeights =			0x00;
+    private static final int SUCCESS_exportDataWeights =			0x00;
     
     private static final int ERROR_1_import_IOException = 				1;
     private static final int ERROR_2_import_typeConversionOrBlank = 	2;
@@ -178,24 +92,63 @@ public class LUTTrackfire extends AdvancedRobot{
     private static final int ERROR_9_export_dump =						9;
     private static final int ERROR_10_export_mismatchedStringName =		10;
     private static final int ERROR_11_import_wrongFileName_LUT = 		11;
+    private static final int ERROR_12_importWeights_IOException = 12;
+    private static final int ERROR_13_importWeights_typeConversionOrBlank = 13;
+    private static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
+    private static final int ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput = 15;
+    private static final int ERROR_16_exportWeights_IOException = 16;
+    private static final int ERROR_17 = 17;
+    private static final int ERROR_18 = 18;
+    private static final int ERROR_19 = 19;
+    private static final int ERROR_20 = 20;
+    private static final int ERROR_21 = 21;
+    
     
     //strings used for importing or extracting files 
     String strStringTest = "stringTest.dat";    
     String strLUT = "LUTTrackfire.dat";
     String strWL = "winlose.dat";
     String strSA = "stateAction.dat"; 
+    String  strError = "saveErrorForActions.dat" ;
     
     /**
 	 * STATEACTION VARIABLES for stateAction ceilings.
-	 * Currently 518400 state/actions
+	 * FOR NN
 	 */
-    private static final int num_actions = 24; 
-    private static final int myPositionDiscretized_states = 5;
-    private static final int myHeadingDiscretized_states = 4; 
-    private static final int enemyDirection_states = 3; 						
-    private static final int enemyDistance_states = 3;							
-    private static final int enemyEnergy_states = 2;		
+    //currently NN needs to forward propagate 4 * 2 * 3 = 24
+    private static final int input_action0_moveReferringToEnemy_possibilities = 4;
+    //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
     
+    private static final int input_action1_fire_possibilities = 2;
+    //1, 3
+    
+    private static final int input_action2_fireDirection_possibilities = 3;
+    //-10deg, 0, 10deg
+    
+    private static final int numActions = 3;
+    
+    private static final int input_state0_myPos_possibilities = 5;
+    //center, left, right, top, bottom (cannot be undiscretized) 
+    private static final int input_state1_myHeading_originalPossilibities = 4;
+    //0-89deg, 90-179, 180-269, 270-359
+    private static final int input_state2_enemyEnergy_originalPossibilities = 2;
+    //>30, <30
+    private static final int input_state3_enemyDistance_originalPossibilities = 3;
+    //<150, <350, >=350
+    private static final int input_state4_enemyDirection_originalPossibilities = 3;
+    //head-on (still (abs <30 || >150), 
+    //left (<0 relative dir w/ positive velo || >0 with negative velo), 
+    //right (<0 dir w/ negative velo || >0 with positive velo)
+    
+
+    private static final int numStates = 5;
+    
+    private static final int numInputBias = 0;
+    private static final int numHiddenBias = 1;
+    private static final int numHiddenNeuron = 4;
+    private static final int numInputsTotal = ( numInputBias + numActions + numStates );
+    private static final int numHiddensTotal = ( numHiddenNeuron + numHiddenBias );
+    private static final int numOutputsTotal = 1;
     /**
      * FLAGS AND COUNTS
      */
@@ -213,6 +166,9 @@ public class LUTTrackfire extends AdvancedRobot{
     private boolean flag_stringTestImported = false;
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
+    private boolean flag_weightsImported = false;
+    
+    private static boolean flag_useOfflineTraining = true; 
     // printout error flag - initialized to 0, which is no error.
     static private int flag_error = 0;
 
@@ -222,57 +178,63 @@ public class LUTTrackfire extends AdvancedRobot{
     /**
      *  OTHER GLOBALS
      */
+    	
+    // weights connecting between input and hidden layers.
+    private static double[][] NNWeights_inputToHidden 
+        = new double
+        [numInputsTotal]
+        [numHiddensTotal] //no weights go from inputs to hidden bias.
+        ;
     
-
+    // weights connecting
+    private static double[][] NNWeights_hiddenToOutput
+    	= new double
+    	[numHiddensTotal]
+    	[numOutputsTotal]
+    	;
+    
+    
+    
     // LUT table configuration information, stored in the first line of .dat
     private short fileSettings_default = 0;
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
     
-    // LUT table stored in memory.
-    private static int [][][][][][] roboLUT 
-        = new int
-        [num_actions]
-        [myPositionDiscretized_states]
-        [myHeadingDiscretized_states]		
-        [enemyEnergy_states]
-        [enemyDistance_states]
-        [enemyDirection_states];
-    
-    // Dimensions of LUT table, used for iterations.
-    private static int[] roboLUTDimensions = {
-        num_actions, 
-        myPositionDiscretized_states,
-        myHeadingDiscretized_states,
-        enemyEnergy_states,
-        enemyDistance_states,
-        enemyDirection_states};
-    
+
     // Stores current reward for action.
+    
     private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
     private int energyDiffCurr = 0;
     private int energyDiffPrev = 0;
     
+
     // Stores current and previous stateAction vectors.
-    private int currentStateActionVector[] = new int [roboLUTDimensions.length];
-    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
-     
+    //State vector (no actions) where copy currentSV to prevSV 
+    private double currentStateActionVector[] = new double [numInputsTotal];
+    private double prevStateActionVector[]    = new double [numInputsTotal]; 
+
+    private double currentNetQVal = 0.0;
+    private double previousNetQVal= 0.0; 
+    private double[] Ycalc = new double [1]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
+    private double expectedYVal = 0.0; 
+    //array to store the q values from net. 
+    private double [][][] qFromNet = new double [input_action0_moveReferringToEnemy_possibilities][input_action1_fire_possibilities][input_action2_fireDirection_possibilities];
+
     //variables used for getMax.
+    int num_actions = 24; 
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
-    private int actionChosenForQValMax = 0; //stores the chosen currSAV with maxqval before policy
-    private double qValMax = 0.0; // stores the maximum currSAV QMax
+    private int actionChosenForQValMax = 0; 				//stores the chosen currSAV with maxqval before policy
+    private double qValMax = 0.0; 							// stores the maximum currSAV QMax
 
     //chosen policy. greedy or exploratory or SARSA 
     private static int policy = exploratory; 
 
-    
     //enemy information
     private int enemyDistance = 0;
     private int enemyHeadingRelative = 0;
     private int enemyHeadingRelativeAbs = 0;
-    private int enemyVelocity = 0;
-    
+    private int enemyVelocity = 0;    
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
@@ -292,7 +254,35 @@ public class LUTTrackfire extends AdvancedRobot{
     private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
+
+    private static double[] QErrors = new double [520000];
+    private static int currentRoundOfError = 0;
     
+    /** Neural net stuff 
+     * 
+     * */
+
+    
+    /*Initiate variables */
+		
+	private double lRate = 0.05; 			//learning rate
+	private double momentum = 0.0;  		//value of momentum 
+	
+	// initialize arrays 
+	private double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
+	private double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
+	private double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
+	private double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
+	private double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
+	private double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
+	private double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
+	private double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
+	private double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
+	private double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
+	private double [] delta_out = new double[numOutputsTotal];
+	private double [] delta_hidden = new double[numHiddensTotal];
+	private boolean flagActivation = false;  
+	private final int bias = 1; 
 
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
@@ -318,20 +308,17 @@ public class LUTTrackfire extends AdvancedRobot{
         
         // Import data. ->Change imported filename here<-
         
-//        flag_error = importData("strStringTest.dat");
+//        flag_error = importData(strWL);
 //        if( flag_error != SUCCESS_importData) {
-//        	out.println("ERROR: " + flag_error);
+//        	out.println("ERROR @run WL: " + flag_error);
 //        }
         
-        flag_error = importData(strLUT);
+        flag_error = importDataWeights();
         if(flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run LUT: " + flag_error);
+        	out.println("ERROR @run weights: " + flag_error);
         }
         
-        flag_error = importData(strWL);
-        if( flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run WL: " + flag_error);
-        }
+
             
         //set gun and radar for robot turn separate gun, radar and robot (robocode properties). 
         setAdjustGunForRobotTurn(true);
@@ -355,19 +342,22 @@ public class LUTTrackfire extends AdvancedRobot{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-        flag_error = exportData(strLUT);				//strLUT = "LUTTrackfire.dat"
-        
-        
+        flag_error = exportDataWeights();	
         if(flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
+        	out.println("ERROR @onBattleEnded weights: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
         	//LUT is 0'd, causing error 9 (export_dump)
         }
-//        flag_error =  exportData(strSA); 
-        flag_error = saveData(strSA); 
-        if(flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
-        	//LUT is 0'd, causing error 9 (export_dump)
-        }
+        
+//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onBattleEnded WL: " + flag_error);
+//        }
+        
+        flag_error = exportData(strError);					//"strError" = saveError.dat
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded Error: " + flag_error);
+        }       
+        
     }
     
     /**
@@ -381,20 +371,21 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void onDeath(DeathEvent event){
     	currentBattleResult = 0;    					//global variable. 
-        flag_error = exportData(strLUT);
+        flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath: " + flag_error);
+        	out.println("ERROR @onDeath weights: " + flag_error);
         }
         
-        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR: " + flag_error);
-        }
-//        flag_error =  exportData(strSA); 
-//        flag_error = saveData(strSA); 
+//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
 //        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onDeath: " + flag_error);
+//        	out.println("ERROR @onDeath WL: " + flag_error);
 //        }
+        
+        flag_error = exportData(strError);					//"strError" = saveError.dat
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onDeath WL: " + flag_error);
+        }        
+
     }
     
     /**
@@ -409,31 +400,29 @@ public class LUTTrackfire extends AdvancedRobot{
      */    
 	public void onWin(WinEvent e) {
     	currentBattleResult = 1;
-        flag_error = exportData(strLUT);
-        
+    	
+        flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportData) {
-        	if (debug_export || debug) {
-        		
-        	}
-        	out.println("ERROR: " + flag_error);
+        	out.println("ERROR @onWin weights: " + flag_error);
         }
         
-        flag_error = exportData(strWL);
+//        flag_error = exportData(strWL);
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onWin WL: " + flag_error);
+//        }
+        
+        flag_error = exportData(strError);
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR: " + flag_error);
+        	out.println("ERROR @onWin WL: " + flag_error);
         }
 
-//        flag_error = saveData(strSA); 
-//        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onDeath: " + flag_error);
-//        }
 	}
 	
 
 	/**
      * @name:		onScannedRobot
      * @purpose:	1. determine enemy bearing and distance
-     * 				2. call learningloop to update the LUT
+     * 				2. call learning to learn from NN
      * @param:		ScannedRobotEvent event
      * @return:		none, but updates:
      * 				1. getGunBearing
@@ -458,70 +447,7 @@ public class LUTTrackfire extends AdvancedRobot{
     	learning();
     }
 
-	/* 
-	 * If want to emphasize a certain event, then call the event and add external reward. 
-	 * */
-//	/**
-//	* @name: 		onBulletMissed
-//	* @purpose: 	1. Updates reward. -10 if bullet misses enemy
-//	* @param:		1. HItBulletEvent class from Robot
-//	* @return:		n
-//	*/      
-//    public void onBulletMissed(BulletMissedEvent event){
-////    	reward += -5;    
-////    	learningLoop(); 
-////    	out.println("Missed Bullet" + reward);
-//    }
-    
-//	/**
-//	* @name: 		onBulletHit
-//	* @purpose: 	1. Updates reward. +30 if bullet hits enemy
-//	* 				2. Update the values of heading and energy of my robot 
-//	* @param:		1. HItBulletEvent class from Robot
-//	* @return:		n
-//	*/     
-//    public void onBulletHit(BulletHitEvent e){
-//    	reward += 5; 
-////    	out.println("Hit Bullet" + reward);
-//    }
-//    
-//    /**
-//     * @name: 		onHitWall
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-//    public void onHitWall(HitWallEvent e) {
-//    	reward = -5; 
-////    	out.println("Hit Wall" + reward);
-//    }
-    
-//    /**
-//     * @name: 		onHitByBullet
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-////    public void onHitByBullet(HitByBulletEvent e) {
-////    	reward += -5;
-////    //	learningLoop();
-////    }   
-    
-//    /**
-//     * @name: 		onHitRobot
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-////    public void onHitRobot(HitRobotEvent e) {
-////    	reward = -1;
-////    //	learningLoop();
-////    }  
-//	
-	
+
 	
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
@@ -540,30 +466,18 @@ public class LUTTrackfire extends AdvancedRobot{
     }
     
     /**
-     * @name:		learningLoop
+     * @name:		learning
      * @purpose:	perform continuous reinforcement learning.
      * 				Reinforcement learning involves following steps:
      * 				1. Store the last state and action (currentSAV -> prevSAV)
      * 				2. Use information from the environment to determine the current state.
      * 				(3. punish robot for not changing state [not in original qfunction])
      * 				4. Perform QFunction (detailed further in function).
-     * 				5. Perform chosen action.
-     * 				6. Reset rewards. IE: all events affect reward only once unless specified.
-     * 				7. Repeat step 1-6. 
+     * 				5. Reset rewards. IE: all events affect reward only once unless specified.
+     * 				6. Perform chosen action. 
      * @param:		n
      * @return:		n
      */
-    public void learningLoop(){
-    	while (true) {
-    		calculateReward();
-        	copyCurrentSAVIntoPrevSAV();
-        	generateCurrentStateVector();
-        	qFunction(); 
-        	resetReward();
-        	doAction(); 
-    	}
-    }
-
     /* Training online: 
      *  step (1) - need a vector of just states "copyCurrentSV into prev SV". 
         step (2) - get weights array - neural net do forwardpropagation for each action in the "CurrentSV"  , remembering all outputs "Y" in an array
@@ -573,39 +487,29 @@ public class LUTTrackfire extends AdvancedRobot{
         step (5) - with prevSAV (inputs) and qOld_new (correct target)  and qOld (calculated output), run backpropagation & save weights 
         step (6) - save error for graph
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
-        
      */
     public void learning() {
-    	//tick%3 is possible new state. 
-//        if (tick%3 == 0) {
-
+    	if (tick%4 == 0) {
+    		
              calculateReward();
-             copyCurrentSAVIntoPrevSAV();
-
+             copyCurrentSVIntoPrevSV();
              generateCurrentStateVector();
-
-
+             getQfromNet(); 			//in here we do forward propagation
              qFunction();
-
              resetReward();
-
              doAction();
+    	}
 
-//        }
-//
-//        else {
-
+        else {
             setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-
-//        }
+        }
 
         setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-
         scan();
-
         execute();
 
     }
+
 
 	/**
      * @name:		calculateReward
@@ -624,12 +528,14 @@ public class LUTTrackfire extends AdvancedRobot{
      * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
      * @param:		n, but uses:
      * 				1. currentStateActionVector
+     * 				2. previous and current Net Q Val 
      * @return:		n
      */
-    public void copyCurrentSAVIntoPrevSAV(){
-    	for (int i = 0; i < prevStateActionVector.length; i++) {
+    public void copyCurrentSVIntoPrevSV(){
+    	for (int i = 0; i < currentStateActionVector.length; i++) {
     		prevStateActionVector[i] = currentStateActionVector[i];
     	}
+    	previousNetQVal = currentNetQVal; 
     }
     
     /**
@@ -637,83 +543,142 @@ public class LUTTrackfire extends AdvancedRobot{
      * @purpose: 	1. gets state values from battlefield. 
      * 				2. discretize. 
      * 				3. Update array of current stateAction vector.  
-     * @param: 		n, but uses:
-     * 				1. bearingFromGun
+     * @param: 		n
      * @return: 	none
+     * currentStateVector positions [0][1][2] are all the actions. 
      */
     public void generateCurrentStateVector(){
-    	//Dimension 1: input: myPositionDiscretized = 0-4: center, left, right, top, bot
+    	//INPUTS 0, 1 and 2 are ACTION
+        
+    	//Dimension 1 - private static final int input_state0_myPos_possibilities = 5;
     	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					//left
-    		currentStateActionVector[1] = 1;						
+    		currentStateActionVector[3] = 1;						
     	}
     	else if (  (myPosX>=750)  &&  ( ((800-myPosX) <= myPosY) || ((800-myPosX) <= (600-myPosY)) )  ){		//right
-    		currentStateActionVector[1] = 2;						
+    		currentStateActionVector[3] = 2;						
     	}
     	else if (myPosY<=50) {		//top 
-    		currentStateActionVector[1] = 3;
+    		currentStateActionVector[3] = 3;
     	}
     	else if (myPosY>=550) {		//bottom				
-    		currentStateActionVector[1] = 4;
+    		currentStateActionVector[3] = 4;
     	}
     	else {
-    		currentStateActionVector[1] = 0; 
+    		currentStateActionVector[3] = 0; 
     	}
 
-    	//Dimension 2: input: myHeading = 0-3: 0-89, 90-179, 180-269, 270-359
-    	if (myHeading < 90) {
-    		currentStateActionVector[2] = 0;
+    	//Dimension 3 - private static final int input_state1_myHeading_originalPossilibities = 4;
+    	currentStateActionVector[4] = myHeading*(4/360);			//to normalize. 
+    	
+    	//Dimension 4 - enemyEnergy
+    	if (enemyEnergy < 30){
+    		currentStateActionVector[5] = enemyEnergy/60;
     	}
-    	else if (myHeading < 180) {
-    		currentStateActionVector[2] = 1;
+    	
+    	else if (enemyEnergy >= 30){
+    		currentStateActionVector[5] =((enemyEnergy-30)/70)+0.5;
     	}
-    	else if (myHeading < 270) {
-    		currentStateActionVector[2] = 2;
+    	//Dimension 5:  //<150, <350, >=350(to1000)
+    	currentStateActionVector[6] = enemyDistance;
+    	if (enemyDistance < 150){
+    		currentStateActionVector[6] = enemyDistance/100;
     	}
-    	else {
-    		currentStateActionVector[2] = 3;
+    	
+    	else if (enemyDistance <= 350){
+    		currentStateActionVector[6] =((enemyDistance-150)/200);
     	}
-		
-		//Dimension 3: input: enemyEnergy: 0-1
-		if (enemyEnergy > 30) {
-			currentStateActionVector[3] = 0;
-		}
-		else {
-			currentStateActionVector[3] = 1;
-		}
-		
-		//Dimension 4: input: enemyDistance: 0-2
-		if (enemyDistance < 150) {
-			currentStateActionVector[4] = 0;
-		}
-		else if (enemyDistance < 350) {
-			currentStateActionVector[4] = 1;
-		}
-		else {
-			currentStateActionVector[4] = 2;
-		}
-		
+    	else if (enemyDistance > 350){
+    		currentStateActionVector[6] = (enemyDistance/2000); 
+    	}
+    	
 		//Dimension 5: is enemy moving right, left, or within the angle of my gun?
 		//requires mygunheading, enemyheading, enemyvelocity
-		if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
-			currentStateActionVector[5] = 0; //within angle of gun
+    	if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
+			currentStateActionVector[7] = 0; //within angle of gun
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity > 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity < 0)) ) {
-			currentStateActionVector[5] = 1; //enemy moving left
+			currentStateActionVector[7] = 1; //enemy moving left
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity < 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity > 0)) ){
-			currentStateActionVector[5] = 2; //enemy moving right
+			currentStateActionVector[7] = 2; //enemy moving right
 		}
-		else {
-			out.println("Error! CSAV[5]");
-		}
+    	if (debug){
+    		out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
+    	}
+    	out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
     }
  
+    /** 
+     * @name:		getQfromNet
+     * @input: 		currentStateVector 
+     * @purpose: 	For each state in "stateVector", call forwardPropagation to generate the output.  
+     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
+     * @return: 	not sure yet
+     */
+
+	public void getQfromNet() {
+//		out.println("state here " + Arrays.toString(currentStateActionVector));
+		//need to get the Ycalc from all the states
+		for (int i = 0; i < input_action0_moveReferringToEnemy_possibilities; i++){
+			for (int j = 0; j < input_action1_fire_possibilities; j++){
+				for(int k = 0; k < input_action2_fireDirection_possibilities; k++){
+					double Ycalc = forwardProp(flagActivation);
+					//error is here
+					qFromNet[i][j][k] = Ycalc; 
+				}
+			}
+		}
+//		out.println("YCalc " + Arrays.deepToString(qFromNet));
+    	if (debug){
+    		out.println("YCalc " + Arrays.deepToString(qFromNet));
+    	}
+	}
+	
+
+	/** function for forwardpropagation
+	 * @purpose: does forwardPropagation on the inputs from the robot. 
+	 * @return: an array of Y values for all the state pairs. 
+	 **/
+    public double forwardProp(boolean flag) {
+//    	out.println("in forward prop " + Arrays.toString(currentStateActionVector));
+		for (int j = 1; j < numHiddensTotal; j++){
+			double sumIn = 0.0; 
+			for (int i= 0; i < numInputsTotal; i++){	
+				sumIn += currentStateActionVector[i]*NNWeights_inputToHidden[i][j]; 
+			}
+			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
+			Z_in[0] = bias; 									//set z_in[0] = bias 
+			if (flag == true){
+				Z[j] = binaryActivation(Z_in[j]); 
+				Z[0] = Z_in[0];
+			}
+			else{
+				Z[j] = bipolarActivation(Z_in[j]); 
+				Z[0] = Z_in[0];
+			}
+		}
+		for (int k = 0; k < numOutputsTotal; k++){
+			double sumOut = 0.0; 
+			for (int j= 0; j < numHiddensTotal; j++){	
+				sumOut += Z[j]*NNWeights_hiddenToOutput[j][k]; 
+			}
+			Y_in[k] = sumOut; 	
+			if (flag == true)
+				Y[k] = binaryActivation(Y_in[k]); 
+			else
+				Y[k] = bipolarActivation(Y_in[k]);				
+		}		
+//		out.println("Yactual " + Y[0]); 
+		return Y[0]; 
+	}
+    
     /**
      * @name:		qFunction
-     * @purpose: 	1. Obtain the action in current state with the highest q-value, 
-     * 				   and its associated q-value. 
-     * 				2. Calculate new prev q-value. 
-     * 				3. Update prevSAV with this q-value in LUT. 
+     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
+     * 				2. The q value is the maximum "Y" from array
+     * 				3. currentNetQVal is assigned prevQVal 
+     * 				4. Ycalc is previousNetQ
+     * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Ycalc is prevNetQVal 
      * @param: 		none, but uses:
      * 				1.	double reward 
      * 				2.	int currentStateVector[] already discretized (size numStates)
@@ -723,8 +688,26 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     public void qFunction(){
        getMax(); 
-       int prevQVal = (int)calcNewPrevQVal();
-       updateLUT(prevQVal);
+       currentNetQVal =  calcNewPrevQVal();
+       //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
+       Ycalc[0] = previousNetQVal;
+       expectedYVal = currentNetQVal; 
+//       updateLUT(expectedYVal);
+//       out.println("expectedYVal " + expectedYVal);
+//       out.println("Ycalc " + Arrays.toString(Ycalc));
+
+   	preProcessOutputs(); 
+    runBackProp(expectedYVal, Ycalc, flagActivation); 
+    }
+
+    /** 
+     * 
+     */
+	/* preprocess outputs 
+	 * 
+	 */
+    public void preProcessOutputs() {
+    	expectedYVal = expectedYVal/0.5; 
     }
 
     /**
@@ -736,14 +719,13 @@ public class LUTTrackfire extends AdvancedRobot{
 	 *						i. if indexQVal > currMax:
 	 *							(1) Update currMax
 	 *							(2) Set numMaxActions = 1.
-	 *							(3) Store the action index into arrAllMaxActions[numMaxActions-1]
+	 *							(3) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
 	 *						ii. if indexQVal == currMax:
 	 *							(1) numMaxActions++
-	 *							(2) Store the action index into arrAllMaxActions[numMaxActions-1]
+	 *							(2) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
 	 *						iii. if indexQVal < currMax:
 	 *							ignore.
-	 *					c. record chosen action. If multiple actions with max q-values, 
-	 *					   randomize chosen action.
+	 *					c. record chosen action. If multiple actions with max q-values, randomize chosen action.
 	 *						i. if numMaxActions > 1, 
 	 *						   randomly select between 0 and numMaxActions - 1. The randomed 
 	 *						   number will correspond to the array location of the chosen
@@ -753,38 +735,39 @@ public class LUTTrackfire extends AdvancedRobot{
      * @param: 		none, but uses:
      * 				1.	current SAV[].
      * 				2.	roboLUT 
-     * 				3.	currQArrayMax(Joey: can we get replace this) 
+     * 				3.	currQArrayMax
      * @return: 	n
      */
     public void getMax() {
-        double currMax = -100.0;
-        double indexQVal = 0.0;
+    	double currMax = -100.0;
+//    	double currMax = qFromNet[0][0][0];  
+        double qVal = 0.0;
         int numMaxActions = 0;
         int randMaxAction = 0;
-
-        if (debug) {
-        	out.println("@getMax()");
-        	out.println("reward " + reward);
-        	out.println("Cycling actions in currSAV for maxQ: ");
-        }   
-        
-        for (int i = 0; i < num_actions; i++){
-            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]];
-            
-            if (indexQVal > currMax){
-            	currMax = indexQVal;
-            	numMaxActions = 1;
-            	arrAllMaxActions[numMaxActions-1] = i;
-            }
-            else if (indexQVal == currMax){
-            	numMaxActions++;
-            	arrAllMaxActions[numMaxActions-1] = i;
-            }
-            
-            if (debug) {
-            	out.print(i + ": " + indexQVal + "  ");
-            }
-        } 
+//        out.println("qFromNet.length " + qFromNet.length); 
+    	for (int i = 0; i < qFromNet.length; i++){
+		    for (int j = 0; j < qFromNet[0].length; j++){
+		    	for (int k = 0; k < qFromNet[0][0].length; k++){
+		    		qVal = (double)qFromNet[i][j][k];
+//		    		out.println("qFromNet" + qFromNet[i][j][k]);
+		    		if (qFromNet[i][j][k] > currMax){
+		    			currMax = qFromNet[i][j][k];
+		            	numMaxActions = 1;
+		            	arrAllMaxActions[numMaxActions-1] = (i+1)*(j+1)*(k+1)-1;		//all possible combinations (i*j*k)
+		            }
+		            else if (qVal == currMax){
+		            	numMaxActions++;
+//		            	out.println("arrAllMaxActions[numMaxActions-1] " + arrAllMaxActions[numMaxActions-1]); 
+		            	arrAllMaxActions[numMaxActions-1] = (i+1)*(j+1)*(k+1)-1;
+		            }
+		            
+		            if (debug) {
+		            	out.print(i + ": " + qVal + "  ");
+		            }
+		    	}
+    		}
+    	}
+        qValMax = currMax;
         
         if (numMaxActions > 1) {
         	randMaxAction = (int)(Math.random()*(numMaxActions)); //math.random randoms btwn 0.0 and 0.999. Add 1 to avoid truncation after typecasting to int.
@@ -795,12 +778,12 @@ public class LUTTrackfire extends AdvancedRobot{
         }
         
         actionChosenForQValMax = arrAllMaxActions[randMaxAction];
-        qValMax = currMax;
+
         
         if (debug) {
         	System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
         }
-        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
+//        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
     }
     
     /**
@@ -809,45 +792,34 @@ public class LUTTrackfire extends AdvancedRobot{
      * @param		n, but uses:
      * 				1. qValMax
      * @return		prevQVal
+     	Q(s’,a’)-Q(s,a)
      */
-    public int calcNewPrevQVal(){
-
-        double prevQVal = roboLUT[prevStateActionVector[0]]
-        						 [prevStateActionVector[1]]
-        						 [prevStateActionVector[2]]		 
-        						 [prevStateActionVector[3]]
-        						 [prevStateActionVector[4]]
-        						 [prevStateActionVector[5]];
-        
-        prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
-        return (int)prevQVal;
-        
+    public double calcNewPrevQVal(){
+    	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
+//    	out.println("currentNetQVal " + currentNetQVal);
+    	//TODO
+//    	0.0, 0.0, 2.0, 0.0, 0.5, 0.0, 2.0
+   	if (currentStateActionVector[0] == 1 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
+		&& currentStateActionVector[3] == 2 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0.5 
+		&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 2){
+   		
+        QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
+        out.println("QErrors[currentRoundOfError-1] " + QErrors[currentRoundOfError-1]);     
+   	}  
+    	return currentNetQVal;
     }
     
     /**
-     * @name:		updateLUT
+     * @name:		runbackProp
      * @purpose:	1. Update prevSAV in LUT with the calculated prevQVal.
      * 				2. Update curr state with correct action based on policy (greedy or exploratory).
      * @param:		1. prevQVal
      * @return:		n
      */
-    public void updateLUT(int prevQVal){
-        int valueRandom = 0;
-        
-        roboLUT[prevStateActionVector[0]]
-         	   [prevStateActionVector[1]]
-         	   [prevStateActionVector[2]]
-         	   [prevStateActionVector[3]]
-         	   [prevStateActionVector[4]]
-         	   [prevStateActionVector[5]]	   
-         					  = prevQVal;
-        
-        if (debug) {
-	        out.println("prev " + Arrays.toString(prevStateActionVector));
-	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]][prevStateActionVector[4]][prevStateActionVector[5]]);
-        }
-        
-        //Choosing next action based on policy.
+    public void runBackProp(double Yreal, double[] Ycalc, boolean flag) {
+    	//first choose action. 
+    	int valueRandom = 0;
+    	//Choosing next action based on policy.
         valueRandom = (int)(Math.random()*(num_actions));
         if (policy == SARSA) {
         	currentStateActionVector[0] = valueRandom;
@@ -857,20 +829,65 @@ public class LUTTrackfire extends AdvancedRobot{
         	currentStateActionVector[0] = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
         }
         
-        else{ 
+        else if(policy == greedy){ 
         	currentStateActionVector[0] = actionChosenForQValMax;
         }
-        //Choosing next action based on policy.
-//        valueRandom = (int)(Math.random()*(num_actions));
-//     
-//        if (policy == exploratory) {
-//        	currentStateActionVector[0] = valueRandom;
-//        }
-//        else if (policy == SARSA){ 
-//        	currentStateActionVector[0] = actionChosenForQValMax;
-//        }
-    }
-    
+        
+//        out.println("Yreal" + Yreal);
+//        out.println("YCalc " + Ycalc[0]);
+		for (int k = 0; k <numOutputsTotal; k++){
+
+			if (flag == true){
+				delta_out[k] = (Yreal - Ycalc[k])*binaryDerivative(Y_in[k]); 
+			}
+			else{
+				delta_out[k] = (Yreal - Ycalc[k])*bipolarDerivative(Y_in[k]);	
+			}
+//			System.out.println("\n");
+//			System.out.println("delta " + delta_out[k]);
+			for (int j = 0; j < numHiddensTotal; j++){
+//				System.out.println("wPast[j][k] " + wPast[j][k]);
+//				System.out.println("NNWeights_hiddenToOutput[j][k] " + NNWeights_hiddenToOutput[j][k]);
+				deltaW[j][k] = alpha*delta_out[k]*Z[j];
+				wNext[j][k] = NNWeights_hiddenToOutput[j][k] + deltaW[j][k] + momentum*(NNWeights_hiddenToOutput[j][k] - wPast[j][k]); 
+				wPast[j][k] = NNWeights_hiddenToOutput[j][k]; 
+				NNWeights_hiddenToOutput[j][k] = wNext[j][k]; 
+//				System.out.println("wPast[j][k] " + wPast[j][k]);
+//				System.out.println("NNWeights_hiddenToOutput[j][k] " + NNWeights_hiddenToOutput[j][k]);
+//				System.out.println("wNext[j][k] " + wNext[j][k]);
+			}
+		}
+		
+		//for hidden layer
+		for (int j = 0; j < numHiddensTotal; j++){
+			double sumDeltaInputs = 0.0;
+			for (int k = 0;  k < numOutputsTotal; k++){
+				sumDeltaInputs += delta_out[k]*NNWeights_hiddenToOutput[j][k];
+				if (flag == true){
+					 delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
+				}
+				else{
+					delta_hidden[j] = sumDeltaInputs*bipolarDerivative(Z_in[j]);	
+				}
+			}
+			for (int i = 0; i< numInputsTotal; i++){
+//				System.out.println("vPast[i][j] " + vPast[i][j]);
+//				System.out.println("NNWeights_inputToHidden[i][j] " + NNWeights_inputToHidden[i][j]);
+				deltaV[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i];
+				vNext[i][j]  = NNWeights_inputToHidden[i][j] + deltaV[i][j] + momentum*(NNWeights_inputToHidden[i][j] - vPast[i][j]); 
+				vPast[i][j] = NNWeights_inputToHidden[i][j]; 
+				NNWeights_inputToHidden[i][j] = vNext[i][j]; 
+//				System.out.println("vPast[i][j] " + vPast[i][j]);
+//				System.out.println("NNWeights_inputToHidden[i][j] " + NNWeights_inputToHidden[i][j]);
+//				System.out.println("vNext[i][j] " + vNext[i][j]);
+			}
+		}
+		//Step 9 - Calculate local error. 
+		double error = 0.0;
+		for (int k = 0; k < numOutputsTotal; k++){ 
+			error = 0.5*(java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
+		}
+	}
 	/**
      * @name:		resetReward
      * @purpose: 	Resets reward to 0.
@@ -893,9 +910,6 @@ public class LUTTrackfire extends AdvancedRobot{
      */
     	
     public void doAction(){
-    	
-
-    	
     	//maneuver behaviour (chase-offensive/defensive)
     	if ((currentStateActionVector[0])%4 == 0) {
     		setTurnRight(enemyBearingFromHeading);
@@ -941,9 +955,167 @@ public class LUTTrackfire extends AdvancedRobot{
       }
     }
     
-
-
-
+    /**
+     * @name:		importDataWeights
+     * @author:		partly written in sittingduckbot
+     * @purpose:	to extract neural net weights stored in finalHiddenWeights.txt 
+     * 				and finalOuterWeights.txt into arrays NNWeights_inputToHidden[][]
+     * 				and NNWeights_hiddenToOutput[][], respectively.
+     * @param:		n, but uses these globals:
+     * 				NNWeights_inputToHidden[][]
+     * 				NNWeights_hiddenToOutput[][]
+     * @return:		n
+     */
+    public int importDataWeights() {
+    	if (flag_weightsImported == false) {
+	    	try {
+	        	BufferedReader reader = null;
+	        	
+	            try {
+	            	if (flag_useOfflineTraining) {
+	            		reader = new BufferedReader(new FileReader(getDataFile("inToHiddenWeights_OfflineTraining.txt")));
+	            	}
+	            	else {
+	            		reader = new BufferedReader(new FileReader(getDataFile("finalHiddenWeights.txt")));
+	            	}
+	            	
+	            	for (int i = 0; i < numInputsTotal; i++) {
+	            		for (int j = 0; j < numHiddensTotal; j++) {
+//	            			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader.readLine()));
+//	            			out.println("i " + i); 
+//	            			out.println("j " + j); 
+	            			NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
+		                }
+	            	}
+	            } 
+	            finally {
+	                if (reader != null) {
+	                    reader.close();
+	                }
+	            }
+	            
+	            BufferedReader reader2 = null;
+	            try {
+	            	if (flag_useOfflineTraining) {
+	            		reader2 = new BufferedReader(new FileReader(getDataFile("hiddenToOutWeights_OfflineTraining.txt")));
+	            	}
+	            	else {
+	            		reader2 = new BufferedReader(new FileReader(getDataFile("finalOuterWeights.txt")));
+	            	}
+	            	for (int i = 0; i < numHiddensTotal; i++) {
+	            		for (int j = 0; j < numOutputsTotal; j++) {
+//	            			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader2.readLine()));
+	            			NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader2.readLine());
+		                }
+	            	}
+	            } 
+	            finally {
+	                if (reader2 != null) {
+	                    reader2.close();
+	                }
+	            }
+	        } 
+	        //exception to catch when file is unreadable
+	        catch (IOException e) {
+	            return ERROR_12_importWeights_IOException;
+	        } 
+	        // type of exception where there is a wrong number format (type is wrong or blank)  
+	        catch (NumberFormatException e) {
+	            return ERROR_13_importWeights_typeConversionOrBlank;
+	        }
+	    	
+	    	flag_weightsImported = true;
+	    	if (flag_useOfflineTraining) {
+	    		flag_useOfflineTraining = false;
+	    	}
+	    	return SUCCESS_importDataWeights;
+    	}
+    	
+    	else {
+    		return ERROR_17;
+    	}
+    }
+    
+    /**
+     * @name: 		exportDataWeight
+     * @author: 	mostly sittingduckbot
+     * @purpose: 	1. stores the weights back into finalHiddenWeights.txt, 
+     * 				finalOuterWeights.txt from data NNWeights_inputToHidden[][]
+     * 				and NNWeights_hiddenToOutput[][], respectively.
+     * 
+     */
+    public int exportDataWeights() {
+    	if(flag_weightsImported == true) {
+			PrintStream w1 = null;
+	    	try {
+	    		w1 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalHiddenWeights.txt")));
+	    		if (w1.checkError()) {
+	                //Error 0x03: cannot write
+	            	if (debug_export || debug) {
+	            		out.println("Something done messed up (Error 14 cannot write)");
+	            	}
+	            	return ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden;
+	    		}
+	    		 
+	    		for (int i = 0; i < numInputsTotal; i++) {
+	         		for (int j = 0; j < numHiddensTotal; j++) {
+	         			w1.println(NNWeights_inputToHidden[i][j]);
+	                }
+	         	} 
+	    	}
+	    	catch (IOException e) {
+	    		if (debug_export || debug) {
+	    			out.println("IOException trying to write: ");
+	    		}
+	            e.printStackTrace(out); //Joey: lol no idea what this means
+	            return ERROR_16_exportWeights_IOException;
+	        } 
+	        finally {
+	            if (w1 != null) {
+	                w1.close();
+	            }
+	        }      
+	    	PrintStream w2 = null;
+	    	try {
+	    		
+	    		w2 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalOuterWeights.txt")));
+	    		if (w2.checkError()) {
+	                //Error 0x03: cannot write
+	            	if (debug_export || debug) {
+	            		out.println("Something done messed up (Error 15 cannot write)");
+	            	}
+	            	return ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput;
+	    		 }
+	    		 
+	    		for (int i = 0; i < numHiddensTotal; i++) {
+	         		for (int j = 0; j < numOutputsTotal; j++) {
+	         			w2.println(NNWeights_hiddenToOutput[i][j]);
+	                }
+	         	}
+	    	}
+	    	catch (IOException e) {
+	    		if (debug_export || debug) {
+	    			out.println("IOException trying to write: ");
+	    		}
+	            e.printStackTrace(out); //Joey: lol no idea what this means
+	            return ERROR_16_exportWeights_IOException;
+	        } 
+	        finally {
+	            if (w2 != null) {
+	                w2.close();
+	            }
+	        }    
+	    	
+	    	
+	    	flag_weightsImported = false;
+	    	return SUCCESS_exportDataWeights;
+    	}
+    	else {
+    		return ERROR_18;
+    	}
+    }
+    
+    
     /**
      * @name:		importData
      * @author:		partly written in sittingduckbot
@@ -975,7 +1147,7 @@ public class LUTTrackfire extends AdvancedRobot{
     		out.println("fileSettings_default: " + fileSettings_default);
     		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
     		out.println("fileSettings_LUT: " + fileSettings_LUT);
-    		out.println("fileSettings_WL: "+ fileSettings_WL); 
+    		out.println("fileSettings_WL: "+ fileSettings_WL);
     	}
     	
         try {
@@ -1017,57 +1189,6 @@ public class LUTTrackfire extends AdvancedRobot{
                 	
                 	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
                 	//flag prevents multiple file imports (mostly for preventing export bugs)
-                	else if ( ((fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire) == CONFIGMASK_FILETYPE_LUTTrackfire)
-                	&& (flag_LUTImported == false) )
-                	{
-                		if (strName != "LUTTrackfire.dat") {
-            				if (debug_import || debug) {
-            					out.println ("Import aborted (Imported wrong file - file declared LUTTrackfire.dat in settings)");
-            				}
-                			return ERROR_11_import_wrongFileName_LUT;
-                		}
-                		// confirmed filename matches filetype reported by settings in file for LUT. 
-                		
-                    	if ((fileSettings_default & CONFIGMASK_ZEROLUT) == CONFIGMASK_ZEROLUT) {
-                    		if (debug_import || debug) {
-                    			out.println("starting loop of zeroLUT:");
-                    		}
-    	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-    	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-    	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-    	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-    		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-    	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-    	                        					roboLUT[p0][p1][p2][p3][p4][p5] = 0;
-    	                        				}
-                            				}
-                            			}
-    	                        	}
-    	                        }
-    	                    }
-                    	} // end of configmask_zeroLUT for LUTTrackfire
-                    	else {
-                    		for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-    	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-    	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-    	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-    	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-    	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-    	                        					roboLUT[p0][p1][p2][p3][p4][p5] = Integer.parseInt(reader.readLine());
-    	                        				}
-    	                        			}
-    	                        		}
-    	                        	}
-    	                        }
-    	                    } // end of data extraction for LUTTrackfire
-                    		if (debug_import || debug) {
-                            	out.println("Imported LUT data (zeroLUT or normal)");
-                            }
-                    	}
-                    	//fileSettings copied individually into LUT for exporting purposes.
-                		fileSettings_LUT = fileSettings_default;
-                		flag_LUTImported = true; //sets flag to prevent multiple instances of robot importing(and exporting) from same .dat (and causing weird interactions(?)).
-                	} // end of LUTTrackfire
                 	
                 	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
                 		if (strName != "winlose.dat") {
@@ -1175,12 +1296,14 @@ public class LUTTrackfire extends AdvancedRobot{
     		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
     		out.println("fileSettings_LUT: " + fileSettings_LUT);
     		out.println("fileSettings_WL: "+ fileSettings_WL);
+    		
     	}
     	
     	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
     	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
     	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
-    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )){
+    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )
+    	  || ( (strName == strError))){
 	    	
     		PrintStream w = null;
 	        
@@ -1207,66 +1330,29 @@ public class LUTTrackfire extends AdvancedRobot{
 	            	flag_stringTestImported = false;
 	            	
 	            } //end of testString
-	            
-	        	//update LUT
-	            else if ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) {
-	            	
-	            	//DEBUG
-	            	if (debug_export || debug) {
-	            		out.println("writing into strLUT");
-	            	}
-	            	
-	            	//both zeroLUT and correct LUT will be written here
-	        		//following if prevents repeat zeroLUT from occurring by editing the zero flag.
-	        		if ((fileSettings_LUT & CONFIGMASK_ZEROLUT) == CONFIGMASK_ZEROLUT) {
-	        			
-	        			//DEBUG
-	        			if (debug_export || debug) {
-	        				out.println("attempting to write zeroes to LUT: ");
-	        				out.println("fileSettings_LUT before zeroing:" + fileSettings_LUT);
-	        			}
-	        			
-	        			//only this line in this if
-	        			fileSettings_LUT -= CONFIGMASK_ZEROLUT;
-	        			
-	        			//DEBUG
-	        			if (debug_export || debug) {
-	        				out.println("fileSettings_LUT after zeroing:" + fileSettings_LUT);
-	        			}
-	        		}
-	        		
-	        		w.println(fileSettings_LUT);
-	                for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-	                    for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-	                    	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-	                    		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-	                    			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-	                    				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-	                    					w.println(roboLUT[p0][p1][p2][p3][p4][p5]);
-	                    				}
-	                				}
-	                    		}
-	                    	}
-	                    }
-	                }
-	                flag_LUTImported = false;
-	                
-	        	} //endof trackfire
 
 	            //winlose
-	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
-	            	if (debug_export || debug) {
-	            		out.println("writing into winLose");
-	            	}
-	            	w.println(fileSettings_WL);
-	            	w.println(totalFights+1);
-	            	for (int i = 0; i < totalFights; i++){
-	        			w.println(battleResults[i]);
-	            	}
-	        			w.println(currentBattleResult);
-	            	flag_WLImported = false;
-	            }// end winLose
+//	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
+//	            	if (debug_export || debug) {
+//	            		out.println("writing into winLose");
+//	            	}
+//	            	w.println(fileSettings_WL);
+//	            	w.println(totalFights+1);
+//	            	for (int i = 0; i < totalFights; i++){
+//	        			w.println(battleResults[i]);
+//	            	}
+//	        			w.println(currentBattleResult);
+//	            	flag_WLImported = false;
+//	            }// end winLose
 	            
+	            //strError
+	            else if((strName == strError)){
+	            	w.println("contains currentNetQVal-previousNetQVal for each tick");
+	            	for (int i = 0; i < currentRoundOfError; i++) {
+	            		w.println(QErrors[i]);
+//	            		w.println(Arrays.toString(QErrorSAV[i]));
+	            	}
+	            }
 	            
 	            /* to add new files for exporting data
 	             * such as saveData
@@ -1307,39 +1393,109 @@ public class LUTTrackfire extends AdvancedRobot{
     		return ERROR_10_export_mismatchedStringName;
     	}
     }
+ 
+    /**binaryActivation function
+     * @param x
+     * @return squashedValue. 
+     */
+ 	public double binaryActivation(double x) {
+// 		System.out.println("BINARY ");
+ 		double newVal = 1/(1 + Math.exp(-x)); 
+// 		System.out.println("binary " + newVal );
+ 		return newVal;
+ 	}
+ 	
+ 	/**Function name: bipolarActivation 
+ 	 * @param: current hidden value "z"
+ 	 * @return: new value evaluated at the f(x) = (2/(1 + e(-x))) - 1 
+ 	**/ 	
+ 	public double bipolarActivation(double x) {
+ 		double newVal = (2/(1 + Math.exp(-x)))-1; 
+ 		return newVal; 
+ 	}
+ 	/** Function name: binaryDerivative
+ 	 * @param: input to take the derivative of based on f'(x) = f(x)*(1-f(x)). 
+ 	 * @return: derivative of value. 
+ 	 * 
+ 	 **/
+ 	public double binaryDerivative(double x) {
+ 		double binFunc = binaryActivation(x);
+ 		double binDeriv = binFunc*(1 - binFunc); 
+ 		return binDeriv;
+ 	}
+ 	/** Function name: bipolarDerivative
+ 	 * @param: input to take the derivative of. 
+ 	 * @return: derivative of value: f'(x) =  0.5*(1 + f(x))*(1 - f(x));
+ 	 * 
+ 	 **/
+ 	public double bipolarDerivative(double x) {
+ 		double bipFunc = bipolarActivation(x);
+ 		double bipDeriv = 0.5*(1 + bipFunc)*(1 - bipFunc);  
+ 		return bipDeriv;
+ 	}
+	/* 
+	 * If want to emphasize a certain event, then call the event and add external reward. 
+	 * */
+//	/**
+//	* @name: 		onBulletMissed
+//	* @purpose: 	1. Updates reward. -10 if bullet misses enemy
+//	* @param:		1. HItBulletEvent class from Robot
+//	* @return:		n
+//	*/      
+//    public void onBulletMissed(BulletMissedEvent event){
+////    	reward += -5;    
+////    	learningLoop(); 
+////    	out.println("Missed Bullet" + reward);
+//    }
     
-    public int saveData(String strName) {
-    	PrintStream w = null;
-        try {
-            w = new PrintStream(new RobocodeFileOutputStream(getDataFile(strName)));
-//        	out.println("writing into strSA");
-        	//DEBUG
-        	if (debug_export || debug) {
-        		out.println("writing into strSA");
-        	}
-            for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-                	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-                		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-                			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-                				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-                					w.println("\t" + p0+p1+p2+p3+p4+p5);
-                				}
-            				}
-                		}
-                	}
-                }
-            }
-    } catch (IOException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
-    finally {
-        if (w != null) {
-            w.close();
-        }
-    } 
-    return SUCCESS_exportData;
-}
-
+//	/**
+//	* @name: 		onBulletHit
+//	* @purpose: 	1. Updates reward. +30 if bullet hits enemy
+//	* 				2. Update the values of heading and energy of my robot 
+//	* @param:		1. HItBulletEvent class from Robot
+//	* @return:		n
+//	*/     
+//    public void onBulletHit(BulletHitEvent e){
+//    	reward += 5; 
+////    	out.println("Hit Bullet" + reward);
+//    }
+//    
+//    /**
+//     * @name: 		onHitWall
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+//    public void onHitWall(HitWallEvent e) {
+//    	reward = -5; 
+////    	out.println("Hit Wall" + reward);
+//    }
+    
+//    /**
+//     * @name: 		onHitByBullet
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+////    public void onHitByBullet(HitByBulletEvent e) {
+////    	reward += -5;
+////    //	learningLoop();
+////    }   
+    
+//    /**
+//     * @name: 		onHitRobot
+//     * @purpose: 	1. Updates reward. -10
+//     * 				2. Updates heading and energy levels. 
+//     * @param:		1. HitWallEvent class from Robot
+//     * @return:		n
+//     */   
+////    public void onHitRobot(HitRobotEvent e) {
+////    	reward = -1;
+////    //	learningLoop();
+////    }  
+//	
+	
+ 	
 }
