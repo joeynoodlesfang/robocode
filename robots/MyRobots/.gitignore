@@ -6,3 +6,10 @@
 /backPropFinalTest.class
 /NeuralNetInterface.class
 /CommonInterface.class
+<<<<<<< HEAD
+/NN1_DeadBunnyCrying.class
+/NN2_LUTMimic.class
+=======
+/readingInput.class
+/backPropNoQuantization.class
+>>>>>>> 1d0521999960f63ef208b131eeba42a83cdd8838
