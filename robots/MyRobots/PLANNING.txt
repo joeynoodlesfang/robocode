@@ -1,0 +1,7 @@
+12-25 sun
+- Finish first draft of NN1 v1.0.1
+
+
+
+12-22
+- Write Readme.txt and transfer worklogs into worklog.txt

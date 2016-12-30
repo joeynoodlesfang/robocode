@@ -1,10 +1,3 @@
-/*
-	
-	december 12, 2016
-		- implement NN basic online training structure. 
-
- */
-
 package MyRobots;
 
 import static robocode.util.Utils.normalRelativeAngleDegrees;
