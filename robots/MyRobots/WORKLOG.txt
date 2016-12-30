@@ -1,0 +1,99 @@
+	2016-12-22
+		- added readme and worklog files to MyRobots folder.
+	2016-12-03 to 2016-12-14
+		- implemented NN basic online training structure.
+		- implemented NN2 using LUT parameters. 
+	2016-12-02
+		- working on new states branch.
+		- [not used] figure out sine/cosine enemy angle
+		- [done] consider implementing reward system based on "change in health difference"
+		
+	2016-12-01 - a
+		hotfixed zeroLUT bug and an oob bug.
+		
+	2016-11-28 - a
+		implementing new state-action pairs. 
+		hope to train NN by tonight 
+		okay.. don't know how to implement states for the velocity and for the firing action.. not sure what this is
+	
+	2016-11-26 - j
+		- continue testing imp/exp
+		- [ignore for now] consider: static flag_error
+		- [done] test out zeroLUT
+		- tested out import export for LUT, zerolut, WL, all work.
+		
+		
+	2016-11-23 - j
+		- test imp/exp settings
+		- [done; too much time-wise to string convert both ways] explore possibilities of converting string-reading into hex 
+		- `learn about throws, catches, exceptions
+		- fixed: multiplefileflag not flipping in between - due to learningloop() invoked prior to export leaving static flag true and carry over
+		- [currently nonstatic] consider: changing flag to non-static to allow for proper import if export fails and battle ends.
+					- testing as non-staic currently
+					?Will this assist in preventing issues from multiple samebot invokes in importing and exporting data?
+					we want it to be static so that it will prevent multiple accesses, so that we keep 1 import -> 1 export format, 
+					and locked in the use of the import of the file. 
+					?Can robot2 export robot1's import? 
+					no matter
+					the point of flag is also to act as indicator if immediately previous import was successful. therefore should not be static.
+		- fixed: sometimes file gets wiped: check if accessing file during beginning of export clears file. - added multiple or's for 
+				 stringname, and thus will require editing for every new file added.
+	
+	2016-11-21 - j
+		- [done] switch around error labels to have number first
+	
+	2016-11-18 - j
+		- [done] rewrite imports
+		- [done] rewrite exports
+		- [done] add config lines in current txt
+		- [done] change run fxn
+
+	2016-11-15
+		- added rewards for dying and winning 
+		- added "onHitBullet" event and "Hit" event to give rewards and to let TF learn. 
+		- added two more actions... not sure if any of this makes sense though.. it feels very random. 
+		- if gets hit by bullet, it should move away!
+	   2:33 pm 
+		- execute plan from LUTplan.xlsx
+		- update scannedRobot(); 
+		- update onHitBullet() event. 
+		- update actions
+		
+	   3:51 pm. 
+		- reward system 
+			-positiveReward for hitting an enemy
+			-negativeReward for getting hit. 
+			-negativeTerminalReward
+			-positiveTerminalReward
+	   1:51 am
+		- added states  not really working. 
+
+	2016-11-14
+		- currently working on mimicking TrackFire's attacking abilities
+		in particular, variables (done), onScannedRobot() (done), generateCurrentStateVector(), doAction()
+		
+		- implement reward system
+		
+		- implement simple defensive strategy (eg: Fire.java moves when hit)
+		
+	  Andy
+		- added two more discretized levels for energy and distance: generateCurrentStateVector() (done)
+		- added action for doAction()
+
+	
+
+		
+	
+		
+
+	
+	
+	december 1, 2016
+		
+	
+	december 2, 2016
+		
+		
+	-to zero data, go to the first line of LUTTrackfire and add 1 to the number. 
+	
+	This is the one that is used for offline training. 
