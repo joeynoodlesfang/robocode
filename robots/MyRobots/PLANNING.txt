@@ -1,6 +1,14 @@
-12-25 sun
+1-4 wed (extended from 12-25 sun)
 - Finish first draft of NN1 v1.0.1
+	1. Import NN framework from NN2.
+	2. Import + rewrite NN2 read/write structure to include hexNumInInt-config line, and settings for reset for winLose.
+	3. Design NN-based SAs
+	4. Misc corrections(LEL soo bad)
 
+- Consider adding DoAction2 and if condition for modular learning.
+- Consider using local variables(? is this possible)
+- Adding arrays to modularize nn, use defines for numHiddens
+- Consider adding in a line at bottom of file so dimensions are correct.
 
 
 12-22

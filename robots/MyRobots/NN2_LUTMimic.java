@@ -790,7 +790,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public double calcNewPrevQVal(){
     	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
 //    	out.println("currentNetQVal " + currentNetQVal);
-    	//TODO
 //    	0.0, 0.0, 2.0, 0.0, 0.5, 0.0, 2.0
    	if (currentStateActionVector[0] == 1 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
 		&& currentStateActionVector[3] == 2 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0.5 
@@ -804,10 +803,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     /**
      * @name:		runbackProp
-     * @purpose:	1. Update prevSAV in LUT with the calculated prevQVal.
-     * 				2. Update curr state with correct action based on policy (greedy or exploratory).
-     * @param:		1. prevQVal
-     * @return:		n
+     * @purpose:	1. //TODO
+     * @param:		1. //TODO
+     * @return:		1. //TODO
      */
     public void runBackProp(double Yreal, double[] Ycalc, boolean flag) {
     	//first choose action. 

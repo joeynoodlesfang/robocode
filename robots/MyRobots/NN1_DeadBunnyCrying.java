@@ -42,11 +42,11 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	 */
 	
 	/**
-	 * FINALS (defines)
+	 * ===================================FINALS (defines)====================================================================================
 	 */
-	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
-    private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
-    private static final double gamma = 0.5;                //importance of future rewards
+	 //variables for the q-function. Robot will NOT change analysis pattern mid-fight.
+    private static final double alpha = 0.1;                //to what extent the newly acquired information will override the old information.
+    private static final double gamma = 0.1;                //importance of future rewards
     private static final double epsilon = 0.05; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
@@ -60,157 +60,177 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     //
     // Config settings:
     //     				stringTest: 16400 (0x4010)
-    // 					strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
+    // 					(deprecated) strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
     //     				WL:			16448 (0x4040)
     /* 
      * Notes: 
      * short - size of int. 
      * CONFIGMASK - */
-    private static final short CONFIGMASK_ZEROLUT  = 				0x0001;
-    private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 	0x4000;
-    private static final short CONFIGMASK_FILETYPE_stringTest =		0x0010;
-    private static final short CONFIGMASK_FILETYPE_LUTTrackfire =	0x0020;
-    private static final short CONFIGMASK_FILETYPE_WinLose = 		0x0040;
+    private static final short CONFIGMASK_ZEROINGFILE  =				0x0001;
+    private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 		0x4000;
+    private static final short CONFIGMASK_FILETYPE_stringTest =			0x0010;
+    private static final short CONFIGMASK_FILETYPE_LUTTrackfire =		0x0020;
+    private static final short CONFIGMASK_FILETYPE_winLose = 			0x0040;
+    private static final short CONFIGMASK_FILETYPE_weights =			0x0080;
     
-    private static final int SUCCESS_importData = 					0x00;
-    private static final int SUCCESS_exportData = 					0x00;
-    private static final int SUCCESS_importDataWeights =			0x00;
-    private static final int SUCCESS_exportDataWeights =			0x00;
+    private static final int SUCCESS_importData = 						0x00;
+    private static final int SUCCESS_exportData = 						0x00;
+    private static final int SUCCESS_importDataWeights =				0x00;
+    private static final int SUCCESS_exportDataWeights =				0x00;
     
-//    private static final int ERROR_1_import_IOException = 				1;
-//    private static final int ERROR_2_import_typeConversionOrBlank = 	2;
-//    private static final int ERROR_3_import_verification = 				3;
-//    private static final int ERROR_4_import_wrongFileName_stringTest =	4;
-//    private static final int ERROR_5_import_wrongFileName_WL =			5;
-//    private static final int ERROR_6_export_cannotWrite =				6;
-//    private static final int ERROR_7_export_IOException =				7;
-//    private static final int ERROR_8_import_dump =						8;
-//    private static final int ERROR_9_export_dump =						9;
-//    private static final int ERROR_10_export_mismatchedStringName =		10;
-//    private static final int ERROR_11_import_wrongFileName_LUT = 		11;
-    
-    private static final int ERROR_12_importWeights_IOException = 12;
+    private static final int ERROR_1_import_IOException = 				1;
+    private static final int ERROR_2_import_typeConversionOrBlank = 	2;
+    private static final int ERROR_3_import_verification = 				3;
+    private static final int ERROR_4_import_wrongFileName_stringTest =	4;
+    private static final int ERROR_5_import_wrongFileName_WL =			5;
+    private static final int ERROR_6_export_cannotWrite =				6;
+    private static final int ERROR_7_export_IOException =				7;
+    private static final int ERROR_8_import_dump =						8;
+    private static final int ERROR_9_export_dump =						9;
+    private static final int ERROR_10_export_mismatchedStringName =		10;
+    private static final int ERROR_11_import_wrongFileName_LUT = 		11;
+    private static final int ERROR_12_importWeights_IOException = 		12;
     private static final int ERROR_13_importWeights_typeConversionOrBlank = 13;
     private static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
     private static final int ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput = 15;
-    private static final int ERROR_16_exportWeights_IOException = 16;
+    private static final int ERROR_16_exportWeights_IOException = 		16;
+    private static final int ERROR_17 = 								17;
+    private static final int ERROR_18 = 								18;
+    private static final int ERROR_19_import_wrongFileName_weights =	19;
+    private static final int ERROR_20_import_weights_wrongNetSize =		20;
+    private static final int ERROR_21 = 								21;
+    
     
     //strings used for importing or extracting files 
     String strStringTest = "stringTest.dat";    
     String strLUT = "LUTTrackfire.dat";
     String strWL = "winlose.dat";
     String strSA = "stateAction.dat"; 
+    String strError = "saveErrorForActions.dat" ;
+    String strWeights = "weights.dat";
     
     /**
-	 * STATEACTION VARIABLES for stateAction ceilings.
-	 * FOR NN
+	 * NN STATEACTION VARIABLES for stateAction ceilings (for array designs).
+	 * 
 	 */
-    //currently NN needs to forward propagate 5*5*4*5 = 500
-    private static final int input_action0_turnReferringToEnemy_possibilities = 5;
-    //-90, -45, 0, 45, 90
-    //considerations: considered using a fan of min to max angle of turn; but
-    //robot might not have enough computing time to calculate since it needs to find
-    //maxQ for all actions.
     
-    private static final int input_action1_ahead_possibilities = 5;
-    //-100, -50, 0, 50, 100
+    //No. times NN needs to forward propagate per tick = 4 * 2 * 3 = 24
+    private static final int input_action0_moveReferringToEnemy_possibilities = 4; //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
+    private static final int input_action1_fire_possibilities = 2;    //1, 3
+    private static final int input_action2_fireDirection_possibilities = 3;    //-10deg, 0, 10deg
+    private static final int numActions = 3;
     
-    private static final int input_action2_fireStrength_possibilities = 4;
-    //0, 1, 2, 3
+    private static final int input_state0_myPos_possibilities = 5;    //center, left, right, top, bottom (cannot be undiscretized) 
+    private static final int input_state1_myHeading_originalPossilibities = 4;    //0-89deg, 90-179, 180-269, 270-359
+    private static final int input_state2_enemyEnergy_originalPossibilities = 2;    //>30, <30
+    private static final int input_state3_enemyDistance_originalPossibilities = 3;    //<150, <350, >=350
+    private static final int input_state4_enemyDirection_originalPossibilities = 3;    //head-on (still (abs <30 || >150), left (<0 relative dir w/ positive velo || >0 with negative velo), right (<0 dir w/ negative velo || >0 with positive velo)
+    private static final int numStates = 5;
     
-    private static final int input_action3_fireDir_possibilities = 5;
-    // -10, -5, 0, 5, 10
+    private static final int numInputBias = 0;
+    private static final int numHiddenBias = 1;
+    private static final int numHiddenNeuron = 4;
+    private static final int numInputsTotal = ( numInputBias + numActions + numStates ); 
+    private static final int numHiddensTotal = ( numHiddenBias+ numHiddenNeuron );
+    private static final int numOutputsTotal = 1;
     
-    private static final int input_state0_myXPos_possibilities = 800;
-    private static final int input_state1_myYPos_possibilities = 600; 
-    private static final int input_state2_enemyDirection_possibilities = 3; 								//velocitiy is close, mid, far 
-    private static final int enemyDistance_states = 3;							//<100, 100-200, 200-400, 400+
-    private static final int enemyEnergy_states = 2;							//low(<30) or other
-//    private static final int myEnergy_states = 2;								//low(<30) or other 
-
-   
+    private static final boolean binaryMethod = true;
+    private static final boolean bipolarMethod = false;
+    
     /**
      * FLAGS AND COUNTS
      */
     
     //debug flags.
-    static private boolean debug = false;  
-    static private boolean debug_doAction = false;
-    static private boolean debug_import = false;
-    static private boolean debug_export = false;
+    private boolean debug = false;  
+    private boolean debug_doAction_updateLearningAlgo = false;
+    private boolean debug_import = false;
+    private boolean debug_export = false;
+    private boolean debug_onScannedRobot = false;
+    private boolean debug_forwardProp = false;
+    private boolean debug_getMax = false;
     
-    // Flag used for functions importData and exportData.
-    // primary role is to maintain 1 import -> at most 1 export
-    // secondary goals: Assists in preventing overwrite, and protection against wrong file entries.
-    // False == inaccessible to write-to-file commands.
+    // Flag used in data imp/exp fxns:
+    //		1. maintain one-import-to-one-export ratio //Joey: is this useful
+    // 		2. prevents overwrite, and protects against wrong file entries
+    // 		false == only imports can access; true == only exports can access.
+    //		Always initialize these as false.
     private boolean flag_stringTestImported = false;
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
+    private boolean flag_weightsImported = false;
+    private boolean flag_alreadyExported = false;
+    
+    private static boolean flag_useOfflineTraining = false; //Joey: check usage 
+    //Joey: add static var to prevent multiple robot invocations
     // printout error flag - initialized to 0, which is no error.
-    static private int flag_error = 0;
+    private int flag_error = 0;
 
-//    //Flag used if user desires to zero LUT at the next battle. 
-//    static private boolean zeroLUT = false; 
 
     /**
      *  OTHER GLOBALS
      */
     
+    
+    // weights connecting between input and hidden layers.
+    private static double[][] arr_NNWeights_inputToHidden 
+        = new double
+        [numInputsTotal]
+        [numHiddensTotal] 
+        ;
+    
+    // weights connecting between hidden layer to output.
+    private static double[][] arr_NNWeights_hiddenToOutput
+    	= new double
+    	[numHiddensTotal]
+    	[numOutputsTotal]
+    	;
+    
 
-    // LUT table configuration information, stored in the first line of .dat
-    private short fileSettings_default = 0;
+    // temp vars: textfile config settings, stored in the first line of .dat
+    private short fileSettings_temp = 0;
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
-    private short fileSettings_SA = 0; 
+    private short fileSettings_weights = 0;
     
-//    // LUT table stored in memory.
-//    private static int [][][][][][][] roboLUT 
-//        = new int
-//        [num_actions]
-//        [myPositionDiscretized_states]
-//        [myHeadingDiscretized_states]		
-//        [enemyEnergy_states]
-//        [enemyDistance_states]
-//        [enemyDirection_states]
-//        [1];
-//    
-//    // Dimensions of LUT table, used for iterations.
-//    private static int[] roboLUTDimensions = {
-//        num_actions, 
-//        myPositionDiscretized_states,
-//        myHeadingDiscretized_states,
-//        enemyEnergy_states,
-//        enemyDistance_states,
-//        enemyDirection_states,
-//        1};
-    
-    // Stores current reward for action.
-    private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
+
+    // vars used for storing reward, and reward calculation.
+    private double reward = 0.0; //only one reward variable.
     private int energyDiffCurr = 0;
     private int energyDiffPrev = 0;
     
-    // Stores current and previous stateAction vectors.
-    private int currentStateActionVector[] = new int [roboLUTDimensions.length];
-    private int prevStateActionVector[]    = new int [roboLUTDimensions.length]; 
-     
+
+    //vars that store current and previous stateAction vectors
+    private double currentStateActionVector[] = new double [numInputsTotal];
+    private double prevStateActionVector[]    = new double [numInputsTotal]; 
+
+    private double currentNetQVal = 0.0;
+    private double previousNetQVal= 0.0; 
+    private double[] Y_calculated = new double [1]; 			//because backProp takes in a vector for Y_calculated (which is qprevious). 
+    private double expectedYVal = 0.0; 
+    
+    //array to store the q values obtained from net forward propagation, using the current state values as well as all possible actions as inputs. 
+    private double [][][] qValsFromNet = new double 
+    		[input_action0_moveReferringToEnemy_possibilities]
+    		[input_action1_fire_possibilities]
+    		[input_action2_fireDirection_possibilities];
+
     //variables used for getMax.
+    int num_actions = 24; 
     private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
-    private int actionChosenForQValMax = 0; //stores the chosen currSAV with maxqval before policy
-    private double qValMax = 0.0; // stores the maximum currSAV QMax
+    private int actionChosenForQValMax = 0; 				//stores the chosen currSAV with maxqval before policy
+    private double qValMax = 0.0; 							// stores the maximum currSAV QMax
 
     //chosen policy. greedy or exploratory or SARSA 
-    private static int policy = exploratory; 
+    private static int policy = greedy; 
+    private static int learningRate = 4; //learningAlgo is run every 4 ticks. //Joey: consider allowing robot to self-optimize for this.
 
-    
     //enemy information
     private int enemyDistance = 0;
-//    private int enemyHeading = 0;
     private int enemyHeadingRelative = 0;
     private int enemyHeadingRelativeAbs = 0;
-    private int enemyVelocity = 0;
-//    private int enemyDirection = 0;
-    
+    private int enemyVelocity = 0;    
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
@@ -230,7 +250,35 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
+
+    private static double[] QErrors = new double [520000];
+    private static int currentRoundOfError = 0;
+
+    /** Neural net stuff 
+     * 
+     * */
+
     
+    /*Initiate variables */
+		
+	private double lRate = 0.05; 			//analysis rate
+	private double momentum = 0.0;  		//value of momentum //Joey: consider adding some momentum lel
+	
+	// initialize arrays 
+	private double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
+	private double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
+	private double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
+	private double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
+	private double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
+	private double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
+	private double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
+	private double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
+	private double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
+	private double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
+	private double [] delta_out = new double[numOutputsTotal];
+	private double [] delta_hidden = new double[numHiddensTotal];
+	private boolean activationMethod = bipolarMethod; 
+	private final int bias = 1; 
 
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
@@ -239,7 +287,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @name: 		run
      * @purpose:	1. Initializes robot colour
      * 				2. Imports LUT data from file into local memory array.
-     * 				4. Runs LUT-based learning code. See fxn learningLoop for details.
+     * 				4. Runs LUT-based analysis code. See fxn learningLoop for details.
      * @brief:		To import desired file name, simply write Stringvar of filename or "filenamehere.dat" as param of importData. 
      * @brief:		To ZeroLUT, add 1 to top line in .dat file (or change 16416 to 16417)
      * @param:		n
@@ -251,17 +299,12 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
         setColors();
         
         if (debug) {
-        	out.println("I have been a dodger duck (robot entered run)"); 
+        	out.println("@I have been a dodger duck (robot entered run)"); 
         }
         
         // Import data. ->Change imported filename here<-
-        
-//        flag_error = importData("strStringTest.dat");
-//        if( flag_error != SUCCESS_importData) {
-//        	out.println("ERROR: " + flag_error);
-//        }
-        
-        flag_error = importData(strLUT);
+
+        flag_error = importData(strWeights);
         if(flag_error != SUCCESS_importData) {
         	out.println("ERROR @run LUT: " + flag_error);
         }
@@ -271,12 +314,13 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
         	out.println("ERROR @run WL: " + flag_error);
         }
             
-        //set gun and radar for robot turn separate gun, radar and robot (robocode properties). 
+        //set independent movement for gun, radar and body (robocode properties). 
         setAdjustGunForRobotTurn(true);
     	setAdjustRadarForGunTurn(true);	
     	setAdjustRadarForRobotTurn(true);
 
     	// anything in infinite loop is initial behaviour of robot
+    	// current initial behaviour is to turn radar until enemy located.
         for(;;){
         	setTurnRadarRight(20);
     		execute();					//from "AdvancedRobot" to allow parallel commands. 
@@ -284,46 +328,40 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
          
     }
     
+
     /**
      * @name: 		onBattleEnded
-     * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
-     * 				   	linearly. Exporting will occur only once per fight, either during 
-     * 				   	death or fight end.
+     * @brief:		Overwrites default onBattleEnded class fxn in order to perform exports data.
+     * @purpose: 	1. 	Exports weights and win/lose on end of battle to datafile - IN CASES WHERE ONDEATH OR ONWIN DOES NOT TRIGGER 
      * @param:		1.	BattleEndedEvent class from Robot
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-        flag_error = exportData(strLUT);				//strLUT = "LUTTrackfire.dat"
-        if(flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
-        	//LUT is 0'd, causing error 9 (export_dump)
-        }
-        
-        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR: " + flag_error);
-        }
-        
-//        flag_error =  exportData(strSA); 
-//        flag_error = saveData(strSA); 
-//        if(flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
-//        	//LUT is 0'd, causing error 9 (export_dump)
-//        }
+    	
+    	if (!flag_alreadyExported) {
+	        flag_error = exportData(strWeights);				//strWeights = weights.dat
+	        if(flag_error != SUCCESS_exportData) {
+	        	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
+	        }
+	        
+	        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+	        if( flag_error != SUCCESS_exportData) {
+	        	out.println("ERROR @onBattleEnded: " + flag_error);
+	        }
+    	}
     }
     
     /**
      * @name: 		onDeath
-     * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
-     * 				   	linearly. Exporting will occur only once per fight, either during 
-     * 				   	death or fight end.
-     * 				2.  Sets a terminal reward of -100 
+     * @purpose: 	1. 	Exports weights and win/lose on death(we lost lel) to datafile.
      * @param:		1.	DeathEvent class from Robot
      * @return:		n
      */
     public void onDeath(DeathEvent event){
+    	
     	currentBattleResult = 0;    					//global variable. 
-        flag_error = exportData(strLUT);
+    	
+        flag_error = exportData(strWeights);
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onDeath: " + flag_error);
         }
@@ -332,11 +370,6 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR: " + flag_error);
         }
-//        flag_error =  exportData(strSA); 
-//        flag_error = saveData(strSA); 
-//        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onDeath: " + flag_error);
-//        }
     }
     
     /**
@@ -350,13 +383,11 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @return:		n
      */    
 	public void onWin(WinEvent e) {
-    	currentBattleResult = 1;
-        flag_error = exportData(strLUT);
-        
+		
+		currentBattleResult = 1;
+    	
+        flag_error = exportData(strWeights);
         if( flag_error != SUCCESS_exportData) {
-        	if (debug_export || debug) {
-        		
-        	}
         	out.println("ERROR: " + flag_error);
         }
         
@@ -364,18 +395,24 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR: " + flag_error);
         }
-
-//        flag_error = saveData(strSA); 
-//        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onDeath: " + flag_error);
-//        }
 	}
 	
 
 	/**
      * @name:		onScannedRobot
-     * @purpose:	1. determine enemy bearing and distance
-     * 				2. call learningloop to update the LUT
+     * @brief:		This function is called by the game when the enemy is located by the scanner. It is the only function that will obtain info on the current game 
+     * 				 environment, and decide what the robot will perform during this tick.
+     * @purpose:	1. determines:
+     * 					- my heading
+     * 					- my position: x and y
+     * 					- my energy
+     * 					- enemy heading
+     * 					- enemy velocity
+     * 					- enemy bearing
+     * 					- enemy distance
+     * 					- enemy energy
+     * 					- current tick
+     * 				2. call analysis fxn to determine the next move for this tick.
      * @param:		ScannedRobotEvent event
      * @return:		none, but updates:
      * 				1. getGunBearing
@@ -383,88 +420,29 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      */
 
 	public void onScannedRobot(ScannedRobotEvent event){
+		
 		myHeading = (int)getHeading();
+		myPosX = (int)getX();
+		myPosY = (int)getY();
+		myEnergy = (int)getEnergy();
 		enemyHeadingRelative = (int)normalRelativeAngleDegrees(event.getHeading() - getGunHeading());
 		enemyHeadingRelativeAbs = Math.abs(enemyHeadingRelative);
 		enemyVelocity = (int)event.getVelocity();
-		myPosX = (int)getX();
-		myPosY = (int)getY();
 		enemyBearingFromRadar = (double)myHeading + event.getBearing() - getRadarHeading();
 		enemyBearingFromGun = (double)myHeading + event.getBearing() - getGunHeading();
 		enemyBearingFromHeading = event.getBearing();
 		enemyDistance = (int)event.getDistance(); 
 		enemyEnergy = (int)event.getEnergy();
-		myEnergy = (int)getEnergy();
 		tick = (int)getTime();
-//		out.println("Time is" + event.getTime());
-    	learning();
+		
+		if (debug_onScannedRobot || debug) {
+			out.println("Time is" + event.getTime());
+		}
+		
+    	analysis();
     }
 
-	/* 
-	 * If want to emphasize a certain event, then call the event and add external reward. 
-	 * */
-//	/**
-//	* @name: 		onBulletMissed
-//	* @purpose: 	1. Updates reward. -10 if bullet misses enemy
-//	* @param:		1. HItBulletEvent class from Robot
-//	* @return:		n
-//	*/      
-//    public void onBulletMissed(BulletMissedEvent event){
-////    	reward += -5;    
-////    	learningLoop(); 
-////    	out.println("Missed Bullet" + reward);
-//    }
-    
-//	/**
-//	* @name: 		onBulletHit
-//	* @purpose: 	1. Updates reward. +30 if bullet hits enemy
-//	* 				2. Update the values of heading and energy of my robot 
-//	* @param:		1. HItBulletEvent class from Robot
-//	* @return:		n
-//	*/     
-//    public void onBulletHit(BulletHitEvent e){
-//    	reward += 5; 
-////    	out.println("Hit Bullet" + reward);
-//    }
-//    
-//    /**
-//     * @name: 		onHitWall
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-//    public void onHitWall(HitWallEvent e) {
-//    	reward = -5; 
-////    	out.println("Hit Wall" + reward);
-//    }
-    
-//    /**
-//     * @name: 		onHitByBullet
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-////    public void onHitByBullet(HitByBulletEvent e) {
-////    	reward += -5;
-////    //	learningLoop();
-////    }   
-    
-//    /**
-//     * @name: 		onHitRobot
-//     * @purpose: 	1. Updates reward. -10
-//     * 				2. Updates heading and energy levels. 
-//     * @param:		1. HitWallEvent class from Robot
-//     * @return:		n
-//     */   
-////    public void onHitRobot(HitRobotEvent e) {
-////    	reward = -1;
-////    //	learningLoop();
-////    }  
-//	
-	
-	
+
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
     /** 
@@ -482,19 +460,21 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     }
     
     /**
-     * @name:		learning
-     * @purpose:	perform continuous reinforcement learning.
-     * 				Reinforcement learning involves following steps:
-     * 				1. Store the last state and action (currentSAV -> prevSAV)
-     * 				2. Use information from the environment to determine the current state.
-     * 				(3. punish robot for not changing state [not in original qfunction])
+     * @name:		analysis
+     * @purpose:	1. Analyze all environmental and self conditions.
+     * 				2. Perform action.
+     * @NNet:		Our neural net online training involves the following:
+     * 				0. (not in NN) Determine if learning should happen this tick. Fxn learnThisRound returns a boolean.
+     * 				1. Calculate how well we have done since the last NN update. (The time between this NN access and previous NN update is called a round)
+     * 				2. Store the previous state and action (currentSAV -> prevSAV)
+     * 				3. Use information from the environment to determine the current state.
      * 				4. Perform QFunction (detailed further in function).
-     * 				5. Reset rewards. IE: all events affect reward only once unless specified.
-     * 				6. Perform chosen action. 
+     * 				5. Reset rewards. IE: all events affect reward only once unless further emphasized by events other than onScannedRobot. (NONE YET)
+     * 				6. Perform chosen action. (learning-specific as well as those mandatory per tick).
      * @param:		n
      * @return:		n
      */
-    /* Training online: 
+    /* Training online detailed by A (important, several points repeated from @NNet): 
      *  step (1) - need a vector of just states "copyCurrentSV into prev SV". 
         step (2) - get weights array - neural net do forwardpropagation for each action in the "CurrentSV"  , remembering all outputs "Y" in an array
         step (3) - choose maximum "Y" from array 
@@ -503,29 +483,39 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
         step (5) - with prevSAV (inputs) and qOld_new (correct target)  and qOld (calculated output), run backpropagation & save weights 
         step (6) - save error for graph
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
-        
      */
-    public void learning() {
-    	//tick%3 is possible new state. 
-             calculateReward();
-             copyCurrentSAVIntoPrevSAV();
-             generateCurrentStateVector();
-             qFunction();
-             resetReward();
-             doAction();
-
-//        else {
-//            setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-//        }
-
-        setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-
-        scan();
-
-        execute();
+    public void analysis() {
+    	
+    	if (learnThisRound()){
+    		calculateReward();
+            copyCurrentSAVIntoPrevSAV();
+            generateCurrentStateVector();
+            getAllQsFromNet(); 			//in here we do forward propagation
+            qFunction();
+            resetReward();
+            doAction_updateLearningAlgo();
+    	}
+        else {
+        	doAction_notLearning();
+        }
+    	doAction_mandatoryPerTurn();
 
     }
 
+    /**
+     * @name:		boolean learnThisRound
+     * @purpose:	To determine if analysis algo should be run this round
+     * @param:		none, but uses int tick
+     * @return:		boolean
+     */
+
+    public boolean learnThisRound() {
+    	if (tick%learningRate == 0)
+    		return true;
+    	else
+    		return false; 
+    }
+    
 	/**
      * @name:		calculateReward
      * @purpose:	calculates reward based on change in energy difference of robots.
@@ -535,7 +525,8 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     public void calculateReward(){
     	energyDiffPrev = energyDiffCurr;
     	energyDiffCurr = myEnergy - enemyEnergy;
-    	reward += energyDiffCurr - energyDiffPrev;  	
+    	reward += energyDiffCurr - energyDiffPrev; 
+
     }
     
     /**
@@ -543,100 +534,178 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
      * @param:		n, but uses:
      * 				1. currentStateActionVector
+     * 				2. previous and current Net Q Val 
      * @return:		n
      */
     public void copyCurrentSAVIntoPrevSAV(){
-    	for (int i = 0; i < prevStateActionVector.length; i++) {
+    	for (int i = 0; i < currentStateActionVector.length; i++) {
     		prevStateActionVector[i] = currentStateActionVector[i];
     	}
+    	previousNetQVal = currentNetQVal; 
     }
     
     /**
-     * @name: 		generateCurrentStateVector - discretize states here. 
-     * @purpose: 	1. gets state values from battlefield. 
-     * 				2. discretize. 
-     * 				3. Update array of current stateAction vector.  
+     * @name: 		generateCurrentStateVector
+     * @brief:		Obtains robot values from
+     * @purpose: 	1. gets state values from environment. 
+     * 				2. Update array of current stateAction vector.  
      * @param: 		n
      * @return: 	none
+     * currentStateVector positions [0][1][2] are all the actions. 
      */
     public void generateCurrentStateVector(){
-    	//INPUT 0: ACTION
-    	
-    	//Dimension 1: input: myXPosDiscretized = 0-4: center, left, right, top, bot
+    	//First few INPUTS are ACTIONS and hence will be IGNORED for generating CSAV
+    	//INPUTS 0, 1 and 2 are ACTION
+        
+    	//Dimension 1 - private static final int input_state0_myPos_possibilities = 5;
     	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					//left
-    		currentStateActionVector[1] = 1;						
+    		currentStateActionVector[3] = 1;						
     	}
     	else if (  (myPosX>=750)  &&  ( ((800-myPosX) <= myPosY) || ((800-myPosX) <= (600-myPosY)) )  ){		//right
-    		currentStateActionVector[1] = 2;						
+    		currentStateActionVector[3] = 2;						
     	}
     	else if (myPosY<=50) {		//top 
-    		currentStateActionVector[1] = 3;
+    		currentStateActionVector[3] = 3;
     	}
     	else if (myPosY>=550) {		//bottom				
-    		currentStateActionVector[1] = 4;
+    		currentStateActionVector[3] = 4;
     	}
     	else {
-    		currentStateActionVector[1] = 0; 
+    		currentStateActionVector[3] = 0; 
     	}
 
-    	//Dimension 2: input: myHeading = 0-3: 0-89, 90-179, 180-269, 270-359
-    	if (myHeading < 90) {
-    		currentStateActionVector[2] = 0;
+    	//Dimension 3 - private static final int input_state1_myHeading_originalPossilibities = 4;
+    	currentStateActionVector[4] = myHeading*(4/360);			//to normalize. 
+    	
+    	//Dimension 4 - enemyEnergy
+    	if (enemyEnergy < 30){
+    		currentStateActionVector[5] = enemyEnergy/60;
     	}
-    	else if (myHeading < 180) {
-    		currentStateActionVector[2] = 1;
+    	
+    	else if (enemyEnergy >= 30){
+    		currentStateActionVector[5] =((enemyEnergy-30)/70)+0.5;
     	}
-    	else if (myHeading < 270) {
-    		currentStateActionVector[2] = 2;
+    	//Dimension 5:  //<150, <350, >=350(to1000)
+    	currentStateActionVector[6] = enemyDistance;
+    	if (enemyDistance < 150){
+    		currentStateActionVector[6] = enemyDistance/100;
     	}
-    	else {
-    		currentStateActionVector[2] = 3;
+    	
+    	else if (enemyDistance <= 350){
+    		currentStateActionVector[6] =((enemyDistance-150)/200);
     	}
-		
-		//Dimension 3: input: enemyEnergy: 0-1
-		if (enemyEnergy > 30) {
-			currentStateActionVector[3] = 0;
-		}
-		else {
-			currentStateActionVector[3] = 1;
-		}
-		
-		//Dimension 4: input: enemyDistance: 0-2
-		if (enemyDistance < 150) {
-			currentStateActionVector[4] = 0;
-		}
-		else if (enemyDistance < 350) {
-			currentStateActionVector[4] = 1;
-		}
-		else {
-			currentStateActionVector[4] = 2;
-		}
-		
+    	else if (enemyDistance > 350){
+    		currentStateActionVector[6] = (enemyDistance/2000); 
+    	}
+    	
 		//Dimension 5: is enemy moving right, left, or within the angle of my gun?
 		//requires mygunheading, enemyheading, enemyvelocity
-		if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
-			currentStateActionVector[5] = 0; //within angle of gun
+    	if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
+			currentStateActionVector[7] = 0; //within angle of gun
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity > 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity < 0)) ) {
-			currentStateActionVector[5] = 1; //enemy moving left
+			currentStateActionVector[7] = 1; //enemy moving left
 		}
 		else if ( ((enemyHeadingRelative < 0)&&(enemyVelocity < 0)) || ((enemyHeadingRelative > 0)&&(enemyVelocity > 0)) ){
-			currentStateActionVector[5] = 2; //enemy moving right
+			currentStateActionVector[7] = 2; //enemy moving right
 		}
-		else {
-			out.println("Error! CSAV[5]");
-		}
-		
-		//Dimension 6: null 
-		currentStateActionVector[6] = 0;
+    	if (debug){
+    		out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
+    	}
+    	out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
     }
+     
  
+    /** 
+     * @name:		getAllQsFromNet
+     * @input: 		currentStateVector 
+     * @purpose: 	1. For current state, cycle through all possible actions and obtain the action in current state with the highest q-value 
+     * 					from the outputarray "Yout" of the neural net. 
+     * @param:		n //Joey: i think
+     * @return: 	n
+     */
+
+	public void getAllQsFromNet() {
+		if (debug_forwardProp || debug){
+    		out.println("- entering getAllQsFromNet:");
+    	}
+
+		for (int action0 = 0; action0 < input_action0_moveReferringToEnemy_possibilities; action0++){
+			for (int action1 = 0; action1 < input_action1_fire_possibilities;             	 action1++){
+				for(int action2 = 0; action2 < input_action2_fireDirection_possibilities;       action2++){
+					qValsFromNet[action0][action1][action2] = forwardProp(); 
+				}
+			}
+		}
+
+    	if (debug_forwardProp || debug){
+    		out.println("YCalc " + Arrays.deepToString(qValsFromNet));
+    	}
+    	
+    	return;
+	}
+	
+
+	/** function for forwardpropagation
+	 * @brief: forward propagation done in accordance to pg294 in Fundamentals of Neural Network, by Laurene Fausett.
+	 * 			Feedforward (step 3 to 5):
+	 * 				step 3: Each input unit (Xi, i = 1, ..., n) receives input signal xi and broadcasts this signal to all units in the layer above (the hidden units).
+	 * 				step 4: Each hidden unit (Zj, j = 1, ..., p) sums its weighted input signals,
+	 * 								z_inj = v0j + (sum of from i = 1 to n)xivij,                <- v = weights between input and hidden.
+	 * 						applies its activation fxn to compute its output signal,
+	 * 								zj = f(z_inj),
+	 * 						and sends this signal to all units in the layer above (output units).
+	 * 				step 5: Each output unit (Yk, k = 1, ..., m) sums its weighted input signals,
+	 * 								y_ink = w0k + (sum of from j = 1 to p)zjwjk                 <- w = weights between hidden and output.
+	 * 						and applies its activation fxn to compute its output signal,
+	 * 								yk = f(y_ink)
+	 * @purpose: does forwardPropagation on the inputs from the robot. 
+	 * @return: an array of Y values for all the state pairs. 
+	 **/
+    public double forwardProp() {
+    	if (debug_forwardProp || debug){
+    		out.println("- in forward prop :");
+    		out.println(Arrays.toString(currentStateActionVector));
+    	}
+    	//step 3 and 4:
+		for (int j = 1; j < numHiddensTotal; j++){ 		//p = numHiddensTotal
+			double sumIn = 0.0;
+			for (int i = 0; i < numInputsTotal; i++){	   //n = numInputsTotal
+				sumIn += currentStateActionVector[i]*arr_NNWeights_inputToHidden[i][j]; //NO INPUT BIAS
+			}
+			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
+			Z_in[0] = bias; 									//set z_in[0] = bias. HIDDEN BIAS = 1
+			Z[0] = Z_in[0]; //can choose to optimize here if needs be: run during run.
+			
+			if (activationMethod == binaryMethod)
+				Z[j] = binaryActivation(Z_in[j]); 				
+			else
+				Z[j] = bipolarActivation(Z_in[j]); 
+		}
+		//step 5:
+		for (int k = 0; k < numOutputsTotal; k++){
+			double sumOut = 0.0; 
+			for (int j= 0; j < numHiddensTotal; j++){	
+				sumOut += Z[j]*arr_NNWeights_hiddenToOutput[j][k]; 
+			}
+			Y_in[k] = sumOut; 	
+			
+			if (activationMethod == binaryMethod)
+				Y[k] = binaryActivation(Y_in[k]); 
+			else
+				Y[k] = bipolarActivation(Y_in[k]);				
+		}		
+//		out.println("Yactual " + Y[0]); 
+		return Y[0]; 
+	}
+
     /**
      * @name:		qFunction
-     * @purpose: 	1. Obtain the action in current state with the highest q-value, 
-     * 				   and its associated q-value. 
-     * 				2. Calculate new prev q-value. 
-     * 				3. Update prevSAV with this q-value in LUT. 
+     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
+     * 				2. The q value is the maximum "Y" from array
+     * 				3. currentNetQVal is assigned prevQVal 
+     * 				4. Y_calculated is previousNetQ
+     * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Y_calculated is prevNetQVal 
      * @param: 		none, but uses:
      * 				1.	double reward 
      * 				2.	int currentStateVector[] already discretized (size numStates)
@@ -645,9 +714,26 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @return: 	n
      */
     public void qFunction(){
-       getMax(); 
-       int prevQVal = (int)calcNewPrevQVal();
-       updateLUT(prevQVal);
+    	
+        getMax(); 
+        currentNetQVal =  calcNewPrevQVal();
+        //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
+        Y_calculated[0] = previousNetQVal;
+        expectedYVal = currentNetQVal; 
+//        out.println("expectedYVal " + expectedYVal);
+//        out.println("Y_calculated " + Arrays.toString(Y_calculated));
+//        preProcessOutputs(); 
+        runBackProp(); 
+    }
+
+    /** 
+     * 
+     */
+	/* preprocess outputs 
+	 * 
+	 */
+    public void preProcessOutputs() {
+    	expectedYVal = expectedYVal/0.5; 
     }
 
     /**
@@ -659,14 +745,13 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	 *						i. if indexQVal > currMax:
 	 *							(1) Update currMax
 	 *							(2) Set numMaxActions = 1.
-	 *							(3) Store the action index into arrAllMaxActions[numMaxActions-1]
+	 *							(3) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
 	 *						ii. if indexQVal == currMax:
 	 *							(1) numMaxActions++
-	 *							(2) Store the action index into arrAllMaxActions[numMaxActions-1]
+	 *							(2) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
 	 *						iii. if indexQVal < currMax:
 	 *							ignore.
-	 *					c. record chosen action. If multiple actions with max q-values, 
-	 *					   randomize chosen action.
+	 *					c. record chosen action. If multiple actions with max q-values, randomize chosen action.
 	 *						i. if numMaxActions > 1, 
 	 *						   randomly select between 0 and numMaxActions - 1. The randomed 
 	 *						   number will correspond to the array location of the chosen
@@ -676,54 +761,79 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @param: 		none, but uses:
      * 				1.	current SAV[].
      * 				2.	roboLUT 
-     * 				3.	currQArrayMax(Joey: can we get replace this) 
+     * 				3.	currQArrayMax
      * @return: 	n
      */
     public void getMax() {
-        double currMax = -100.0;
-        double indexQVal = 0.0;
+    	double currMax = -100.0;
+//    	double currMax = qValsFromNet[0][0][0];  
         int numMaxActions = 0;
         int randMaxAction = 0;
-
-        if (debug) {
-        	out.println("@getMax()");
-        	out.println("reward " + reward);
-        	out.println("Cycling actions in currSAV for maxQ: ");
-        }   
-        
-        for (int i = 0; i < num_actions; i++){
-            indexQVal = (double) roboLUT[i][currentStateActionVector[1]][currentStateActionVector[2]][currentStateActionVector[3]][currentStateActionVector[4]][currentStateActionVector[5]][currentStateActionVector[6]];
-            
-            if (indexQVal > currMax){
-            	currMax = indexQVal;
-            	numMaxActions = 1;
-            	arrAllMaxActions[numMaxActions-1] = i;
-            }
-            else if (indexQVal == currMax){
-            	numMaxActions++;
-            	arrAllMaxActions[numMaxActions-1] = i;
-            }
-            
-            if (debug) {
-            	out.print(i + ": " + indexQVal + "  ");
-            }
-        } 
+        int actionLinearized = 0;
+//        out.println("qValsFromNet.length " + qValsFromNet.length); 
+    	for (int i = 0; i < qValsFromNet.length; i++){
+		    for (int j = 0; j < qValsFromNet[0].length; j++){
+		    	for (int k = 0; k < qValsFromNet[0][0].length; k++, actionLinearized++){
+		    		
+//		    		out.println("qValsFromNet" + qValsFromNet[i][j][k]);
+		    		if (qValsFromNet[i][j][k] > currMax){
+		    			currMax = qValsFromNet[i][j][k];
+		            	numMaxActions = 1;
+		            	arrAllMaxActions[numMaxActions-1] = actionLinearized;		
+		            }
+		            else if (qValsFromNet[i][j][k] == currMax){
+		            	arrAllMaxActions[numMaxActions++] = actionLinearized;
+		            }	            
+		    		
+		    		
+		            if (debug_getMax || debug) {
+		            	out.print(i + ": " + qValsFromNet[i][j][k] + "  ");
+		            }
+		    	}
+    		}
+    	}
+        qValMax = currMax;
         
         if (numMaxActions > 1) {
         	randMaxAction = (int)(Math.random()*(numMaxActions)); //math.random randoms btwn 0.0 and 0.999. Add 1 to avoid truncation after typecasting to int.
         	
-        	if (debug) {
+        	if (debug_getMax || debug) {
             	System.out.println("randMaxAction " + randMaxAction + " numMaxActions " + numMaxActions);
             }
         }
         
-        actionChosenForQValMax = arrAllMaxActions[randMaxAction];
-        qValMax = currMax;
+        actionChosenForQValMax = arrAllMaxActions[randMaxAction]; //if numMaxActions <= 1, randMaxAction = 0;
+
         
-        if (debug) {
+        if (debug_getMax || debug) {
         	System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
         }
-//        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
+        
+    	int valueRandom = 0;
+    	//Choosing next action based on policy.
+        valueRandom = (int)(Math.random()*(num_actions));
+        if (policy == SARSA) {
+        	actionChosenForQValMax = valueRandom;
+        }
+        else if(policy == exploratory) {
+        	actionChosenForQValMax = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
+        }
+        else if(policy == greedy){ 
+        	actionChosenForQValMax = actionChosenForQValMax;
+        }
+        
+        for (int i = 0; i < qValsFromNet.length; i++){
+		    for (int j = 0; j < qValsFromNet[0].length; j++){
+		    	for (int k = 0; k < qValsFromNet[0][0].length; k++){
+		    		if (actionChosenForQValMax-- == 0) {
+		    			currentStateActionVector[0] = i; //Joey: test this shit out LEL
+		    			currentStateActionVector[1] = j;
+		    			currentStateActionVector[2] = k;
+		    			return;
+		    		}
+		    	}
+		    }
+        }
     }
     
     /**
@@ -732,72 +842,73 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @param		n, but uses:
      * 				1. qValMax
      * @return		prevQVal
+     	Q(s’,a’)-Q(s,a)
      */
-    public int calcNewPrevQVal(){
-
-        double prevQVal = roboLUT[prevStateActionVector[0]]
-        						 [prevStateActionVector[1]]
-        						 [prevStateActionVector[2]]		 
-        						 [prevStateActionVector[3]]
-        						 [prevStateActionVector[4]]
-        						 [prevStateActionVector[5]]
-        						 [prevStateActionVector[6]];
-        
-        prevQVal += alpha*(reward + gamma*qValMax - prevQVal);
-        return (int)prevQVal;
-        
+    public double calcNewPrevQVal(){
+    	double normalizedReward = bipolarActivation(reward);
+    	currentNetQVal +=  alpha*(normalizedReward + gamma*qValMax - previousNetQVal); //Joey: mby bipolar activate the reward
+    	return currentNetQVal;
     }
     
     /**
-     * @name:		updateLUT
-     * @purpose:	1. Update prevSAV in LUT with the calculated prevQVal.
-     * 				2. Update curr state with correct action based on policy (greedy or exploratory).
-     * @param:		1. prevQVal
-     * @return:		n
+     * @name:		runbackProp
+     * @brief:		pg 295 in Fundamentals of Neural Networks by Lauren Fausett, Backpropagation of error: steps 6 to 8.
+     * @param:		1. //TODO
+     * @return:		1. //TODO
      */
-    public void updateLUT(int prevQVal){
-        int valueRandom = 0;
-        
-        double selectRandom = 0;
-        
-        roboLUT[prevStateActionVector[0]]
-         	   [prevStateActionVector[1]]
-         	   [prevStateActionVector[2]]
-         	   [prevStateActionVector[3]]
-         	   [prevStateActionVector[4]]
-         	   [prevStateActionVector[5]]
-         	   [prevStateActionVector[6]]	   
-         					  = prevQVal;
-        
-        if (debug) {
-	        out.println("prev " + Arrays.toString(prevStateActionVector));
-	        out.println("prevQVal" +  roboLUT[prevStateActionVector[0]][prevStateActionVector[1]][prevStateActionVector[2]][prevStateActionVector[3]][prevStateActionVector[4]][prevStateActionVector[5]][prevStateActionVector[6]]);
-        }
-        
-        //Choosing next action based on policy.
-        valueRandom = (int)(Math.random()*(num_actions));
-        if (policy == SARSA) {
-        	currentStateActionVector[0] = valueRandom;
-        }
-        
-        else if(policy == exploratory) {
-        	currentStateActionVector[0] = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
-        }
-        
-        else{ 
-        	currentStateActionVector[0] = actionChosenForQValMax;
-        }
-        //Choosing next action based on policy.
-//        valueRandom = (int)(Math.random()*(num_actions));
-//     
-//        if (policy == exploratory) {
-//        	currentStateActionVector[0] = valueRandom;
-//        }
-//        else if (policy == SARSA){ 
-//        	currentStateActionVector[0] = actionChosenForQValMax;
-//        }
-    }
-    
+    public void runBackProp() {      
+		for (int k = 0; k <numOutputsTotal; k++){
+			if (activationMethod == binaryMethod){
+				delta_out[k] = (expectedYVal - Y_calculated[k])*binaryDerivative(Y_in[k]); 
+			}
+			else{
+				delta_out[k] = (expectedYVal - Y_calculated[k])*bipolarDerivative(Y_in[k]);	
+			}
+//			System.out.println("\n");
+//			System.out.println("delta " + delta_out[k]);
+			for (int j = 0; j < numHiddensTotal; j++){
+//				System.out.println("wPast[j][k] " + wPast[j][k]);
+//				System.out.println("arr_NNWeights_hiddenToOutput[j][k] " + arr_NNWeights_hiddenToOutput[j][k]);
+				deltaW[j][k] = alpha*delta_out[k]*Z[j];
+				wNext[j][k] = arr_NNWeights_hiddenToOutput[j][k] + deltaW[j][k] + momentum*(arr_NNWeights_hiddenToOutput[j][k] - wPast[j][k]); 
+				wPast[j][k] = arr_NNWeights_hiddenToOutput[j][k]; 
+				arr_NNWeights_hiddenToOutput[j][k] = wNext[j][k]; 
+//				System.out.println("wPast[j][k] " + wPast[j][k]);
+//				System.out.println("arr_NNWeights_hiddenToOutput[j][k] " + arr_NNWeights_hiddenToOutput[j][k]);
+//				System.out.println("wNext[j][k] " + wNext[j][k]);
+			}
+		}
+		
+		//for hidden layer
+		for (int j = 0; j < numHiddensTotal; j++){
+			double sumDeltaInputs = 0.0;
+			for (int k = 0;  k < numOutputsTotal; k++){
+				sumDeltaInputs += delta_out[k]*arr_NNWeights_hiddenToOutput[j][k];
+				if (activationMethod == binaryMethod){
+					 delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
+				}
+				else{
+					delta_hidden[j] = sumDeltaInputs*bipolarDerivative(Z_in[j]);	
+				}
+			}
+			for (int i = 0; i< numInputsTotal; i++){
+//				System.out.println("vPast[i][j] " + vPast[i][j]);
+//				System.out.println("arr_NNWeights_inputToHidden[i][j] " + arr_NNWeights_inputToHidden[i][j]);
+				deltaV[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i]; //Joey: what about the action vectors?
+				vNext[i][j]  = arr_NNWeights_inputToHidden[i][j] + deltaV[i][j] + momentum*(arr_NNWeights_inputToHidden[i][j] - vPast[i][j]); 
+				vPast[i][j] = arr_NNWeights_inputToHidden[i][j]; 
+				arr_NNWeights_inputToHidden[i][j] = vNext[i][j]; 
+//				System.out.println("vPast[i][j] " + vPast[i][j]);
+//				System.out.println("arr_NNWeights_inputToHidden[i][j] " + arr_NNWeights_inputToHidden[i][j]);
+//				System.out.println("vNext[i][j] " + vNext[i][j]);
+			}
+		}
+		//Step 9 - Calculate local error. 
+		double error = 0.0;
+		for (int k = 0; k < numOutputsTotal; k++){ 
+			error = 0.5*(java.lang.Math.pow((expectedYVal - Y_calculated[k]), 2)); 
+		}
+	}
 	/**
      * @name:		resetReward
      * @purpose: 	Resets reward to 0.
@@ -812,17 +923,14 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     }
     
     /**
-     * @name:		doAction
-     * @purpose: 	Converts state Action vector into action by reading currentSAV[0]
+     * @name:		doAction_updateLearningAlgo
+     * @purpose: 	Converts state Action vector into action by reading currentSAV[0], and other analysis specific actions.
      * @param: 		n, but uses:
      * 				1. Array currentSAV.
      * @return:		n
      */
     	
-    public void doAction(){
-    	
-
-    	
+    public void doAction_updateLearningAlgo(){
     	//maneuver behaviour (chase-offensive/defensive)
     	if ((currentStateActionVector[0])%4 == 0) {
     		setTurnRight(enemyBearingFromHeading);
@@ -852,25 +960,42 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     	if ((currentStateActionVector[0])/8 == 0){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	}
-    	
     	else if ((currentStateActionVector[0])/8 == 1){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));
     	}
-    	
     	else if ((currentStateActionVector[0])/8 == 2){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
-    	}
-    	
+    	}   	
 
 //    	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));     
-      if (debug_doAction || debug) {
+      if (debug_doAction_updateLearningAlgo || debug) {
     	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
       }
     }
+
+    /**
+     * @name:		doAction_notLearning
+     * @purpose: 	performs actions for rounds that do not perform learning, mainly to maintain gun angle proximity to enemy.
+     * @param: 		n
+     * @return:		n
+     */
+    public void doAction_notLearning() {
+    	setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    }
+
+    /**
+     * @name:		doAction_mandatoryPerTurn
+     * @purpose: 	performs actions mandatory for the round, mostly to maintain radar lock on the enemy.
+     * @param: 		n
+     * @return:		n
+     */
+    public void doAction_mandatoryPerTurn() {
+	    setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+	    scan();
+	    execute();
+    }
     
-
-
-
+    //TODO
     /**
      * @name:		importData
      * @author:		partly written in sittingduckbot
@@ -886,7 +1011,6 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * 				stringTest: 16400 (0x4010)
      * 				strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
      * 				WL:			16448 (0x4040)
-     * 				strSA: 		? 
      * 				
      * @param: 		1. stringname of file desired to be written. The fxn currently accepts 3(three) 
      * 				files: LUTTrackfire.dat, winlose.dat, and stringTest.dat. Any other string 
@@ -896,185 +1020,200 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @return:		1. int importLUTDATA success/error;
      */
     public int importData(String strName){
-//    	if (debug_import || debug) {
-//    		out.println("@importData: at beginning of fxn");
-//    		out.println("printing fileSettings: ");
-//    		out.println("fileSettings_default: " + fileSettings_default);
-//    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+    	if (debug_import || debug) {
+    		out.println("@importData: at beginning of fxn");
+    		out.println("printing fileSettings: ");
+    		out.println("fileSettings_temp: " + fileSettings_temp);
+    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
 //    		out.println("fileSettings_LUT: " + fileSettings_LUT);
-//    		out.println("fileSettings_WL: "+ fileSettings_WL); 
-//    	}
-//    	
-//        try {
-//        	BufferedReader reader = null;
-//            try {
-//                reader = new BufferedReader(new FileReader(getDataFile(strName)));
-//                fileSettings_default = (short)Integer.parseInt(reader.readLine());			//reads first line of code to obtain what is in "fileSettings_default"
-//                
-//                if (debug_import || debug) {
-//            		out.println("extracted fileSettings into default: ");
-//            		out.println("fileSettings_default: " + fileSettings_default);
-//            	}
-//                // CONFIGMASK_VERIFYSETTINGSAVAIL = 0x4000
-//                // & is bit-wise "and" to compare every single bit of CONFIGMASK with fileSettings_default
-//                // to ensure that a first line exists. 
-//                if ((fileSettings_default & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
-//                	if (debug_import || debug) {
-//                		out.println("Import aborted (file not configured properly)");
-//                	}
-//                	
-//                	return ERROR_3_import_verification;
-//                }
-//                else {
-//                	//this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
-//                	//flag prevents multiple imports and data overwrite since array is static
-//                	if ( ((fileSettings_default & CONFIGMASK_FILETYPE_stringTest) == CONFIGMASK_FILETYPE_stringTest)
-//                		&& (flag_stringTestImported == false) )
-//                	{
-//                		if (strName != "stringTest.dat") {
-//            				if (debug_import || debug) {
-//            					out.println ("Import aborted (Imported wrong file - file declared stringTest.dat in settings)");
-//            				}
-//                			return ERROR_4_import_wrongFileName_stringTest;
-//                		}
-//                		
-//                		fileSettings_stringTest = fileSettings_default;
-//                		flag_stringTestImported = true;
-//                	}
-//                	
-//                	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
-//                	//flag prevents multiple file imports (mostly for preventing export bugs)
-//                	else if ( ((fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire) == CONFIGMASK_FILETYPE_LUTTrackfire)
-//                	&& (flag_LUTImported == false) )
-//                	{
-//                		if (strName != "LUTTrackfire.dat") {
-//            				if (debug_import || debug) {
-//            					out.println ("Import aborted (Imported wrong file - file declared LUTTrackfire.dat in settings)");
-//            				}
-//                			return ERROR_11_import_wrongFileName_LUT;
-//                		}
-//                		// confirmed filename matches filetype reported by settings in file for LUT. 
-//                		
-//                    	if ((fileSettings_default & CONFIGMASK_ZEROLUT) == CONFIGMASK_ZEROLUT) {
-//                    		if (debug_import || debug) {
-//                    			out.println("starting loop of zeroLUT:");
-//                    		}
-//    	                    for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-//    	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-//    	                        	for(int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-//    	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-//    		                        		for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-//    	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-//    	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = 0;
-//    	                        					}
-//    	                        				}
-//                            				}
-//                            			}
-//    	                        	}
-//    	                        }
-//    	                    }
-//                    	} // end of configmask_zeroLUT for LUTTrackfire
-//                    	else {
-//                    		int i = 0; 
-//                    		for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-//    	                        for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-//    	                        	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-//    	                        		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-//    	                        			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-//    	                        				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-//    	                        					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//    	                        						roboLUT[p0][p1][p2][p3][p4][p5][p6] = Integer.parseInt(reader.readLine());
-//    	                        					}
-//    	                        				}
-//    	                        			}
-//    	                        		}
-//    	                        	}
-//    	                        }
-//    	                    } // end of data extraction for LUTTrackfire
-//                    		if (debug_import || debug) {
-//                            	out.println("Imported LUT data (zeroLUT or normal)");
-//                            }
-//                    	}
-//                    	//fileSettings copied individually into LUT for exporting purposes.
-//                		fileSettings_LUT = fileSettings_default;
-//                		flag_LUTImported = true; //sets flag to prevent multiple instances of robot importing(and exporting) from same .dat (and causing weird interactions(?)).
-//                	} // end of LUTTrackfire
-//                	
-//                	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
-//                		if (strName != "winlose.dat") {
-//                			if (debug_import || debug) {
-//                				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
-//                			}
-//                			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
-//                		}
-//                		totalFights = Integer.parseInt(reader.readLine());
-//                    	for (int i = 0; i < battleResults.length; i++){
-//                    		if (i < totalFights) {
-//                    			battleResults[i] = Integer.parseInt(reader.readLine());
-//                    		}
-//                    		else {
-//                    			battleResults[i] = 0;
-//                    		}
-//                    	}
-//                    	fileSettings_WL = fileSettings_default;
-//                    	flag_WLImported = true;
-//                	} // end of WinLose
-//                	
-//                	//write code for new file uses here. 
-//                	//also change the string being called 
-//                	//ctr+f: Import data. ->Change imported filename here<- 
-//                	
-//                	//file is undefined - so returns error 8
-//                	else {
-//                		if (debug_import || debug) {
-//                    		out.println("error 8:");
-//                    		out.println("fileSettings_default: " + fileSettings_default);
-//                    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+    		out.println("fileSettings_WL: "+ fileSettings_WL);
+    		out.println("fileSettings_weights: " + fileSettings_weights);
+    	}
+    	
+        try {
+        	BufferedReader reader = null;
+            try {
+                reader = new BufferedReader(new FileReader(getDataFile(strName)));
+                //reads first line of code to obtain what is in "fileSettings_temp"
+                fileSettings_temp = (short)Integer.parseInt(reader.readLine());			
+                
+                if (debug_import || debug) {
+            		out.println("extracted fileSettings into default: ");
+            		out.println("fileSettings_temp: " + fileSettings_temp);
+            	}
+                // CONFIGMASK_VERIFYSETTINGSAVAIL = 0x4000
+                // & is bit-wise "and". It compares each bit of the chosen CONFIGMASK with fileSettings_temp.
+                // CONFIGMASK_VERIFYSETTINGSAVAIL is used to make sure the value in the first line is a fileSettings number (0x4000 is too large to be used as weights or LUT HOPEFULLY T_T)
+                if ((fileSettings_temp & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
+                	return ERROR_3_import_verification;
+                }
+                
+                //else: we verified the file has a fileSettings line. Let's read what file it is!
+                //this prevents accidentally importing from wrong file. It matches the filename given to the function with the fileSettings read from the file.
+                else { 
+                	
+                	if ( ((fileSettings_temp & CONFIGMASK_FILETYPE_stringTest) == CONFIGMASK_FILETYPE_stringTest) && (flag_stringTestImported == false) ) {
+                		if (strName != "stringTest.dat") {
+                			return ERROR_4_import_wrongFileName_stringTest;
+                		}
+                		//else: the fileSettings read from the file matches with the one given to the function, continue!
+                		//Clarification: the reason behind having both flag and file-specific fileSettings variable set, is due to the fact that the program
+                		//	may change the fileSettings (eg. zeroing file on purpose) by writing a different settings back, so there must be a way to store the settings.
+                		fileSettings_stringTest = fileSettings_temp; 
+                		flag_stringTestImported = true;
+                	}
+
+                	else if ( ((fileSettings_temp & CONFIGMASK_FILETYPE_weights) == CONFIGMASK_FILETYPE_weights) && (flag_weightsImported == false) ) {
+                		if (strName != "weights.dat") {
+                			return ERROR_19_import_wrongFileName_weights;
+                		}
+            			if ( (fileSettings_temp & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE ) {
+            				if (debug_import || debug) {
+                    			out.println("- writing blank weights into local weights array: ");
+                    		}
+            				for (int i = 0; i < numInputsTotal; i++) {
+        	            		for (int j = 0; j < numHiddensTotal; j++) { 
+        	            			arr_NNWeights_inputToHidden[i][j] = 0;
+        		                }
+        	            	}
+            				for (int i = 0; i < numHiddensTotal; i++) {
+        	            		for (int j = 0; j < numOutputsTotal; j++) {
+        	            			arr_NNWeights_hiddenToOutput[i][j] = 0;
+        		                }
+        	            	}
+            				//Subtracts zeroingfile setting from fileSettings, so that the weights are zeroed only once.
+            				fileSettings_temp -= CONFIGMASK_ZEROINGFILE;
+            				
+            				if (debug_import || debug) {
+                    			out.println("Imported blank weights.");
+                    		}
+            				
+            			}
+            			else {
+            				if (debug_import || debug) {
+                    			out.println("- writing recorded weights into local weights array: ");
+                    		}
+            				
+            				for (int i = 0; i < numInputsTotal; i++) {
+        	            		for (int j = 0; j < numHiddensTotal; j++) { 
+        	            			arr_NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
+        		                }
+        	            	}
+            				for (int i = 0; i < numHiddensTotal; i++) {
+        	            		for (int j = 0; j < numOutputsTotal; j++) {
+        	            			arr_NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader.readLine());
+        		                }
+        	            	}
+            				//value 999 is at the end of the weights file to make sure net is the desired size.
+            				//TODO learn interaction with EOF
+            	            if (Double.parseDouble(reader.readLine()) != 999) {
+            	            	return ERROR_20_import_weights_wrongNetSize;
+            	            }
+            	            
+            	            if (debug_import || debug) {
+                    			out.println("Imported recorded weights.");
+                    		}
+            			}
+            			fileSettings_weights = fileSettings_temp;
+            			flag_weightsImported = true;
+            		}
+                	
+                	
+                	//continue onwards in the same manner to another file.
+                	else if( ((fileSettings_temp & CONFIGMASK_FILETYPE_winLose) == CONFIGMASK_FILETYPE_winLose) && (flag_WLImported == false) ) {
+                		if (strName != "winlose.dat") {
+
+                			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
+                		}
+                		if ( (fileSettings_temp & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE ) {
+            				if (debug_import || debug) {
+                    			out.println("- blanking fight records (winLose):");
+                    		}
+            				totalFights = 0; //these honestly should not be necessary; initialized as 0 and object(robot) is made new every fight.
+            				for (int i = 0; i < battleResults.length; i++){
+	                    			battleResults[i] = 0;
+	                    	}
+            				fileSettings_temp -= CONFIGMASK_ZEROINGFILE;
+            				
+            				if (debug_import || debug) {
+                    			out.println("Imported blank records.");
+                    		}
+                		}
+                		else {
+            				if (debug_import || debug) {
+                    			out.println("- importing saved fight records (winLose):");
+                    		}
+	                		totalFights = Integer.parseInt(reader.readLine());
+	                    	for (int i = 0; i < battleResults.length; i++){
+	                    		if (i < totalFights) {
+	                    			battleResults[i] = Integer.parseInt(reader.readLine());
+	                    		}
+	                    		else {
+	                    			battleResults[i] = 0;
+	                    		}
+	                    	}
+	                    	if (debug_import || debug) {
+                    			out.println("Imported saved fight records.");
+                    		}
+                		}
+                    	fileSettings_WL = fileSettings_temp;
+                    	flag_WLImported = true;
+                	} // end of WinLose
+                	
+                	//write code for new file uses here. 
+                	//also change the string being called 
+                	//ctr+f: Import data. ->Change imported filename here<- 
+                	
+                	//file is undefined - so returns error 8
+                	else {
+                		if (debug_import || debug) {
+                    		out.println("error 8:");
+                    		out.println("fileSettings_temp: " + fileSettings_temp);
+                    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
 //                    		out.println("fileSettings_LUT: " + fileSettings_LUT);
-//                    		out.println("fileSettings_WL: "+ fileSettings_WL);
-//                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire|verisett: " + (CONFIGMASK_FILETYPE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL));
-//                    		out.println("CONFIGMASK_FILETYPE_WinLose|versett: " + (CONFIGMASK_FILETYPE_WinLose | CONFIGMASK_VERIFYSETTINGSAVAIL));
+                    		out.println("fileSettings_WL: "+ fileSettings_WL);
+                    		out.println("fileSettings_weights: " + fileSettings_weights);
+//                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire|verification: " + (CONFIGMASK_FILETYPE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL));
+                    		out.println("CONFIGMASK_FILETYPE_winLose|verification: " + (CONFIGMASK_FILETYPE_winLose | CONFIGMASK_VERIFYSETTINGSAVAIL));
+                    		out.println("CONFIGMASK_FILETYPE_weights|verification: " + (CONFIGMASK_FILETYPE_weights | CONFIGMASK_VERIFYSETTINGSAVAIL));
 //                    		out.println("flag_LUTImported: " + flag_LUTImported);
-//                    		out.println("fileSettings_default & CONFIGMASK_ZEROLUT: " + (fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire));
-//                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire: " + CONFIGMASK_FILETYPE_LUTTrackfire);
-//                    	}
-//                		return ERROR_8_import_dump; //error 8 - missed settings/file dump.
-//                	}
-//                }
-//            } 
-//            finally {
-//                if (reader != null) {
-//                    reader.close();
-//                }
-//            }
-//        } 
-//        //exception to catch when file is unreadable
-//        catch (IOException e) {
-//        	if (debug_import || debug) {
-//        		out.println("Something done fucked up (Error0x01 error in file reading)");
-//        	}
-//            return ERROR_1_import_IOException;
-//        } 
-//        // type of exception where there is a wrong number format (type is wrong or blank)  
-//        catch (NumberFormatException e) {
-//            if (debug_import || debug) {
-//            	out.println("Something done fucked up (Error0x02 error in type conversion - check class throw for more details)");
-//            }
-//            return ERROR_2_import_typeConversionOrBlank;
-//        }
-//       
-//    	if (debug_import || debug) {
-//    		out.println("end of fxn fileSettings check (succeeded):");
-//    		out.println("fileSettings_default: " + fileSettings_default);
-//    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+                    		out.println("flag_weightsImported: " + flag_weightsImported);
+                    		out.println("fileSettings_temp & CONFIGMASK_ZEROINGFILE: " + (fileSettings_temp & CONFIGMASK_ZEROINGFILE));
+                    		out.println("CONFIGMASK_FILETYPE_weights: " + CONFIGMASK_FILETYPE_weights);
+                    	}
+                		return ERROR_8_import_dump; //error 8 - missed settings/file dump.
+                	}
+                }
+            } 
+            finally {
+                if (reader != null) {
+                    reader.close();
+                }
+            }
+        } 
+        //exception to catch when file is unreadable
+        catch (IOException e) {
+        	//error in file reading
+            return ERROR_1_import_IOException;
+        } 
+        // type of exception where there is a wrong number format (type is wrong or blank)  
+        catch (NumberFormatException e) {
+        	//Error0x02 error in type conversion - check class throw for more details
+            return ERROR_2_import_typeConversionOrBlank;
+        }
+       
+    	if (debug_import || debug) {
+    		out.println("end of fxn fileSettings check (succeeded):");
+    		out.println("fileSettings_temp: " + fileSettings_temp);
+    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
 //    		out.println("fileSettings_LUT: " + fileSettings_LUT);
-//    		out.println("fileSettings_WL: "+ fileSettings_WL);
-//    	}
-//        return SUCCESS_importData;
-        return 0;
+    		out.println("fileSettings_WL: "+ fileSettings_WL);
+    		out.println("fileSettings_weights: " + fileSettings_weights);
+    	}
+        return SUCCESS_importData;
     }
     
+
     /**
      * @name: 		exportData()
      * @author: 	partially written in robocode's sittingduckbot
@@ -1101,183 +1240,345 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      */
 
     public int exportData(String strName) {
-//    	if (debug_export || debug) {
-//    		out.println("@exportData: beginning");
-//    		out.println("printing fileSettings: ");
-//    		out.println("fileSettings_default: " + fileSettings_default);
-//    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
-//    		out.println("fileSettings_LUT: " + fileSettings_LUT);
-//    		out.println("fileSettings_WL: "+ fileSettings_WL);
-//    	}
-//    	
-//    	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
-//    	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
-//    	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
-//    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )){
-//	    	
-//    		PrintStream w = null;
-//	        
-//	        try {
-//	            w = new PrintStream(new RobocodeFileOutputStream(getDataFile(strName)));
-//	            // different commands between files
-//	            if (w.checkError()) {
-//	                //Error 0x03: cannot write
-//	            	if (debug_export || debug) {
-//	            		out.println("Something done fucked up (Error 6 cannot write)");
-//	            	}
-//	            	return ERROR_6_export_cannotWrite;
-//	            }
-//	            
-//	            //if scope for exporting files to stringTest
-//	            if ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) {
-//	            	
-//	            	//debug
-//	            	if (debug_export || debug) {
-//	            		out.println("writing into strStringTest");
-//	            	}
-//	            	
-//	            	w.println(fileSettings_stringTest);
-//	            	flag_stringTestImported = false;
-//	            	
-//	            } //end of testString
-//	            
-//	        	//update LUT
-//	            else if ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) {
-//	            	
-//	            	//DEBUG
-//	            	if (debug_export || debug) {
-//	            		out.println("writing into strLUT");
-//	            	}
-//	            	
-//	            	//both zeroLUT and correct LUT will be written here
-//	        		//following if prevents repeat zeroLUT from occurring by editing the zero flag.
-//	        		if ((fileSettings_LUT & CONFIGMASK_ZEROLUT) == CONFIGMASK_ZEROLUT) {
-//	        			
-//	        			//DEBUG
-//	        			if (debug_export || debug) {
-//	        				out.println("attempting to write zeroes to LUT: ");
-//	        				out.println("fileSettings_LUT before zeroing:" + fileSettings_LUT);
-//	        			}
-//	        			
-//	        			//only this line in this if
-//	        			fileSettings_LUT -= CONFIGMASK_ZEROLUT;
-//	        			
-//	        			//DEBUG
-//	        			if (debug_export || debug) {
-//	        				out.println("fileSettings_LUT after zeroing:" + fileSettings_LUT);
-//	        			}
-//	        		}
-//	        		
-//	        		w.println(fileSettings_LUT);
-//	                for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-//	                    for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-//	                    	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-//	                    		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-//	                    			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-//	                    				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-//	                    					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//	                    						w.println(roboLUT[p0][p1][p2][p3][p4][p5][p6]);
-//	                    					}
-//	                    				}
-//	                				}
-//	                    		}
-//	                    	}
-//	                    }
-//	                }
-//	                flag_LUTImported = false;
-//	                
-//	        	} //endof trackfire
-//
-//	            //winlose
-//	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
-//	            	if (debug_export || debug) {
-//	            		out.println("writing into winLose");
-//	            	}
-//	            	w.println(fileSettings_WL);
-//	            	w.println(totalFights+1);
-//	            	for (int i = 0; i < totalFights; i++){
-//	        			w.println(battleResults[i]);
-//	            	}
-//	        			w.println(currentBattleResult);
-//	            	flag_WLImported = false;
-//	            }// end winLose
-//	            
-//	            
-//	            /* to add new files for exporting data
-//	             * such as saveData
-//	             */
-//	                        
-//	            
-//	            else {
-//	            	if (debug_export || debug) {
-//	            		out.println("error 9");
-//	            		
-//	            	}
-//	            	return ERROR_9_export_dump;
-//	            }
-//	        }
-//	        
-//	        //OC: PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
-//	        catch (IOException e) {
-//	    		if (debug_export || debug) {
-//	    			out.println("IOException trying to write: ");
-//	    		}
-//	            e.printStackTrace(out); //Joey: lol no idea what this means
-//	            return ERROR_7_export_IOException;
-//	        } 
-//	        finally {
-//	            if (w != null) {
-//	                w.close();
-//	            }
-//	        }      
-//	        if (debug_export || debug) {
-//	        	out.println("(succeeded export)");
-//	        }
-//	        return SUCCESS_exportData;
-//    	}
-//    	
-//    	//this should prevent wiping INDIRECTLY if import error. If import was successful, then config flag was set.
-//    	//goal is to prevent accidentally wiping irrelevant file
-//    	else {
-//    		return ERROR_10_export_mismatchedStringName;
-//    	}
-    	return 0;
-    }
+    	if (debug_export || debug) {
+    		out.println("@exportData: beginning");
+    		out.println("printing fileSettings: ");
+    		out.println("fileSettings_temp: " + fileSettings_temp);
+    		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
+    		out.println("fileSettings_WL: "+ fileSettings_WL);
+    		out.println("fileSettings_weights: " + fileSettings_weights);
+    		
+    	}
+    	
+    	//this condition prevents wrong file from being accidentally deleted. File is cleared whenever printstream accesses it (how?), so writing the correct information 
+    	//	into the desired file is paramount to data retention.
+    	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
+    	  || ( (strName == strWL)         && (fileSettings_WL > 0)         && (flag_WLImported == true) )
+    	  || ( (strName == strWeights)    && (fileSettings_weights > 0)    && (flag_weightsImported == true) )
+    	  /* ||  ( (strName == strError) ) */ 
+    					){ 
+	    	
+    		PrintStream w = null;
+	        
+	        try {
+	            w = new PrintStream(new RobocodeFileOutputStream(getDataFile(strName)));
+	            // different commands between files
+	            if (w.checkError()) {
+	                //Error 0x03: cannot write
+	            	if (debug_export || debug) {
+	            		out.println("Something done messed up (Error 6 cannot write)");
+	            	}
+	            	return ERROR_6_export_cannotWrite;
+	            }
+	            
+	            //if scope for exporting files to stringTest
+	            if ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) {
+	            	
+	            	if (debug_export || debug) {
+	            		out.println("- writing into strStringTest:");
+	            	}
+	            	
+	            	w.println(fileSettings_stringTest);
+	            	
+	            	if (debug_export || debug) {
+	            		out.println("Successfully written into strStringTest.");
+	            	}
+	            	
+	            	flag_stringTestImported = false;
+	            } //end of testString
 
+	            // weights
+	            else if ( (strName == strWeights) && (fileSettings_weights > 0) && (flag_weightsImported == true) ) {
+	            	if (debug_export || debug) {
+	            		out.println("- writing into weights.dat:");
+	            	}
+	            	for (int i = 0; i < numInputsTotal; i++) {
+		         		for (int j = 0; j < numHiddensTotal; j++) {
+		         			w.println(arr_NNWeights_inputToHidden[i][j]);
+		                }
+		         	} 
+	            	for (int i = 0; i < numHiddensTotal; i++) {
+		         		for (int j = 0; j < numOutputsTotal; j++) {
+		         			w.println(arr_NNWeights_hiddenToOutput[i][j]);
+		                }
+		         		w.println("999");
+		         	}
+	            	
+	            	if (debug_export || debug) {
+	            		out.println("Successfully written into weights.");
+	            	}
+	            	
+	            	flag_weightsImported = false;
+	            } //end weights export
+	            
+//	            winlose //Joey: why was winlose disabled
+	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
+	            	if (debug_export || debug) {
+	            		out.println("- writing into winLose:");
+	            	}
+	            	w.println(fileSettings_WL);
+	            	w.println(totalFights+1);
+	            	for (int i = 0; i < totalFights; i++){
+	        			w.println(battleResults[i]);
+	            	}
+	        		w.println(currentBattleResult);
+	            	
+	            	if (debug_export || debug) {
+	            		out.println("Successfully written into winLose.");
+	            	}
+	            	
+	            	flag_WLImported = false;
+	            }// end winLose
+	            
+//	            //strError
+//	            else if((strName == strError)){
+//	            	w.println("contains currentNetQVal-previousNetQVal for each tick");
+//	            	for (int i = 0; i < currentRoundOfError; i++) {
+//	            		w.println(QErrors[i]);
+////	            		w.println(Arrays.toString(QErrorSAV[i]));
+//	            	}
+//	            }
+//	            
+	            /* 
+	             * add new files here - remember to add config settings and add to the beginning ifs
+	             */
+	                        
+	            
+	            else {
+	            	if (debug_export || debug) {
+	            		out.println("error 9");
+	            		
+	            	}
+	            	return ERROR_9_export_dump;
+	            }
+	        }
+	        
+	        //OC: PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
+	        catch (IOException e) {
+	    		if (debug_export || debug) {
+	    			out.println("IOException trying to write: ");
+	    		}
+	            e.printStackTrace(out); //Joey: lol no idea what this means
+	            return ERROR_7_export_IOException;
+	        } 
+	        finally {
+	            if (w != null) {
+	                w.close();
+	            }
+	        }
+	        
+	        flag_alreadyExported = true;
+	        
+	        if (debug_export || debug) {
+	        	out.println("(succeeded export)");
+	        }
+	        return SUCCESS_exportData;
+    	} //end of big if.
+    	
+    	//this should prevent wipes by writing when data isn't ready or available. If import was successful, then fileSettings would already be set.
+    	//goal is to prevent accidentally wiping irrelevant file.
+    	else {
+    		return ERROR_10_export_mismatchedStringName;
+    	}
+    }
+ 
     
-//    public int saveData(String strName) {
-//    	PrintStream w = null;
-//        try {
-//            w = new PrintStream(new RobocodeFileOutputStream(getDataFile(strName)));
-////        	out.println("writing into strSA");
-//        	//DEBUG
-//        	if (debug_export || debug) {
-//        		out.println("writing into strSA");
-//        	}
-//            for (int p0 = 0; p0 < roboLUTDimensions[0]; p0++) {
-//                for (int p1 = 0; p1 < roboLUTDimensions[1]; p1++) {
-//                	for (int p2 = 0; p2 < roboLUTDimensions[2]; p2++) {
-//                		for (int p3 = 0; p3 < roboLUTDimensions[3]; p3++) {
-//                			for (int p4 = 0; p4 < roboLUTDimensions[4]; p4++) {
-//                				for (int p5 = 0; p5 < roboLUTDimensions[5]; p5++) {
-//                					for (int p6 = 0; p6 < roboLUTDimensions[6]; p6++) {
-//                						w.println("\t" + p0+p1+p2+p3+p4+p5+p6);
-//                					}
-//                				}
-//            				}
-//                		}
-//                	}
-//                }
-//            }
-//	    } catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//	    finally {
-//	        if (w != null) {
-//	            w.close();
-//	        }
-//	    } 
-//	    return SUCCESS_exportData;
-//	}
+    /**binaryActivation function
+     * @param x
+     * @return newVal. 
+     */
+ 	public double binaryActivation(double x) {
+ 		double newVal = 1/(1 + Math.exp(-x)); 
+ 		return newVal;
+ 	}
+ 	
+ 	/**Function name: bipolarActivation 
+ 	 * @param: current hidden value "z"
+ 	 * @return: new value evaluated at the f(x) = (2/(1 + e(-x))) - 1 
+ 	**/ 	
+ 	public double bipolarActivation(double x) {
+ 		double newVal = (2/(1 + Math.exp(-x)))-1; 
+ 		return newVal; 
+ 	}
+ 	/** Function name: binaryDerivative
+ 	 * @param: input to take the derivative of based on f'(x) = f(x)*(1-f(x)). 
+ 	 * @return: derivative of value. 
+ 	 * 
+ 	 **/
+ 	public double binaryDerivative(double x) {
+ 		double binFunc = binaryActivation(x);
+ 		double binDeriv = binFunc*(1 - binFunc); 
+ 		return binDeriv;
+ 	}
+ 	/** Function name: bipolarDerivative
+ 	 * @param: input to take the derivative of. 
+ 	 * @return: derivative of value: f'(x) =  0.5*(1 + f(x))*(1 - f(x));
+ 	 * 
+ 	 **/
+ 	public double bipolarDerivative(double x) {
+ 		double bipFunc = bipolarActivation(x);
+ 		double bipDeriv = 0.5*(1 + bipFunc)*(1 - bipFunc);  
+ 		return bipDeriv;
+ 	}
 }
+
+
+///**
+//* @name:		importDataWeights
+//* @author:		partly written in sittingduckbot
+//* @purpose:	to extract neural net weights stored in finalHiddenWeights.txt 
+//* 				and finalOuterWeights.txt into arrays NNWeights_inputToHidden[][]
+//* 				and NNWeights_hiddenToOutput[][], respectively.
+//* @param:		n, but uses these globals:
+//* 				NNWeights_inputToHidden[][]
+//* 				NNWeights_hiddenToOutput[][]
+//* @return:		n
+//*/
+//public int importDataWeights() {
+//	if (flag_weightsImported == false) {
+//  	try {
+//      	BufferedReader reader = null;
+//      	
+//          try {
+//          	if (flag_useOfflineTraining) {
+//          		reader = new BufferedReader(new FileReader(getDataFile("inToHiddenWeights_OfflineTraining.txt")));
+//          	}
+//          	else {
+//          		reader = new BufferedReader(new FileReader(getDataFile("finalHiddenWeights.txt")));
+//          	}
+//          	
+//          	for (int i = 0; i < numInputsTotal; i++) {
+//          		for (int j = 0; j < numHiddensTotal; j++) {
+////          			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader.readLine()));
+////          			out.println("i " + i); 
+////          			out.println("j " + j); 
+//          			arr_NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
+//	                }
+//          	}
+//          } 
+//          finally {
+//              if (reader != null) {
+//                  reader.close();
+//              }
+//          }
+//          
+//          BufferedReader reader2 = null;
+//          try {
+//          	if (flag_useOfflineTraining) {
+//          		reader2 = new BufferedReader(new FileReader(getDataFile("hiddenToOutWeights_OfflineTraining.txt")));
+//          	}
+//          	else {
+//          		reader2 = new BufferedReader(new FileReader(getDataFile("finalOuterWeights.txt")));
+//          	}
+//          	for (int i = 0; i < numHiddensTotal; i++) {
+//          		for (int j = 0; j < numOutputsTotal; j++) {
+////          			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader2.readLine()));
+//          			arr_NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader2.readLine());
+//	                }
+//          	}
+//          } 
+//          finally {
+//              if (reader2 != null) {
+//                  reader2.close();
+//              }
+//          }
+//      } 
+//      //exception to catch when file is unreadable
+//      catch (IOException e) {
+//          return ERROR_12_importWeights_IOException;
+//      } 
+//      // type of exception where there is a wrong number format (type is wrong or blank)  
+//      catch (NumberFormatException e) {
+//          return ERROR_13_importWeights_typeConversionOrBlank;
+//      }
+//  	
+//  	flag_weightsImported = true;
+//  	if (flag_useOfflineTraining) {
+//  		flag_useOfflineTraining = false;
+//  	}
+//  	return SUCCESS_importDataWeights;
+//	}
+//	
+//	else {
+//		return ERROR_17;
+//	}
+//}
+//
+///**
+//* @name: 		exportDataWeight
+//* @author: 	mostly sittingduckbot
+//* @purpose: 	1. stores the weights back into finalHiddenWeights.txt, 
+//* 				finalOuterWeights.txt from data NNWeights_inputToHidden[][]
+//* 				and NNWeights_hiddenToOutput[][], respectively.
+//* 
+//*/
+//public int exportDataWeights() {
+//	if(flag_weightsImported == true) {
+//		PrintStream w1 = null;
+//  	try {
+//  		w1 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalHiddenWeights.txt")));
+//  		if (w1.checkError()) {
+//              //Error 0x03: cannot write
+//          	if (debug_export || debug) {
+//          		out.println("Something done messed up (Error 14 cannot write)");
+//          	}
+//          	return ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden;
+//  		}
+//  		 
+//  		for (int i = 0; i < numInputsTotal; i++) {
+//       		for (int j = 0; j < numHiddensTotal; j++) {
+//       			w1.println(arr_NNWeights_inputToHidden[i][j]);
+//              }
+//       	} 
+//  	}
+//  	catch (IOException e) {
+//  		if (debug_export || debug) {
+//  			out.println("IOException trying to write: ");
+//  		}
+//          e.printStackTrace(out); //Joey: lol no idea what this means
+//          return ERROR_16_exportWeights_IOException;
+//      } 
+//      finally {
+//          if (w1 != null) {
+//              w1.close();
+//          }
+//      }      
+//  	PrintStream w2 = null;
+//  	try {
+//  		
+//  		w2 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalOuterWeights.txt")));
+//  		if (w2.checkError()) {
+//              //Error 0x03: cannot write
+//          	if (debug_export || debug) {
+//          		out.println("Something done messed up (Error 15 cannot write)");
+//          	}
+//          	return ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput;
+//  		 }
+//  		 
+//  		for (int i = 0; i < numHiddensTotal; i++) {
+//       		for (int j = 0; j < numOutputsTotal; j++) {
+//       			w2.println(arr_NNWeights_hiddenToOutput[i][j]);
+//              }
+//       	}
+//  	}
+//  	catch (IOException e) {
+//  		if (debug_export || debug) {
+//  			out.println("IOException trying to write: ");
+//  		}
+//          e.printStackTrace(out); //Joey: lol no idea what this means
+//          return ERROR_16_exportWeights_IOException;
+//      } 
+//      finally {
+//          if (w2 != null) {
+//              w2.close();
+//          }
+//      }    
+//  	
+//  	
+//  	flag_weightsImported = false;
+//  	return SUCCESS_exportDataWeights;
+//	}
+//	else {
+//		return ERROR_18;
+//	}
+//}

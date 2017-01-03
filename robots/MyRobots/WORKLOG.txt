@@ -1,3 +1,9 @@
+	2017-01-01
+	2016-30-30
+		- [done] Import NN framework from NN2.
+		- added/corrected some comments
+		- fixed a few import export settings for weights.
+		- combined all weights into 1 file.
 	2016-12-22
 		- added readme and worklog files to MyRobots folder.
 	2016-12-03 to 2016-12-14
