@@ -932,38 +932,38 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     	
     public void doAction_updateLearningAlgo(){
     	//maneuver behaviour (chase-offensive/defensive)
-    	if ((currentStateActionVector[0])%4 == 0) {
+    	if (currentStateActionVector[0] == 0) {
     		setTurnRight(enemyBearingFromHeading);
     		setAhead(50);
     	}
-    	else if((currentStateActionVector[0])%4 == 1){
+    	else if(currentStateActionVector[0] == 1){
     		setTurnRight(enemyBearingFromHeading);
     		setAhead(-50);
     	}
-    	else if((currentStateActionVector[0])%4 == 2){
+    	else if(currentStateActionVector[0] == 2){
     		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
     		setAhead(50);
     	}
-    	else if((currentStateActionVector[0])%4 == 3){
+    	else if(currentStateActionVector[0] == 3){
     		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
     		setAhead(-50);
     	}
     	
-    	if ( ((currentStateActionVector[0])/4) %2 == 0){
+    	if (currentStateActionVector[1] == 0){
     		setFire(1);
     	}
-    	else if ( ((currentStateActionVector[0])/4) %2 == 1){
+    	else if (currentStateActionVector[1] == 1){
     		setFire(3);
     	}
     	
     	//firing behaviour (to counter defensive behaviour)
-    	if ((currentStateActionVector[0])/8 == 0){
+    	if (currentStateActionVector[2] == 0){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
     	}
-    	else if ((currentStateActionVector[0])/8 == 1){
+    	else if (currentStateActionVector[2] == 1){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));
     	}
-    	else if ((currentStateActionVector[0])/8 == 2){
+    	else if (currentStateActionVector[2] == 2){
     		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
     	}   	
 
