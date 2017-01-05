@@ -28,17 +28,7 @@ import robocode.WinEvent;
 
 public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	/*
-	 * SAV Change Rules:
-	 * 1. update STATEACTION VARIABLES
-	 * 2. update roboLUT initialization
-	 * 3. update roboLUTDimensions
-	 * 4. If adding or deleting states: Change for loops in import and export functions 
-	 *    (twice in import including zeroLUT loop, once in export)
-	 * 5. Update the corresponding dimension in generateCurrentStateVector()
-	 * 6. if adding or deleting states: In getMax(), update the roboLUT access in the maxQ for loop.
-	 * 7. if adding or deleting states: In calcNewPrevQVal(), update the roboLUT access.
-	 * 8. if adding or deleting states: In updateLUT(), update roboLUT access as well as debug
-	 * 9. if adding or deleting actions: In doAction(), edit accordingly.
+	 * SAV Change Rules: //Joey: finish this
 	 */
 	
 	/**
@@ -54,18 +44,21 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private static final int exploratory = 1;
     private static final int SARSA = 2;
     
+    
+    /* 
+     * CONFIGMASK - used as settings written in data files to be read by functions. 
+     * 			  - contains 2 bytes (4 hex digits)
+     * 			  - functions will use AND conditions to evaluate if the settings in the file match the mask. 
+     */
     // _ _ _ _  _ _ _ _  _ _ _ _  _ _ _ _ 
     //   MSB		filename		LSB
     // verificatn                 file-specific settings
     //
     // Config settings:
     //     				stringTest: 16400 (0x4010)
-    // 					(deprecated) strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
-    //     				WL:			16448 (0x4040)
-    /* 
-     * Notes: 
-     * short - size of int. 
-     * CONFIGMASK - */
+    // 					strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
+    //     				WL:			16448 (0x4040), zero WL = 16449 (0x4041)
+    //					NN weights: 16512 (0x4080), zeroing = 16513 (0x4081)
     private static final short CONFIGMASK_ZEROINGFILE  =				0x0001;
     private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 		0x4000;
     private static final short CONFIGMASK_FILETYPE_stringTest =			0x0010;
@@ -73,6 +66,9 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private static final short CONFIGMASK_FILETYPE_winLose = 			0x0040;
     private static final short CONFIGMASK_FILETYPE_weights =			0x0080;
     
+    /*
+     * IMPORT/EXPORT status returns.
+     */
     private static final int SUCCESS_importData = 						0x00;
     private static final int SUCCESS_exportData = 						0x00;
     private static final int SUCCESS_importDataWeights =				0x00;
@@ -100,21 +96,12 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private static final int ERROR_20_import_weights_wrongNetSize =		20;
     private static final int ERROR_21 = 								21;
     
-    
-    //strings used for importing or extracting files 
-    String strStringTest = "stringTest.dat";    
-    String strLUT = "LUTTrackfire.dat";
-    String strWL = "winlose.dat";
-    String strSA = "stateAction.dat"; 
-    String strError = "saveErrorForActions.dat" ;
-    String strWeights = "weights.dat";
-    
-    /**
-	 * NN STATEACTION VARIABLES for stateAction ceilings (for array designs).
+    /*
+	 * NN STATEACTION VARIABLES for stateAction ceilings (for array designs and other modular function interactions).
 	 * 
 	 */
-    
-    //No. times NN needs to forward propagate per tick = 4 * 2 * 3 = 24
+    //One concern with the complexity of the robot action design is the amount of calculation time spent in forward propagation. 
+    //No. times NN needs to forward propagate per round = 4 * 2 * 3 = 24
     private static final int input_action0_moveReferringToEnemy_possibilities = 4; //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
     private static final int input_action1_fire_possibilities = 2;    //1, 3
     private static final int input_action2_fireDirection_possibilities = 3;    //-10deg, 0, 10deg
@@ -134,14 +121,31 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private static final int numHiddensTotal = ( numHiddenBias+ numHiddenNeuron );
     private static final int numOutputsTotal = 1;
     
+    
+    /*
+     * Activation function choices for the back propagation net
+     */
     private static final boolean binaryMethod = true;
     private static final boolean bipolarMethod = false;
+ 
+    
     
     /**
-     * FLAGS AND COUNTS
+     * STRINGS used for importing or extracting files =========================================== 
      */
+    String strStringTest = "stringTest.dat";    
+    String strLUT = "LUTTrackfire.dat";
+    String strWL = "winlose.dat";
+    String strSA = "stateAction.dat"; 
+    String strError = "saveErrorForActions.dat" ;
+    String strWeights = "weights.dat";
     
-    //debug flags.
+    
+    
+    /**
+     * FLAGS AND COUNTS ===========================================================================
+     */
+    //debug flags. Each allows printouts written for specific functions. debug prints out all.
     private boolean debug = false;  
     private boolean debug_doAction_updateLearningAlgo = false;
     private boolean debug_import = false;
@@ -150,29 +154,30 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private boolean debug_forwardProp = false;
     private boolean debug_getMax = false;
     
-    // Flag used in data imp/exp fxns:
-    //		1. maintain one-import-to-one-export ratio //Joey: is this useful
-    // 		2. prevents overwrite, and protects against wrong file entries
+    // Flags used in data imp/exp fxns.
+    //		Purposes:
+    // 		1. prevents overwrite, and protects against wrong file entries
+    //		2. data for a particular file must be exported before importing for the same file occurs again.
     // 		false == only imports can access; true == only exports can access.
     //		Always initialize these as false.
     private boolean flag_stringTestImported = false;
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
-    private boolean flag_alreadyExported = false;
-    
+    private boolean flag_alreadyExported = false;    
     private static boolean flag_useOfflineTraining = false; //Joey: check usage 
-    //Joey: add static var to prevent multiple robot invocations
-    // printout error flag - initialized to 0, which is no error.
+
+    // printout error flag - used to check function return statuses.
+    // initialized to 0, which is no error.
     private int flag_error = 0;
 
 
     /**
-     *  OTHER GLOBALS
+     *  OTHER VARIABLES USABLE BY ALL CLASS FUNCTIONS ==============================================================================
      */
     
     
-    // weights connecting between input and hidden layers.
+    // weights connecting between input and hidden layers. calculated using definitions defined above.
     private static double[][] arr_NNWeights_inputToHidden 
         = new double
         [numInputsTotal]
@@ -187,7 +192,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     	;
     
 
-    // temp vars: textfile config settings, stored in the first line of .dat
+    // temp vars: config settings for the external files, stored in the first line of .dat
     private short fileSettings_temp = 0;
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
@@ -196,7 +201,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     
 
     // vars used for storing reward, and reward calculation.
-    private double reward = 0.0; //only one reward variable.
+    private double reward = 0.0; 
     private int energyDiffCurr = 0;
     private int energyDiffPrev = 0;
     
@@ -487,10 +492,9 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     public void analysis() {
     	
     	if (learnThisRound()){
-    		calculateReward();
+    		obtainRawReward();
             copyCurrentSAVIntoPrevSAV();
             generateCurrentStateVector();
-            getAllQsFromNet(); 			//in here we do forward propagation
             qFunction();
             resetReward();
             doAction_updateLearningAlgo();
@@ -517,16 +521,15 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     }
     
 	/**
-     * @name:		calculateReward
-     * @purpose:	calculates reward based on change in energy difference of robots.
+     * @name:		obtainRawReward
+     * @purpose:	calculates reward based on change in energy difference of robots. A later function will normalize the reward value.
      * @param:		none
      * @return:		none
      */
-    public void calculateReward(){
+    public void obtainRawReward(){
     	energyDiffPrev = energyDiffCurr;
     	energyDiffCurr = myEnergy - enemyEnergy;
     	reward += energyDiffCurr - energyDiffPrev; 
-
     }
     
     /**
@@ -616,6 +619,32 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     }
      
  
+
+
+    /**
+     * @name:		qFunction
+     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
+     * 				2. The q value is the maximum "Y" from array
+     * 				3. currentNetQVal is assigned prevQVal 
+     * 				4. Y_calculated is previousNetQ
+     * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Y_calculated is prevNetQVal 
+     * @param: 		none, but uses:
+     * 				1.	double reward 
+     * 				2.	int currentStateVector[] already discretized (size numStates)
+     * 				3.	double[].. LUT table, 
+     * 				4.	int [] currentStateActionVector. 
+     * @return: 	n
+     */
+    public void qFunction(){
+    	getAllQsFromNet();
+        getMax(); 
+        currentNetQVal =  calcNewPrevQVal();
+        //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
+        Y_calculated[0] = previousNetQVal;
+        expectedYVal = currentNetQVal; 
+        runBackProp(); 
+    }
+
     /** 
      * @name:		getAllQsFromNet
      * @input: 		currentStateVector 
@@ -698,44 +727,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 //		out.println("Yactual " + Y[0]); 
 		return Y[0]; 
 	}
-
-    /**
-     * @name:		qFunction
-     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
-     * 				2. The q value is the maximum "Y" from array
-     * 				3. currentNetQVal is assigned prevQVal 
-     * 				4. Y_calculated is previousNetQ
-     * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Y_calculated is prevNetQVal 
-     * @param: 		none, but uses:
-     * 				1.	double reward 
-     * 				2.	int currentStateVector[] already discretized (size numStates)
-     * 				3.	double[].. LUT table, 
-     * 				4.	int [] currentStateActionVector. 
-     * @return: 	n
-     */
-    public void qFunction(){
-    	
-        getMax(); 
-        currentNetQVal =  calcNewPrevQVal();
-        //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
-        Y_calculated[0] = previousNetQVal;
-        expectedYVal = currentNetQVal; 
-//        out.println("expectedYVal " + expectedYVal);
-//        out.println("Y_calculated " + Arrays.toString(Y_calculated));
-//        preProcessOutputs(); 
-        runBackProp(); 
-    }
-
-    /** 
-     * 
-     */
-	/* preprocess outputs 
-	 * 
-	 */
-    public void preProcessOutputs() {
-    	expectedYVal = expectedYVal/0.5; 
-    }
-
+    
     /**
      * @name:		getMax()
      * @purpose: 	1. Obtain the action in current state with the highest q-value, 
@@ -819,16 +811,16 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
         	actionChosenForQValMax = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
         }
         else if(policy == greedy){ 
-        	actionChosenForQValMax = actionChosenForQValMax;
+//        	actionChosenForQValMax = actionChosenForQValMax;
         }
         
-        for (int i = 0; i < qValsFromNet.length; i++){
-		    for (int j = 0; j < qValsFromNet[0].length; j++){
-		    	for (int k = 0; k < qValsFromNet[0][0].length; k++){
+        for (int action0 = 0; action0 < qValsFromNet.length; action0++){
+		    for (int action1 = 0; action1 < qValsFromNet[0].length; action1++){
+		    	for (int action2 = 0; action2 < qValsFromNet[0][0].length; action2++){
 		    		if (actionChosenForQValMax-- == 0) {
-		    			currentStateActionVector[0] = i; //Joey: test this shit out LEL
-		    			currentStateActionVector[1] = j;
-		    			currentStateActionVector[2] = k;
+		    			currentStateActionVector[0] = action0; //Joey: test this shit out LEL
+		    			currentStateActionVector[1] = action1;
+		    			currentStateActionVector[2] = action2;
 		    			return;
 		    		}
 		    	}
@@ -845,7 +837,9 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      	Q(s’,a’)-Q(s,a)
      */
     public double calcNewPrevQVal(){
-    	double normalizedReward = bipolarActivation(reward);
+    	double normalizedReward = bipolarActivation(reward); //Joey: put this in reward fxn>
+    	//Joey ask andrea about papers for good gamma terms. (close to 1?)
+    	
     	currentNetQVal +=  alpha*(normalizedReward + gamma*qValMax - previousNetQVal); //Joey: mby bipolar activate the reward
     	return currentNetQVal;
     }

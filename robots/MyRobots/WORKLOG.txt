@@ -1,4 +1,6 @@
-	2017-01-01
+	2017-01-03
+		- fix bug in backprop with SAV[0] treated as only action vector, but other previous fxns treating it as 3.
+		- fix bug in numMaxAction
 	2016-30-30
 		- [done] Import NN framework from NN2.
 		- added/corrected some comments
