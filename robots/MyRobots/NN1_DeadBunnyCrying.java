@@ -36,7 +36,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	 */
 	 //variables for the q-function. Robot will NOT change analysis pattern mid-fight.
     private static final double alpha = 0.1;                //to what extent the newly acquired information will override the old information.
-    private static final double gamma = 0.1;                //importance of future rewards
+    private static final double gamma = 1;                //importance of future rewards
     private static final double epsilon = 0.05; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
@@ -51,10 +51,12 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * 			  - functions will use AND conditions to evaluate if the settings in the file match the mask. 
      */
     // _ _ _ _  _ _ _ _  _ _ _ _  _ _ _ _ 
-    //   MSB		filename		LSB
-    // verificatn                 file-specific settings
+    //   MSnib		filename		LSnib
+    // MSnib is the first nibble baby (4 bits)
+    // the 2nd and 3rd nibbles are used for recognizing specific files
+    // LSnib is used for file-specific settings.
     //
-    // Config settings:
+    // Current available config settings:
     //     				stringTest: 16400 (0x4010)
     // 					strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
     //     				WL:			16448 (0x4040), zero WL = 16449 (0x4041)
@@ -101,11 +103,15 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	 * 
 	 */
     //One concern with the complexity of the robot action design is the amount of calculation time spent in forward propagation. 
-    //No. times NN needs to forward propagate per round = 4 * 2 * 3 = 24
+    //As of now, the No. times NN needs to forward propagate per round = 4 * 2 * 3 = 24
     private static final int input_action0_moveReferringToEnemy_possibilities = 4; //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
     private static final int input_action1_fire_possibilities = 2;    //1, 3
     private static final int input_action2_fireDirection_possibilities = 3;    //-10deg, 0, 10deg
-    private static final int numActions = 3;
+    private static final int numActionContainers = 3;
+    
+    private static final int numActions = input_action0_moveReferringToEnemy_possibilities * 
+    									  input_action1_fire_possibilities *
+    									  input_action2_fireDirection_possibilities;
     
     private static final int input_state0_myPos_possibilities = 5;    //center, left, right, top, bottom (cannot be undiscretized) 
     private static final int input_state1_myHeading_originalPossilibities = 4;    //0-89deg, 90-179, 180-269, 270-359
@@ -117,7 +123,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private static final int numInputBias = 0;
     private static final int numHiddenBias = 1;
     private static final int numHiddenNeuron = 4;
-    private static final int numInputsTotal = ( numInputBias + numActions + numStates ); 
+    private static final int numInputsTotal = ( numInputBias + numActionContainers + numStates ); 
     private static final int numHiddensTotal = ( numHiddenBias+ numHiddenNeuron );
     private static final int numOutputsTotal = 1;
     
@@ -145,7 +151,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     /**
      * FLAGS AND COUNTS ===========================================================================
      */
-    //debug flags. Each allows printouts written for specific functions. debug prints out all.
+    //debug flags. Each allows printouts written for specific functions. debug will print out all.
     private boolean debug = false;  
     private boolean debug_doAction_updateLearningAlgo = false;
     private boolean debug_import = false;
@@ -178,14 +184,14 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     
     
     // weights connecting between input and hidden layers. calculated using definitions defined above.
-    private static double[][] arr_NNWeights_inputToHidden 
+    private static double[][] arr_wIH 
         = new double
         [numInputsTotal]
         [numHiddensTotal] 
         ;
     
     // weights connecting between hidden layer to output.
-    private static double[][] arr_NNWeights_hiddenToOutput
+    private static double[][] arr_wHO
     	= new double
     	[numHiddensTotal]
     	[numOutputsTotal]
@@ -208,30 +214,30 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 
     //vars that store current and previous stateAction vectors
     private double currentStateActionVector[] = new double [numInputsTotal];
-    private double prevStateActionVector[]    = new double [numInputsTotal]; 
+    private double prevStateActionVector[]    = new double [numInputsTotal]; //might not be used 
 
-    private double currentNetQVal = 0.0;
-    private double previousNetQVal= 0.0; 
-    private double[] Y_calculated = new double [1]; 			//because backProp takes in a vector for Y_calculated (which is qprevious). 
-    private double expectedYVal = 0.0; 
+    private double Q_curr = 0.0;
+    private double Q_prev= 0.0; 
+    private double[] Y_calculated = new double [numOutputsTotal]; 			//because backProp takes in a vector for Y_calculated (which is qprevious).  //Joey: might delete this comment
+    private double[] Y_training = new double [numOutputsTotal]; 
     
     //array to store the q values obtained from net forward propagation, using the current state values as well as all possible actions as inputs. 
-    private double [][][] qValsFromNet = new double 
+    private double [][][] Q_NNFP_all = new double 
     		[input_action0_moveReferringToEnemy_possibilities]
     		[input_action1_fire_possibilities]
     		[input_action2_fireDirection_possibilities];
 
     //variables used for getMax.
-    int num_actions = 24; 
-    private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
-    private int actionChosenForQValMax = 0; 				//stores the chosen currSAV with maxqval before policy
-    private double qValMax = 0.0; 							// stores the maximum currSAV QMax
+    private int [] action_QMax_all = new int [numActions]; //array for storing all actions with maxqval
+    private int action_QMax_chosen = 0; 				//stores the chosen currSAV with maxqval before policy
+    private double Q_max = 0.0; 							// stores the maximum currSAV QMax
+    private int random_actionBased = numActions;
 
     //chosen policy. greedy or exploratory or SARSA 
     private static int policy = greedy; 
     private static int learningRate = 4; //learningAlgo is run every 4 ticks. //Joey: consider allowing robot to self-optimize for this.
 
-    //enemy information
+    //enemy bot information
     private int enemyDistance = 0;
     private int enemyHeadingRelative = 0;
     private int enemyHeadingRelativeAbs = 0;
@@ -241,50 +247,55 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private double enemyBearingFromHeading = 0.0;
     private int enemyEnergy = 0;
     
-    //my information
+    //my bot information
     private int myHeading = 0; 
     private int myEnergy = 0;
     private int myPosX = 0;
     private int myPosY = 0;
     
-    //general information
+    //misc battle information
     private int tick = 0;
     
-    
+    //used to update WL export
     private int totalFights = 0;
     private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
-
+    //used for debugging purposes (deprecated)
     private static double[] QErrors = new double [520000];
     private static int currentRoundOfError = 0;
 
-    /** Neural net stuff 
+    /**  
+     * Neural net stuff
      * 
-     * */
+     */
 
-    
-    /*Initiate variables */
-		
-	private double lRate = 0.05; 			//analysis rate
-	private double momentum = 0.0;  		//value of momentum //Joey: consider adding some momentum lel
-	
-	// initialize arrays 
-	private double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
-	private double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
-	private double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
-	private double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
-	private double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
-	private double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
-	private double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
+    private double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
 	private double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
 	private double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
-	private double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
-	private double [] delta_out = new double[numOutputsTotal];
+	private double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y
+	
+    // analysis rate //Joey: huh
+	private double lRate = 0.05; 			
+	//value of momentum //Joey: consider adding some momentum lel
+	private double momentum = 0.0;  		
+	
+	// arrays used for momentum
+	private double [][] vPast  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights for Past.
+	private double [][] wPast  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights for Past.
+	private double [][] vNext  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights.
+	private double [][] wNext  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights.
+	//arrays in BP
+	private double [][] vDelta = new double[numInputsTotal] [numHiddensTotal];	// Change in Input to Hidden weights
+	private double [][] wDelta = new double[numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
+	  
+	private double [] delta_out    = new double[numOutputsTotal];
 	private double [] delta_hidden = new double[numHiddensTotal];
+	
 	private boolean activationMethod = bipolarMethod; 
-	private final int bias = 1; 
-
+	
+	//bias for hidden initialized as value 1
+    private int [] bias_hidden = {1};
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
@@ -544,7 +555,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     	for (int i = 0; i < currentStateActionVector.length; i++) {
     		prevStateActionVector[i] = currentStateActionVector[i];
     	}
-    	previousNetQVal = currentNetQVal; 
+    	Q_prev = Q_curr; 
     }
     
     /**
@@ -625,7 +636,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @name:		qFunction
      * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
      * 				2. The q value is the maximum "Y" from array
-     * 				3. currentNetQVal is assigned prevQVal 
+     * 				3. Q_curr is assigned prevQVal 
      * 				4. Y_calculated is previousNetQ
      * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Y_calculated is prevNetQVal 
      * @param: 		none, but uses:
@@ -638,10 +649,10 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     public void qFunction(){
     	getAllQsFromNet();
         getMax(); 
-        currentNetQVal =  calcNewPrevQVal();
+        Q_curr =  calcNewPrevQVal();
         //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
-        Y_calculated[0] = previousNetQVal;
-        expectedYVal = currentNetQVal; 
+        Y_calculated[0] = Q_prev; //this is wrong
+        Y_training[0] = Q_curr; 
         runBackProp(); 
     }
 
@@ -662,13 +673,13 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 		for (int action0 = 0; action0 < input_action0_moveReferringToEnemy_possibilities; action0++){
 			for (int action1 = 0; action1 < input_action1_fire_possibilities;             	 action1++){
 				for(int action2 = 0; action2 < input_action2_fireDirection_possibilities;       action2++){
-					qValsFromNet[action0][action1][action2] = forwardProp(); 
+					Q_NNFP_all[action0][action1][action2] = forwardProp(); 
 				}
 			}
 		}
 
     	if (debug_forwardProp || debug){
-    		out.println("YCalc " + Arrays.deepToString(qValsFromNet));
+    		out.println("YCalc " + Arrays.deepToString(Q_NNFP_all));
     	}
     	
     	return;
@@ -700,10 +711,10 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 		for (int j = 1; j < numHiddensTotal; j++){ 		//p = numHiddensTotal
 			double sumIn = 0.0;
 			for (int i = 0; i < numInputsTotal; i++){	   //n = numInputsTotal
-				sumIn += currentStateActionVector[i]*arr_NNWeights_inputToHidden[i][j]; //NO INPUT BIAS
+				sumIn += currentStateActionVector[i]*arr_wIH[i][j]; //NO INPUT BIAS
 			}
 			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
-			Z_in[0] = bias; 									//set z_in[0] = bias. HIDDEN BIAS = 1
+			Z_in[0] = bias_hidden[0]; 									//set z_in[0] = bias. HIDDEN BIAS = 1
 			Z[0] = Z_in[0]; //can choose to optimize here if needs be: run during run.
 			
 			if (activationMethod == binaryMethod)
@@ -715,7 +726,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 		for (int k = 0; k < numOutputsTotal; k++){
 			double sumOut = 0.0; 
 			for (int j= 0; j < numHiddensTotal; j++){	
-				sumOut += Z[j]*arr_NNWeights_hiddenToOutput[j][k]; 
+				sumOut += Z[j]*arr_wHO[j][k]; 
 			}
 			Y_in[k] = sumOut; 	
 			
@@ -737,18 +748,18 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	 *						i. if indexQVal > currMax:
 	 *							(1) Update currMax
 	 *							(2) Set numMaxActions = 1.
-	 *							(3) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
+	 *							(3) Store the (now 3 dimension) action index into action_QMax_all[numMaxActions-1]
 	 *						ii. if indexQVal == currMax:
 	 *							(1) numMaxActions++
-	 *							(2) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
+	 *							(2) Store the (now 3 dimension) action index into action_QMax_all[numMaxActions-1]
 	 *						iii. if indexQVal < currMax:
 	 *							ignore.
 	 *					c. record chosen action. If multiple actions with max q-values, randomize chosen action.
 	 *						i. if numMaxActions > 1, 
 	 *						   randomly select between 0 and numMaxActions - 1. The randomed 
 	 *						   number will correspond to the array location of the chosen
-	 *						   action in arrAllMaxActions. 
-	 *						ii. actionChosenForQValMax = arrAllMaxActions[randomed number]
+	 *						   action in action_QMax_all. 
+	 *						ii. action_QMax_chosen = action_QMax_all[randomed number]
 	 *					d. record associated q-value.
      * @param: 		none, but uses:
      * 				1.	current SAV[].
@@ -758,33 +769,33 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      */
     public void getMax() {
     	double currMax = -100.0;
-//    	double currMax = qValsFromNet[0][0][0];  
+//    	double currMax = Q_NNFP_all[0][0][0];  
         int numMaxActions = 0;
         int randMaxAction = 0;
         int actionLinearized = 0;
-//        out.println("qValsFromNet.length " + qValsFromNet.length); 
-    	for (int i = 0; i < qValsFromNet.length; i++){
-		    for (int j = 0; j < qValsFromNet[0].length; j++){
-		    	for (int k = 0; k < qValsFromNet[0][0].length; k++, actionLinearized++){
+//        out.println("Q_NNFP_all.length " + Q_NNFP_all.length); 
+    	for (int i = 0; i < Q_NNFP_all.length; i++){
+		    for (int j = 0; j < Q_NNFP_all[0].length; j++){
+		    	for (int k = 0; k < Q_NNFP_all[0][0].length; k++, actionLinearized++){
 		    		
-//		    		out.println("qValsFromNet" + qValsFromNet[i][j][k]);
-		    		if (qValsFromNet[i][j][k] > currMax){
-		    			currMax = qValsFromNet[i][j][k];
+//		    		out.println("Q_NNFP_all " + Q_NNFP_all[i][j][k]);
+		    		if (Q_NNFP_all[i][j][k] > currMax){
+		    			currMax = Q_NNFP_all[i][j][k];
 		            	numMaxActions = 1;
-		            	arrAllMaxActions[numMaxActions-1] = actionLinearized;		
+		            	action_QMax_all[numMaxActions-1] = actionLinearized;		
 		            }
-		            else if (qValsFromNet[i][j][k] == currMax){
-		            	arrAllMaxActions[numMaxActions++] = actionLinearized;
+		            else if (Q_NNFP_all[i][j][k] == currMax){
+		            	action_QMax_all[numMaxActions++] = actionLinearized;
 		            }	            
 		    		
 		    		
 		            if (debug_getMax || debug) {
-		            	out.print(i + ": " + qValsFromNet[i][j][k] + "  ");
+		            	out.print(i + ": " + Q_NNFP_all[i][j][k] + "  ");
 		            }
 		    	}
     		}
     	}
-        qValMax = currMax;
+        Q_max = currMax;
         
         if (numMaxActions > 1) {
         	randMaxAction = (int)(Math.random()*(numMaxActions)); //math.random randoms btwn 0.0 and 0.999. Add 1 to avoid truncation after typecasting to int.
@@ -794,33 +805,31 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
             }
         }
         
-        actionChosenForQValMax = arrAllMaxActions[randMaxAction]; //if numMaxActions <= 1, randMaxAction = 0;
+        action_QMax_chosen = action_QMax_all[randMaxAction]; //if numMaxActions <= 1, randMaxAction = 0;
 
         
         if (debug_getMax || debug) {
-        	System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
+        	System.out.println("Action Chosen: " + action_QMax_chosen  + " qVal: " + Q_max);
         }
         
-    	int valueRandom = 0;
-    	//Choosing next action based on policy.
-        valueRandom = (int)(Math.random()*(num_actions));
+        //Choosing next action based on policy. Greedy is default
+        if ((policy == SARSA) || (policy == exploratory)) { 
+	        random_actionBased = (int)(Math.random()*(numActions));
+        }
         if (policy == SARSA) {
-        	actionChosenForQValMax = valueRandom;
+        	action_QMax_chosen = random_actionBased;
         }
         else if(policy == exploratory) {
-        	actionChosenForQValMax = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
-        }
-        else if(policy == greedy){ 
-//        	actionChosenForQValMax = actionChosenForQValMax;
+        	action_QMax_chosen = (Math.random() > epsilon ? action_QMax_chosen : random_actionBased);
         }
         
-        for (int action0 = 0; action0 < qValsFromNet.length; action0++){
-		    for (int action1 = 0; action1 < qValsFromNet[0].length; action1++){
-		    	for (int action2 = 0; action2 < qValsFromNet[0][0].length; action2++){
-		    		if (actionChosenForQValMax-- == 0) {
-		    			currentStateActionVector[0] = action0; //Joey: test this shit out LEL
-		    			currentStateActionVector[1] = action1;
-		    			currentStateActionVector[2] = action2;
+        for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
+		    for (int i_A1 = 0; i_A1 < Q_NNFP_all[0].length; i_A1++){
+		    	for (int i_A2 = 0; i_A2 < Q_NNFP_all[0][0].length; i_A2++){
+		    		if (action_QMax_chosen-- == 0) {
+		    			currentStateActionVector[0] = i_A0; //Joey: test the shit out of this LEL
+		    			currentStateActionVector[1] = i_A1;
+		    			currentStateActionVector[2] = i_A2;
 		    			return;
 		    		}
 		    	}
@@ -832,16 +841,16 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @name		calcNewPrevQVal
      * @purpose		1. Calculate the new prev q-value based on Qvalue function.
      * @param		n, but uses:
-     * 				1. qValMax
+     * 				1. Q_max
      * @return		prevQVal
      	Q(s’,a’)-Q(s,a)
      */
     public double calcNewPrevQVal(){
-    	double normalizedReward = bipolarActivation(reward); //Joey: put this in reward fxn>
+    	double reward_N = bipolarActivation(reward); //Joey: put this in reward fxn>
     	//Joey ask andrea about papers for good gamma terms. (close to 1?)
     	
-    	currentNetQVal +=  alpha*(normalizedReward + gamma*qValMax - previousNetQVal); //Joey: mby bipolar activate the reward
-    	return currentNetQVal;
+    	Q_curr = Q_prev + alpha*(reward_N + (gamma*Q_max) - Q_prev); //Joey: mby bipolar activate the reward
+    	return Q_curr;
     }
     
     /**
@@ -851,24 +860,25 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @return:		1. //TODO
      */
     public void runBackProp() {      
+    	//step 6: calculate output delta
 		for (int k = 0; k <numOutputsTotal; k++){
 			if (activationMethod == binaryMethod){
-				delta_out[k] = (expectedYVal - Y_calculated[k])*binaryDerivative(Y_in[k]); 
+				delta_out[k] = (Y_training[k] - Y_calculated[k])*binaryDerivative(Y_in[k]); 
 			}
 			else{
-				delta_out[k] = (expectedYVal - Y_calculated[k])*bipolarDerivative(Y_in[k]);	
+				delta_out[k] = (Y_training[k] - Y_calculated[k])*bipolarDerivative(Y_in[k]);	
 			}
 //			System.out.println("\n");
 //			System.out.println("delta " + delta_out[k]);
 			for (int j = 0; j < numHiddensTotal; j++){
 //				System.out.println("wPast[j][k] " + wPast[j][k]);
-//				System.out.println("arr_NNWeights_hiddenToOutput[j][k] " + arr_NNWeights_hiddenToOutput[j][k]);
-				deltaW[j][k] = alpha*delta_out[k]*Z[j];
-				wNext[j][k] = arr_NNWeights_hiddenToOutput[j][k] + deltaW[j][k] + momentum*(arr_NNWeights_hiddenToOutput[j][k] - wPast[j][k]); 
-				wPast[j][k] = arr_NNWeights_hiddenToOutput[j][k]; 
-				arr_NNWeights_hiddenToOutput[j][k] = wNext[j][k]; 
+//				System.out.println("arr_wHO[j][k] " + arr_wHO[j][k]);
+				wDelta[j][k] = alpha*delta_out[k]*Z[j];
+				wNext[j][k] = arr_wHO[j][k] + wDelta[j][k] + momentum*(arr_wHO[j][k] - wPast[j][k]); 
+				wPast[j][k] = arr_wHO[j][k]; 
+				arr_wHO[j][k] = wNext[j][k]; 
 //				System.out.println("wPast[j][k] " + wPast[j][k]);
-//				System.out.println("arr_NNWeights_hiddenToOutput[j][k] " + arr_NNWeights_hiddenToOutput[j][k]);
+//				System.out.println("arr_wHO[j][k] " + arr_wHO[j][k]);
 //				System.out.println("wNext[j][k] " + wNext[j][k]);
 			}
 		}
@@ -877,7 +887,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 		for (int j = 0; j < numHiddensTotal; j++){
 			double sumDeltaInputs = 0.0;
 			for (int k = 0;  k < numOutputsTotal; k++){
-				sumDeltaInputs += delta_out[k]*arr_NNWeights_hiddenToOutput[j][k];
+				sumDeltaInputs += delta_out[k]*arr_wHO[j][k];
 				if (activationMethod == binaryMethod){
 					 delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
 				}
@@ -887,20 +897,20 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 			}
 			for (int i = 0; i< numInputsTotal; i++){
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
-//				System.out.println("arr_NNWeights_inputToHidden[i][j] " + arr_NNWeights_inputToHidden[i][j]);
-				deltaV[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i]; //Joey: what about the action vectors?
-				vNext[i][j]  = arr_NNWeights_inputToHidden[i][j] + deltaV[i][j] + momentum*(arr_NNWeights_inputToHidden[i][j] - vPast[i][j]); 
-				vPast[i][j] = arr_NNWeights_inputToHidden[i][j]; 
-				arr_NNWeights_inputToHidden[i][j] = vNext[i][j]; 
+//				System.out.println("arr_wIH[i][j] " + arr_wIH[i][j]);
+				vDelta[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i]; //Joey: what about the action vectors?
+				vNext[i][j]  = arr_wIH[i][j] + vDelta[i][j] + momentum*(arr_wIH[i][j] - vPast[i][j]); 
+				vPast[i][j] = arr_wIH[i][j]; 
+				arr_wIH[i][j] = vNext[i][j]; 
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
-//				System.out.println("arr_NNWeights_inputToHidden[i][j] " + arr_NNWeights_inputToHidden[i][j]);
+//				System.out.println("arr_wIH[i][j] " + arr_wIH[i][j]);
 //				System.out.println("vNext[i][j] " + vNext[i][j]);
 			}
 		}
 		//Step 9 - Calculate local error. 
 		double error = 0.0;
 		for (int k = 0; k < numOutputsTotal; k++){ 
-			error = 0.5*(java.lang.Math.pow((expectedYVal - Y_calculated[k]), 2)); 
+			error = 0.5*(java.lang.Math.pow((Y_training[k] - Y_calculated[k]), 2)); 
 		}
 	}
 	/**
@@ -1067,12 +1077,12 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
                     		}
             				for (int i = 0; i < numInputsTotal; i++) {
         	            		for (int j = 0; j < numHiddensTotal; j++) { 
-        	            			arr_NNWeights_inputToHidden[i][j] = 0;
+        	            			arr_wIH[i][j] = 0;
         		                }
         	            	}
             				for (int i = 0; i < numHiddensTotal; i++) {
         	            		for (int j = 0; j < numOutputsTotal; j++) {
-        	            			arr_NNWeights_hiddenToOutput[i][j] = 0;
+        	            			arr_wHO[i][j] = 0;
         		                }
         	            	}
             				//Subtracts zeroingfile setting from fileSettings, so that the weights are zeroed only once.
@@ -1090,12 +1100,12 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
             				
             				for (int i = 0; i < numInputsTotal; i++) {
         	            		for (int j = 0; j < numHiddensTotal; j++) { 
-        	            			arr_NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
+        	            			arr_wIH[i][j] = Double.parseDouble(reader.readLine());
         		                }
         	            	}
             				for (int i = 0; i < numHiddensTotal; i++) {
         	            		for (int j = 0; j < numOutputsTotal; j++) {
-        	            			arr_NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader.readLine());
+        	            			arr_wHO[i][j] = Double.parseDouble(reader.readLine());
         		                }
         	            	}
             				//value 999 is at the end of the weights file to make sure net is the desired size.
@@ -1288,12 +1298,12 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	            	}
 	            	for (int i = 0; i < numInputsTotal; i++) {
 		         		for (int j = 0; j < numHiddensTotal; j++) {
-		         			w.println(arr_NNWeights_inputToHidden[i][j]);
+		         			w.println(arr_wIH[i][j]);
 		                }
 		         	} 
 	            	for (int i = 0; i < numHiddensTotal; i++) {
 		         		for (int j = 0; j < numOutputsTotal; j++) {
-		         			w.println(arr_NNWeights_hiddenToOutput[i][j]);
+		         			w.println(arr_wHO[i][j]);
 		                }
 		         		w.println("999");
 		         	}
@@ -1326,7 +1336,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	            
 //	            //strError
 //	            else if((strName == strError)){
-//	            	w.println("contains currentNetQVal-previousNetQVal for each tick");
+//	            	w.println("contains Q_curr-Q_prev for each tick");
 //	            	for (int i = 0; i < currentRoundOfError; i++) {
 //	            		w.println(QErrors[i]);
 ////	            		w.println(Arrays.toString(QErrorSAV[i]));
@@ -1446,7 +1456,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 ////          			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader.readLine()));
 ////          			out.println("i " + i); 
 ////          			out.println("j " + j); 
-//          			arr_NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
+//          			arr_wIH[i][j] = Double.parseDouble(reader.readLine());
 //	                }
 //          	}
 //          } 
@@ -1467,7 +1477,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 //          	for (int i = 0; i < numHiddensTotal; i++) {
 //          		for (int j = 0; j < numOutputsTotal; j++) {
 ////          			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader2.readLine()));
-//          			arr_NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader2.readLine());
+//          			arr_wHO[i][j] = Double.parseDouble(reader2.readLine());
 //	                }
 //          	}
 //          } 
@@ -1521,7 +1531,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 //  		 
 //  		for (int i = 0; i < numInputsTotal; i++) {
 //       		for (int j = 0; j < numHiddensTotal; j++) {
-//       			w1.println(arr_NNWeights_inputToHidden[i][j]);
+//       			w1.println(arr_wIH[i][j]);
 //              }
 //       	} 
 //  	}
@@ -1551,7 +1561,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 //  		 
 //  		for (int i = 0; i < numHiddensTotal; i++) {
 //       		for (int j = 0; j < numOutputsTotal; j++) {
-//       			w2.println(arr_NNWeights_hiddenToOutput[i][j]);
+//       			w2.println(arr_wHO[i][j]);
 //              }
 //       	}
 //  	}
