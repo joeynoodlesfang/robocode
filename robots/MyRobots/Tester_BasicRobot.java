@@ -38,7 +38,10 @@ public class Tester_BasicRobot extends AdvancedRobot {
 	 * SpinBot's run method - Circle
 	 * @return 
 	 */
-	
+	private double [][][] Q_NNFP_all = new double 
+    		[4]
+    		[2]
+    		[3];
 	public void run() {
 		// Set colors
 		
@@ -50,7 +53,15 @@ public class Tester_BasicRobot extends AdvancedRobot {
 		setAdjustGunForRobotTurn(true);
 		setAdjustRadarForGunTurn(true);
 		setAdjustRadarForRobotTurn(true);
-		
+	    int actionLinearized = 0;
+    	for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
+		    for (int i_A1 = 0; i_A1 < Q_NNFP_all[0].length; i_A1++){
+		    	for (int i_A2 = 0; i_A2 < Q_NNFP_all[0][0].length; i_A2++, actionLinearized++){
+		    		
+		    		out.println(actionLinearized);
+		    	}
+    		}
+    	}
 		try {
 			BufferedReader reader = null;
 			try {

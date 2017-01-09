@@ -38,41 +38,54 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 * 9. if adding or deleting actions: In doAction(), edit accordingly.
 	 */
 	
-	/**
-	 * FINALS (defines)
+	/*
+	 * SAV Change Rules: //Joey: finish this
 	 */
-	 //variables for the q-function. Robot will NOT change learning pattern mid-fight.
-    private static final double alpha = 0.5;                //to what extent the newly acquired information will override the old information.
-    private static final double gamma = 0.5;                //importance of future rewards
-    private static final double epsilon = 0.80; 				//degree of exploration 
+	
+	/**
+	 * ===================================FINALS (defines)====================================================================================
+	 */
+	 //variables for the q-function. Robot will NOT change analysis pattern mid-fight.
+    private static final double alpha = 0.1;                //to what extent the newly acquired information will override the old information.
+    private static final double gamma = 0.8;                //importance of future rewards
+    private static final double epsilon = 0.05; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
     private static final int greedy = 0;
     private static final int exploratory = 1;
     private static final int SARSA = 2;
     
+    
+    /* 
+     * CONFIGMASK - used as settings written in data files to be read by functions. 
+     * 			  - contains 2 bytes (4 hex digits)
+     * 			  - functions will use AND conditions to evaluate if the settings in the file match the mask. 
+     */
     // _ _ _ _  _ _ _ _  _ _ _ _  _ _ _ _ 
-    //   MSB		filename		LSB
-    // verificatn                 file-specific settings
+    //   MSnib		filename		LSnib
+    // MSnib is the first nibble baby (4 bits)
+    // the 2nd and 3rd nibbles are used for recognizing specific files
+    // LSnib is used for file-specific settings.
     //
-    // Config settings:
+    // Current available config settings:
     //     				stringTest: 16400 (0x4010)
     // 					strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
-    //     				WL:			16448 (0x4040)
-    /* 
-     * Notes: 
-     * short - size of int. 
-     * CONFIGMASK - */
-    private static final short CONFIGMASK_ZEROLUT  = 				0x0001;
-    private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 	0x4000;
-    private static final short CONFIGMASK_FILETYPE_stringTest =		0x0010;
-    private static final short CONFIGMASK_FILETYPE_LUTTrackfire =	0x0020;
-    private static final short CONFIGMASK_FILETYPE_WinLose = 		0x0040;
+    //     				WL:			16448 (0x4040), zero WL = 16449 (0x4041)
+    //					NN weights: 16512 (0x4080), zeroing = 16513 (0x4081)
+    private static final short CONFIGMASK_ZEROINGFILE  =				0x0001;
+    private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 		0x4000;
+    private static final short CONFIGMASK_FILETYPE_stringTest =			0x0010;
+    private static final short CONFIGMASK_FILETYPE_LUTTrackfire =		0x0020;
+    private static final short CONFIGMASK_FILETYPE_winLose = 			0x0040;
+    private static final short CONFIGMASK_FILETYPE_weights =			0x0080;
     
-    private static final int SUCCESS_importData = 					0x00;
-    private static final int SUCCESS_exportData = 					0x00;
-    private static final int SUCCESS_importDataWeights =			0x00;
-    private static final int SUCCESS_exportDataWeights =			0x00;
+    /*
+     * IMPORT/EXPORT status returns.
+     */
+    private static final int SUCCESS_importData = 						0x00;
+    private static final int SUCCESS_exportData = 						0x00;
+    private static final int SUCCESS_importDataWeights =				0x00;
+    private static final int SUCCESS_exportDataWeights =				0x00;
     
     private static final int ERROR_1_import_IOException = 				1;
     private static final int ERROR_2_import_typeConversionOrBlank = 	2;
@@ -85,145 +98,158 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int ERROR_9_export_dump =						9;
     private static final int ERROR_10_export_mismatchedStringName =		10;
     private static final int ERROR_11_import_wrongFileName_LUT = 		11;
-    private static final int ERROR_12_importWeights_IOException = 12;
+    private static final int ERROR_12_importWeights_IOException = 		12;
     private static final int ERROR_13_importWeights_typeConversionOrBlank = 13;
     private static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
     private static final int ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput = 15;
-    private static final int ERROR_16_exportWeights_IOException = 16;
-    private static final int ERROR_17 = 17;
-    private static final int ERROR_18 = 18;
-    private static final int ERROR_19 = 19;
-    private static final int ERROR_20 = 20;
-    private static final int ERROR_21 = 21;
+    private static final int ERROR_16_exportWeights_IOException = 		16;
+    private static final int ERROR_17 = 								17;
+    private static final int ERROR_18 = 								18;
+    private static final int ERROR_19_import_wrongFileName_weights =	19;
+    private static final int ERROR_20_import_weights_wrongNetSize =		20;
+    private static final int ERROR_21 = 								21;
     
-    
-    //strings used for importing or extracting files 
-    String strStringTest = "stringTest.dat";    
-    String strLUT = "LUTTrackfire.dat";
-    String strWL = "winlose.dat";
-    String strSA = "stateAction.dat"; 
-    String  strError = "saveErrorForActions.dat" ;
-    
-    /**
-	 * STATEACTION VARIABLES for stateAction ceilings.
-	 * FOR NN
+    /*
+	 * NN STATEACTION VARIABLES for stateAction ceilings (for array designs and other modular function interactions).
+	 * 
 	 */
-    //currently NN needs to forward propagate 4 * 2 * 3 = 24
-    private static final int input_action0_moveReferringToEnemy_possibilities = 4;
-    //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
+    //One concern with the complexity of the robot action design is the amount of calculation time spent in forward propagation. 
+    //As of now, the No. times NN needs to forward propagate per round = 4 * 2 * 3 = 24
+    private static final int input_action0_moveReferringToEnemy_possibilities = 4; //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
+    private static final int input_action1_fire_possibilities = 2;    //1, 3
+    private static final int input_action2_fireDirection_possibilities = 3;    //-10deg, 0, 10deg
+    private static final int numActionContainers = 3;
     
-    private static final int input_action1_fire_possibilities = 2;
-    //1, 3
+    private static final int numActions = input_action0_moveReferringToEnemy_possibilities * 
+    									  input_action1_fire_possibilities *
+    									  input_action2_fireDirection_possibilities;
     
-    private static final int input_action2_fireDirection_possibilities = 3;
-    //-10deg, 0, 10deg
-    
-    private static final int numActions = 3;
-    
-    private static final int input_state0_myPos_possibilities = 5;
-    //center, left, right, top, bottom (cannot be undiscretized) 
-    private static final int input_state1_myHeading_originalPossilibities = 4;
-    //0-89deg, 90-179, 180-269, 270-359
-    private static final int input_state2_enemyEnergy_originalPossibilities = 2;
-    //>30, <30
-    private static final int input_state3_enemyDistance_originalPossibilities = 3;
-    //<150, <350, >=350
-    private static final int input_state4_enemyDirection_originalPossibilities = 3;
-    //head-on (still (abs <30 || >150), 
-    //left (<0 relative dir w/ positive velo || >0 with negative velo), 
-    //right (<0 dir w/ negative velo || >0 with positive velo)
-    
-
+    private static final int input_state0_myPos_possibilities = 5;    //center, left, right, top, bottom (cannot be undiscretized) 
+    private static final int input_state1_myHeading_originalPossilibities = 4;    //0-89deg, 90-179, 180-269, 270-359
+    private static final int input_state2_enemyEnergy_originalPossibilities = 2;    //>30, <30
+    private static final int input_state3_enemyDistance_originalPossibilities = 3;    //<150, <350, >=350
+    private static final int input_state4_enemyDirection_originalPossibilities = 3;    //head-on (still (abs <30 || >150), left (<0 relative dir w/ positive velo || >0 with negative velo), right (<0 dir w/ negative velo || >0 with positive velo)
     private static final int numStates = 5;
     
     private static final int numInputBias = 0;
     private static final int numHiddenBias = 1;
     private static final int numHiddenNeuron = 4;
-    private static final int numInputsTotal = ( numInputBias + numActions + numStates );
-    private static final int numHiddensTotal = ( numHiddenNeuron + numHiddenBias );
+    private static final int numInputsTotal = ( numInputBias + numActionContainers + numStates ); 
+    private static final int numHiddensTotal = ( numHiddenBias+ numHiddenNeuron );
     private static final int numOutputsTotal = 1;
-    /**
-     * FLAGS AND COUNTS
+    
+    
+    /*
+     * Activation function choices for the back propagation net
      */
+    private static final boolean binaryMethod = true;
+    private static final boolean bipolarMethod = false;
+ 
     
-    //debug flags.
-    static private boolean debug = false;  
-    static private boolean debug_doAction = false;
-    static private boolean debug_import = false;
-    static private boolean debug_export = false;
     
-    // Flag used for functions importData and exportData.
-    // primary role is to maintain 1 import -> at most 1 export
-    // secondary goals: Assists in preventing overwrite, and protection against wrong file entries.
-    // False == inaccessible to write-to-file commands.
+    /**
+     * STRINGS used for importing or extracting files =========================================== 
+     */
+    String strStringTest = "stringTest.dat";    
+    String strLUT = "LUTTrackfire.dat";
+    String strWL = "winlose.dat";
+    String strSA = "stateAction.dat"; 
+    String strError = "saveErrorForActions.dat" ;
+    String strWeights = "weights.dat";
+    
+    
+    
+    /**
+     * FLAGS AND COUNTS ===========================================================================
+     */
+    //debug flags. Each allows printouts written for specific functions. debug will print out all.
+    private boolean debug = false;  
+    private boolean debug_doAction_updateLearningAlgo = false;
+    private boolean debug_import = false;
+    private boolean debug_export = false;
+    private boolean debug_onScannedRobot = false;
+    private boolean debug_forwardProp = false;
+    private boolean debug_getMax = false;
+    
+    // Flags used in data imp/exp fxns.
+    //		Purposes:
+    // 		1. prevents overwrite, and protects against wrong file entries
+    //		2. data for a particular file must be exported before importing for the same file occurs again.
+    // 		false == only imports can access; true == only exports can access.
+    //		Always initialize these as false.
     private boolean flag_stringTestImported = false;
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
-    
-    private static boolean flag_useOfflineTraining = true; 
-    // printout error flag - initialized to 0, which is no error.
-    static private int flag_error = 0;
+    private boolean flag_alreadyExported = false;    
+    private static boolean flag_useOfflineTraining = true; //Joey: check usage 
 
-//    //Flag used if user desires to zero LUT at the next battle. 
-//    static private boolean zeroLUT = false; 
+    // printout error flag - used to check function return statuses.
+    // initialized to 0, which is no error.
+    private int flag_error = 0;
+
 
     /**
-     *  OTHER GLOBALS
+     *  OTHER VARIABLES USABLE BY ALL CLASS FUNCTIONS ==============================================================================
      */
-    	
-    // weights connecting between input and hidden layers.
-    private static double[][] NNWeights_inputToHidden 
+    
+    
+    // weights connecting between input and hidden layers. calculated using definitions defined above.
+    private static double[][] arr_wIH 
         = new double
         [numInputsTotal]
-        [numHiddensTotal] //no weights go from inputs to hidden bias.
+        [numHiddensTotal] 
         ;
     
-    // weights connecting
-    private static double[][] NNWeights_hiddenToOutput
+    // weights connecting between hidden layer to output.
+    private static double[][] arr_wHO
     	= new double
     	[numHiddensTotal]
     	[numOutputsTotal]
     	;
     
-    
-    
-    // LUT table configuration information, stored in the first line of .dat
-    private short fileSettings_default = 0;
+
+    // temp vars: config settings for the external files, stored in the first line of .dat
+    private short fileSettings_temp = 0;
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
+    private short fileSettings_weights = 0;
     
 
-    // Stores current reward for action.
-    
-    private double reward = 0.0; //only one reward variable to brief both offensive and defensive maneuvers
+    // vars used for storing reward, and reward calculation.
+    private double reward = 0.0; 
     private int energyDiffCurr = 0;
     private int energyDiffPrev = 0;
     
 
-    // Stores current and previous stateAction vectors.
-    //State vector (no actions) where copy currentSV to prevSV 
+    //vars that store current and previous stateAction vectors
     private double currentStateActionVector[] = new double [numInputsTotal];
-    private double prevStateActionVector[]    = new double [numInputsTotal]; 
+    private double prevStateActionVector[]    = new double [numInputsTotal]; //might not be used 
 
-    private double currentNetQVal = 0.0;
-    private double previousNetQVal= 0.0; 
-    private double[] Ycalc = new double [1]; 			//because backProp takes in a vector for Ycalc (which is qprevious). 
-    private double expectedYVal = 0.0; 
-    //array to store the q values from net. 
-    private double [][][] qFromNet = new double [input_action0_moveReferringToEnemy_possibilities][input_action1_fire_possibilities][input_action2_fireDirection_possibilities];
+    private double Q_curr = 0.0;
+    private double Q_prev = 0.0;
+    private double Q_prev_target = 0.0;
+    private double[] Y_calculated = new double [numOutputsTotal]; 			//because backProp takes in a vector for Y_calculated (which is qprevious).  //Joey: might delete this comment
+    private double[] Y_target = new double [numOutputsTotal]; 
+    
+    //array to store the q values obtained from net forward propagation, using the current state values as well as all possible actions as inputs. 
+    private double [][][] Q_NNFP_all = new double 
+    		[input_action0_moveReferringToEnemy_possibilities]
+    		[input_action1_fire_possibilities]
+    		[input_action2_fireDirection_possibilities];
 
     //variables used for getMax.
-    int num_actions = 24; 
-    private int [] arrAllMaxActions = new int [num_actions]; //array for storing all actions with maxqval
-    private int actionChosenForQValMax = 0; 				//stores the chosen currSAV with maxqval before policy
-    private double qValMax = 0.0; 							// stores the maximum currSAV QMax
+    private int [] action_QMax_all = new int [numActions]; //array for storing all actions with maxqval
+    private int action_QMax_chosen = 0; 				//stores the chosen currSAV with maxqval before policy
+    private double Q_max = 0.0; 							// stores the maximum currSAV QMax
+    private int random_actionBased = numActions;
 
     //chosen policy. greedy or exploratory or SARSA 
-    private static int policy = exploratory; 
+    private static int policy = greedy; 
+    private static int learningRate = 4; //learningAlgo is run every 4 ticks. //Joey: consider allowing robot to self-optimize for this.
 
-    //enemy information
+    //enemy bot information
     private int enemyDistance = 0;
     private int enemyHeadingRelative = 0;
     private int enemyHeadingRelativeAbs = 0;
@@ -233,50 +259,55 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private double enemyBearingFromHeading = 0.0;
     private int enemyEnergy = 0;
     
-    //my information
+    //my bot information
     private int myHeading = 0; 
     private int myEnergy = 0;
     private int myPosX = 0;
     private int myPosY = 0;
     
-    //general information
+    //misc battle information
     private int tick = 0;
     
-    
+    //used to update WL export
     private int totalFights = 0;
     private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
-
+    //used for debugging purposes (deprecated)
     private static double[] QErrors = new double [520000];
     private static int currentRoundOfError = 0;
-    
-    /** Neural net stuff 
-     * 
-     * */
 
-    
-    /*Initiate variables */
-		
-	private double lRate = 0.05; 			//learning rate
-	private double momentum = 0.0;  		//value of momentum 
-	
-	// initialize arrays 
-	private double [][] vPast 	= new double[numInputsTotal][numHiddensTotal];			// Input to Hidden weights for Past.
-	private double [][] wPast 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights for Past.
-	private double [][] vNext	= new double[numInputsTotal][numHiddensTotal];	
-	private double [][] wNext 	= new double[numHiddensTotal][numOutputsTotal];    		// Hidden to Output weights.
-	private double [][] deltaV = new double [numInputsTotal][numHiddensTotal];		// Change in Input to Hidden weights
-	private double [][] deltaW = new double [numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
-	private double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
+    /**  
+     * Neural net stuff
+     * 
+     */
+
+    private double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
 	private double [] Z    = new double[numHiddensTotal];		// Array to store values of Z 
 	private double [] Y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
-	private double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y  
-	private double [] delta_out = new double[numOutputsTotal];
+	private double [] Y	   = new double[numOutputsTotal];		// Array to store values of Y
+	
+    // analysis rate //Joey: huh
+	private double lRate = 0.05; 			
+	//value of momentum //Joey: consider adding some momentum lel
+	private double momentum = 0.1;  		
+	
+	// arrays used for momentum
+	private double [][] vPast  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights for Past.
+	private double [][] wPast  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights for Past.
+	private double [][] vNext  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights.
+	private double [][] wNext  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights.
+	//arrays in BP
+	private double [][] vDelta = new double[numInputsTotal] [numHiddensTotal];	// Change in Input to Hidden weights
+	private double [][] wDelta = new double[numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
+	  
+	private double [] delta_out    = new double[numOutputsTotal];
 	private double [] delta_hidden = new double[numHiddensTotal];
-	private boolean flagActivation = false;  
-	private final int bias = 1; 
-
+	
+	private boolean activationMethod = bipolarMethod; 
+	
+	//bias for hidden initialized as value 1
+    private int bias_hidden = 1;
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
@@ -284,7 +315,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @name: 		run
      * @purpose:	1. Initializes robot colour
      * 				2. Imports LUT data from file into local memory array.
-     * 				4. Runs LUT-based learning code. See fxn learningLoop for details.
+     * 				4. Runs LUT-based analysis code. See fxn learningLoop for details.
      * @brief:		To import desired file name, simply write Stringvar of filename or "filenamehere.dat" as param of importData. 
      * @brief:		To ZeroLUT, add 1 to top line in .dat file (or change 16416 to 16417)
      * @param:		n
@@ -296,29 +327,28 @@ public class NN2_LUTMimic extends AdvancedRobot{
         setColors();
         
         if (debug) {
-        	out.println("I have been a dodger duck (robot entered run)"); 
+        	out.println("@I have been a dodger duck (robot entered run)"); 
         }
         
         // Import data. ->Change imported filename here<-
-        
-//        flag_error = importData(strWL);
-//        if( flag_error != SUCCESS_importData) {
-//        	out.println("ERROR @run WL: " + flag_error);
-//        }
-        
-        flag_error = importDataWeights();
+
+        flag_error = importData(strWeights);
         if(flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run weights: " + flag_error);
+        	out.println("ERROR @run LUT: " + flag_error);
         }
         
-
+        flag_error = importData(strWL);
+        if( flag_error != SUCCESS_importData) {
+        	out.println("ERROR @run WL: " + flag_error);
+        }
             
-        //set gun and radar for robot turn separate gun, radar and robot (robocode properties). 
+        //set independent movement for gun, radar and body (robocode properties). 
         setAdjustGunForRobotTurn(true);
     	setAdjustRadarForGunTurn(true);	
     	setAdjustRadarForRobotTurn(true);
 
     	// anything in infinite loop is initial behaviour of robot
+    	// current initial behaviour is to turn radar until enemy located.
         for(;;){
         	setTurnRadarRight(20);
     		execute();					//from "AdvancedRobot" to allow parallel commands. 
@@ -326,59 +356,48 @@ public class NN2_LUTMimic extends AdvancedRobot{
          
     }
     
+
     /**
      * @name: 		onBattleEnded
-     * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
-     * 				   	linearly. Exporting will occur only once per fight, either during 
-     * 				   	death or fight end.
+     * @brief:		Overwrites default onBattleEnded class fxn in order to perform exports data.
+     * @purpose: 	1. 	Exports weights and win/lose on end of battle to datafile - IN CASES WHERE ONDEATH OR ONWIN DOES NOT TRIGGER 
      * @param:		1.	BattleEndedEvent class from Robot
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-        flag_error = exportDataWeights();	
-        if(flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded weights: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
-        	//LUT is 0'd, causing error 9 (export_dump)
-        }
-        
-//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-//        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onBattleEnded WL: " + flag_error);
-//        }
-        
-        flag_error = exportData(strError);					//"strError" = saveError.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded Error: " + flag_error);
-        }       
-        
+    	
+    	if (!flag_alreadyExported) {
+	        flag_error = exportData(strWeights);				//strWeights = weights.dat
+	        if(flag_error != SUCCESS_exportData) {
+	        	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
+	        }
+	        
+	        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+	        if( flag_error != SUCCESS_exportData) {
+	        	out.println("ERROR @onBattleEnded: " + flag_error);
+	        }
+    	}
     }
     
     /**
      * @name: 		onDeath
-     * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
-     * 				   	linearly. Exporting will occur only once per fight, either during 
-     * 				   	death or fight end.
-     * 				2.  Sets a terminal reward of -100 
+     * @purpose: 	1. 	Exports weights and win/lose on death(we lost lel) to datafile.
      * @param:		1.	DeathEvent class from Robot
      * @return:		n
      */
     public void onDeath(DeathEvent event){
+    	
     	currentBattleResult = 0;    					//global variable. 
-        flag_error = exportDataWeights();
+    	
+        flag_error = exportData(strWeights);
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath weights: " + flag_error);
+        	out.println("ERROR @onDeath: " + flag_error);
         }
         
-//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-//        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onDeath WL: " + flag_error);
-//        }
-        
-        flag_error = exportData(strError);					//"strError" = saveError.dat
+        flag_error = exportData(strWL);					//"strWL" = winLose.dat
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath WL: " + flag_error);
-        }        
-
+        	out.println("ERROR: " + flag_error);
+        }
     }
     
     /**
@@ -392,30 +411,36 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */    
 	public void onWin(WinEvent e) {
-    	currentBattleResult = 1;
+		
+		currentBattleResult = 1;
     	
-        flag_error = exportDataWeights();
+        flag_error = exportData(strWeights);
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onWin weights: " + flag_error);
+        	out.println("ERROR: " + flag_error);
         }
         
-//        flag_error = exportData(strWL);
-//        if( flag_error != SUCCESS_exportData) {
-//        	out.println("ERROR @onWin WL: " + flag_error);
-//        }
-        
-        flag_error = exportData(strError);
+        flag_error = exportData(strWL);
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onWin WL: " + flag_error);
+        	out.println("ERROR: " + flag_error);
         }
-
 	}
 	
 
 	/**
      * @name:		onScannedRobot
-     * @purpose:	1. determine enemy bearing and distance
-     * 				2. call learning to learn from NN
+     * @brief:		This function is called by the game when the enemy is located by the scanner. It is the only function that will obtain info on the current game 
+     * 				 environment, and decide what the robot will perform during this tick.
+     * @purpose:	1. determines:
+     * 					- my heading
+     * 					- my position: x and y
+     * 					- my energy
+     * 					- enemy heading
+     * 					- enemy velocity
+     * 					- enemy bearing
+     * 					- enemy distance
+     * 					- enemy energy
+     * 					- current tick
+     * 				2. call analysis fxn to determine the next move for this tick.
      * @param:		ScannedRobotEvent event
      * @return:		none, but updates:
      * 				1. getGunBearing
@@ -423,25 +448,29 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
 
 	public void onScannedRobot(ScannedRobotEvent event){
+		
 		myHeading = (int)getHeading();
+		myPosX = (int)getX();
+		myPosY = (int)getY();
+		myEnergy = (int)getEnergy();
 		enemyHeadingRelative = (int)normalRelativeAngleDegrees(event.getHeading() - getGunHeading());
 		enemyHeadingRelativeAbs = Math.abs(enemyHeadingRelative);
 		enemyVelocity = (int)event.getVelocity();
-		myPosX = (int)getX();
-		myPosY = (int)getY();
 		enemyBearingFromRadar = (double)myHeading + event.getBearing() - getRadarHeading();
 		enemyBearingFromGun = (double)myHeading + event.getBearing() - getGunHeading();
 		enemyBearingFromHeading = event.getBearing();
 		enemyDistance = (int)event.getDistance(); 
 		enemyEnergy = (int)event.getEnergy();
-		myEnergy = (int)getEnergy();
 		tick = (int)getTime();
-//		out.println("Time is" + event.getTime());
-    	learning();
+		
+		if (debug_onScannedRobot || debug) {
+			out.println("Time is" + event.getTime());
+		}
+		
+    	analysis();
     }
 
 
-	
     //@@@@@@@@@@@@@@@ OTHER INVOKED CLASS FUNCTIONS @@@@@@@@@@@@@@@@@
     
     /** 
@@ -459,19 +488,21 @@ public class NN2_LUTMimic extends AdvancedRobot{
     }
     
     /**
-     * @name:		learning
-     * @purpose:	perform continuous reinforcement learning.
-     * 				Reinforcement learning involves following steps:
-     * 				1. Store the last state and action (currentSAV -> prevSAV)
-     * 				2. Use information from the environment to determine the current state.
-     * 				(3. punish robot for not changing state [not in original qfunction])
+     * @name:		analysis
+     * @purpose:	1. Analyze all environmental and self conditions.
+     * 				2. Perform action.
+     * @NNet:		Our neural net online training involves the following:
+     * 				0. (not in NN) Determine if learning should happen this tick. Fxn learnThisRound returns a boolean.
+     * 				1. Calculate how well we have done since the last NN update. (The time between this NN access and previous NN update is called a round)
+     * 				2. Store the previous state and action (currentSAV -> prevSAV)
+     * 				3. Use information from the environment to determine the current state.
      * 				4. Perform QFunction (detailed further in function).
-     * 				5. Reset rewards. IE: all events affect reward only once unless specified.
-     * 				6. Perform chosen action. 
+     * 				5. Reset rewards. IE: all events affect reward only once unless further emphasized by events other than onScannedRobot. (NONE YET)
+     * 				6. Perform chosen action. (learning-specific as well as those mandatory per tick).
      * @param:		n
      * @return:		n
      */
-    /* Training online: 
+    /* Training online detailed by A (important, several points repeated from @NNet): 
      *  step (1) - need a vector of just states "copyCurrentSV into prev SV". 
         step (2) - get weights array - neural net do forwardpropagation for each action in the "CurrentSV"  , remembering all outputs "Y" in an array
         step (3) - choose maximum "Y" from array 
@@ -481,39 +512,47 @@ public class NN2_LUTMimic extends AdvancedRobot{
         step (6) - save error for graph
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
      */
-    public void learning() {
-    	if (tick%4 == 0) {
-    		
-             calculateReward();
-             copyCurrentSVIntoPrevSV();
-             generateCurrentStateVector();
-             getQfromNet(); 			//in here we do forward propagation
-             qFunction();
-             resetReward();
-             doAction();
+    public void analysis() {
+    	
+    	if (learnThisRound()){
+    		obtainRawReward();
+            copyCurrentSAVIntoPrevSAV();
+            generateCurrentStateVector();
+            qFunction();
+            resetReward();
+            doAction_updateLearningAlgo();
     	}
-
         else {
-            setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+        	doAction_notLearning();
         }
-
-        setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
-        scan();
-        execute();
+    	doAction_mandatoryPerTurn();
 
     }
 
+    /**
+     * @name:		boolean learnThisRound
+     * @purpose:	To determine if analysis algo should be run this round
+     * @param:		none, but uses int tick
+     * @return:		boolean
+     */
 
+    public boolean learnThisRound() {
+    	if (tick%learningRate == 0)
+    		return true;
+    	else
+    		return false; 
+    }
+    
 	/**
-     * @name:		calculateReward
-     * @purpose:	calculates reward based on change in energy difference of robots.
+     * @name:		obtainRawReward
+     * @purpose:	calculates reward based on change in energy difference of robots. A later function will normalize the reward value.
      * @param:		none
      * @return:		none
      */
-    public void calculateReward(){
+    public void obtainRawReward(){
     	energyDiffPrev = energyDiffCurr;
     	energyDiffCurr = myEnergy - enemyEnergy;
-    	reward += energyDiffCurr - energyDiffPrev;  	
+    	reward += energyDiffCurr - energyDiffPrev; 
     }
     
     /**
@@ -524,23 +563,25 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				2. previous and current Net Q Val 
      * @return:		n
      */
-    public void copyCurrentSVIntoPrevSV(){
-    	for (int i = 0; i < currentStateActionVector.length; i++) {
-    		prevStateActionVector[i] = currentStateActionVector[i];
-    	}
-    	previousNetQVal = currentNetQVal; 
+    public void copyCurrentSAVIntoPrevSAV(){
+//    	for (int i = 0; i < currentStateActionVector.length; i++) {
+//    		prevStateActionVector[i] = currentStateActionVector[i];
+//    	}
+    	//Joey: that was not necessary
+    	Q_prev = Q_curr; 
     }
     
     /**
-     * @name: 		generateCurrentStateVector - discretize states here. 
-     * @purpose: 	1. gets state values from battlefield. 
-     * 				2. discretize. 
-     * 				3. Update array of current stateAction vector.  
+     * @name: 		generateCurrentStateVector
+     * @brief:		Obtains robot values from
+     * @purpose: 	1. gets state values from environment. 
+     * 				2. Update array of current stateAction vector.  
      * @param: 		n
      * @return: 	none
      * currentStateVector positions [0][1][2] are all the actions. 
      */
     public void generateCurrentStateVector(){
+    	//First few INPUTS are ACTIONS and hence will be IGNORED for generating CSAV
     	//INPUTS 0, 1 and 2 are ACTION
         
     	//Dimension 1 - private static final int input_state0_myPos_possibilities = 5;
@@ -600,63 +641,107 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	}
     	out.println("currentStateVector " + Arrays.toString(currentStateActionVector));
     }
+     
  
-    /** 
-     * @name:		getQfromNet
-     * @input: 		currentStateVector 
-     * @purpose: 	For each state in "stateVector", call forwardPropagation to generate the output.  
+
+
+    /**
+     * @name:		qFunction
      * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
-     * @return: 	not sure yet
+     * 				2. The q value is the maximum "Y" from array
+     * 				3. Q_curr is assigned prevQVal 
+     * 				4. Y_calculated is previousNetQ
+     * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Y_calculated is prevNetQVal 
+     * @param: 		none, but uses:
+     * 				1.	double reward 
+     * 				2.	int currentStateVector[] already discretized (size numStates)
+     * 				3.	double[].. LUT table, 
+     * 				4.	int [] currentStateActionVector. 
+     * @return: 	n
+     */
+    public void qFunction(){
+    	getAllQsFromNet();
+        getMax(); 
+        calcNewPrevQVal();
+        //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
+        runBackProp(); 
+    }
+
+    /** 
+     * @name:		getAllQsFromNet
+     * @input: 		currentStateVector 
+     * @purpose: 	1. For current state, cycle through all possible actions and obtain the action in current state with the highest q-value 
+     * 					from the outputarray "Yout" of the neural net. 
+     * @param:		n //Joey: i think
+     * @return: 	n
      */
 
-	public void getQfromNet() {
-//		out.println("state here " + Arrays.toString(currentStateActionVector));
-		//need to get the Ycalc from all the states
-		for (int i = 0; i < input_action0_moveReferringToEnemy_possibilities; i++){
-			for (int j = 0; j < input_action1_fire_possibilities; j++){
-				for(int k = 0; k < input_action2_fireDirection_possibilities; k++){
-					double Ycalc = forwardProp(flagActivation);
-					//error is here
-					qFromNet[i][j][k] = Ycalc; 
+	public void getAllQsFromNet() {
+		if (debug_forwardProp || debug){
+    		out.println("- entering getAllQsFromNet:");
+    	}
+
+		for (int action0 = 0; action0 < input_action0_moveReferringToEnemy_possibilities; action0++){
+			for (int action1 = 0; action1 < input_action1_fire_possibilities;             	 action1++){
+				for(int action2 = 0; action2 < input_action2_fireDirection_possibilities;       action2++){
+					Q_NNFP_all[action0][action1][action2] = forwardProp(); 
 				}
 			}
 		}
-//		out.println("YCalc " + Arrays.deepToString(qFromNet));
-    	if (debug){
-    		out.println("YCalc " + Arrays.deepToString(qFromNet));
+
+    	if (debug_forwardProp || debug){
+    		out.println("YCalc " + Arrays.deepToString(Q_NNFP_all));
     	}
+    	
+    	return;
 	}
 	
 
 	/** function for forwardpropagation
+	 * @brief: forward propagation done in accordance to pg294 in Fundamentals of Neural Network, by Laurene Fausett.
+	 * 			Feedforward (step 3 to 5):
+	 * 				step 3: Each input unit (Xi, i = 1, ..., n) receives input signal xi and broadcasts this signal to all units in the layer above (the hidden units).
+	 * 				step 4: Each hidden unit (Zj, j = 1, ..., p) sums its weighted input signals,
+	 * 								z_inj = v0j + (sum of from i = 1 to n)xivij,                <- v = weights between input and hidden.
+	 * 						applies its activation fxn to compute its output signal,
+	 * 								zj = f(z_inj),
+	 * 						and sends this signal to all units in the layer above (output units).
+	 * 				step 5: Each output unit (Yk, k = 1, ..., m) sums its weighted input signals,
+	 * 								y_ink = w0k + (sum of from j = 1 to p)zjwjk                 <- w = weights between hidden and output.
+	 * 						and applies its activation fxn to compute its output signal,
+	 * 								yk = f(y_ink)
 	 * @purpose: does forwardPropagation on the inputs from the robot. 
 	 * @return: an array of Y values for all the state pairs. 
 	 **/
-    public double forwardProp(boolean flag) {
-//    	out.println("in forward prop " + Arrays.toString(currentStateActionVector));
-		for (int j = 1; j < numHiddensTotal; j++){
-			double sumIn = 0.0; 
-			for (int i= 0; i < numInputsTotal; i++){	
-				sumIn += currentStateActionVector[i]*NNWeights_inputToHidden[i][j]; 
+    public double forwardProp() {
+    	if (debug_forwardProp || debug){
+    		out.println("- in forward prop :");
+    		out.println(Arrays.toString(currentStateActionVector));
+    	}
+    	//step 3 and 4:
+		for (int j = 1; j < numHiddensTotal; j++){ 		//p = numHiddensTotal
+			double sumIn = 0.0;
+			for (int i = 0; i < numInputsTotal; i++){	   //n = numInputsTotal
+				sumIn += currentStateActionVector[i]*arr_wIH[i][j]; //NO INPUT BIAS
 			}
 			Z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
-			Z_in[0] = bias; 									//set z_in[0] = bias 
-			if (flag == true){
-				Z[j] = binaryActivation(Z_in[j]); 
-				Z[0] = Z_in[0];
-			}
-			else{
+			Z_in[0] = bias_hidden; 									//set z_in[0] = bias. HIDDEN BIAS = 1
+			Z[0] = Z_in[0]; //can choose to optimize here if needs be: run during run.
+			
+			if (activationMethod == binaryMethod)
+				Z[j] = binaryActivation(Z_in[j]); 				
+			else
 				Z[j] = bipolarActivation(Z_in[j]); 
-				Z[0] = Z_in[0];
-			}
 		}
+		//step 5:
 		for (int k = 0; k < numOutputsTotal; k++){
 			double sumOut = 0.0; 
 			for (int j= 0; j < numHiddensTotal; j++){	
-				sumOut += Z[j]*NNWeights_hiddenToOutput[j][k]; 
+				sumOut += Z[j]*arr_wHO[j][k]; 
 			}
 			Y_in[k] = sumOut; 	
-			if (flag == true)
+			
+			if (activationMethod == binaryMethod)
 				Y[k] = binaryActivation(Y_in[k]); 
 			else
 				Y[k] = bipolarActivation(Y_in[k]);				
@@ -666,44 +751,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	}
     
     /**
-     * @name:		qFunction
-     * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
-     * 				2. The q value is the maximum "Y" from array
-     * 				3. currentNetQVal is assigned prevQVal 
-     * 				4. Ycalc is previousNetQ
-     * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Ycalc is prevNetQVal 
-     * @param: 		none, but uses:
-     * 				1.	double reward 
-     * 				2.	int currentStateVector[] already discretized (size numStates)
-     * 				3.	double[].. LUT table, 
-     * 				4.	int [] currentStateActionVector. 
-     * @return: 	n
-     */
-    public void qFunction(){
-       getMax(); 
-       currentNetQVal =  calcNewPrevQVal();
-       //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
-       Ycalc[0] = previousNetQVal;
-       expectedYVal = currentNetQVal; 
-//       updateLUT(expectedYVal);
-//       out.println("expectedYVal " + expectedYVal);
-//       out.println("Ycalc " + Arrays.toString(Ycalc));
-
-   	preProcessOutputs(); 
-    runBackProp(expectedYVal, Ycalc, flagActivation); 
-    }
-
-    /** 
-     * 
-     */
-	/* preprocess outputs 
-	 * 
-	 */
-    public void preProcessOutputs() {
-    	expectedYVal = expectedYVal/0.5; 
-    }
-
-    /**
      * @name:		getMax()
      * @purpose: 	1. Obtain the action in current state with the highest q-value, 
      * 				   and its associated q-value. 
@@ -712,18 +759,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 *						i. if indexQVal > currMax:
 	 *							(1) Update currMax
 	 *							(2) Set numMaxActions = 1.
-	 *							(3) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
+	 *							(3) Store the (now 3 dimension) action index into action_QMax_all[numMaxActions-1]
 	 *						ii. if indexQVal == currMax:
 	 *							(1) numMaxActions++
-	 *							(2) Store the (now 3 dimension) action index into arrAllMaxActions[numMaxActions-1]
+	 *							(2) Store the (now 3 dimension) action index into action_QMax_all[numMaxActions-1]
 	 *						iii. if indexQVal < currMax:
 	 *							ignore.
 	 *					c. record chosen action. If multiple actions with max q-values, randomize chosen action.
 	 *						i. if numMaxActions > 1, 
 	 *						   randomly select between 0 and numMaxActions - 1. The randomed 
 	 *						   number will correspond to the array location of the chosen
-	 *						   action in arrAllMaxActions. 
-	 *						ii. actionChosenForQValMax = arrAllMaxActions[randomed number]
+	 *						   action in action_QMax_all. 
+	 *						ii. action_QMax_chosen = action_QMax_all[randomed number]
 	 *					d. record associated q-value.
      * @param: 		none, but uses:
      * 				1.	current SAV[].
@@ -733,118 +780,117 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     public void getMax() {
     	double currMax = -100.0;
-//    	double currMax = qFromNet[0][0][0];  
-        double qVal = 0.0;
+//    	double currMax = Q_NNFP_all[0][0][0];  
         int numMaxActions = 0;
         int randMaxAction = 0;
-//        out.println("qFromNet.length " + qFromNet.length); 
-    	for (int i = 0; i < qFromNet.length; i++){
-		    for (int j = 0; j < qFromNet[0].length; j++){
-		    	for (int k = 0; k < qFromNet[0][0].length; k++){
-		    		qVal = (double)qFromNet[i][j][k];
-//		    		out.println("qFromNet" + qFromNet[i][j][k]);
-		    		if (qFromNet[i][j][k] > currMax){
-		    			currMax = qFromNet[i][j][k];
+        int actionLinearized = 0;
+//        out.println("Q_NNFP_all.length " + Q_NNFP_all.length); 
+    	for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
+		    for (int i_A1 = 0; i_A1 < Q_NNFP_all[0].length; i_A1++){
+		    	for (int i_A2 = 0; i_A2 < Q_NNFP_all[0][0].length; i_A2++, actionLinearized++){
+		    		
+//		    		out.println("Q_NNFP_all " + Q_NNFP_all[i][j][k]);
+		    		if (Q_NNFP_all[i_A0][i_A1][i_A2] > currMax){
+		    			currMax = Q_NNFP_all[i_A0][i_A1][i_A2];
 		            	numMaxActions = 1;
-		            	arrAllMaxActions[numMaxActions-1] = (i+1)*(j+1)*(k+1)-1;		//all possible combinations (i*j*k)
+		            	action_QMax_all[numMaxActions-1] = actionLinearized;		
 		            }
-		            else if (qVal == currMax){
-		            	numMaxActions++;
-//		            	out.println("arrAllMaxActions[numMaxActions-1] " + arrAllMaxActions[numMaxActions-1]); 
-		            	arrAllMaxActions[numMaxActions-1] = (i+1)*(j+1)*(k+1)-1;
-		            }
-		            
-		            if (debug) {
-		            	out.print(i + ": " + qVal + "  ");
+		            else if (Q_NNFP_all[i_A0][i_A1][i_A2] == currMax){
+		            	action_QMax_all[numMaxActions++] = actionLinearized;
+		            }	            
+		    		
+		    		
+		            if (debug_getMax || debug) {
+		            	out.print(i_A0 + ": " + Q_NNFP_all[i_A0][i_A1][i_A2] + "  ");
 		            }
 		    	}
     		}
     	}
-        qValMax = currMax;
+        Q_max = currMax;
         
         if (numMaxActions > 1) {
         	randMaxAction = (int)(Math.random()*(numMaxActions)); //math.random randoms btwn 0.0 and 0.999. Add 1 to avoid truncation after typecasting to int.
         	
-        	if (debug) {
+        	if (debug_getMax || debug) {
             	System.out.println("randMaxAction " + randMaxAction + " numMaxActions " + numMaxActions);
             }
         }
         
-        actionChosenForQValMax = arrAllMaxActions[randMaxAction];
+        action_QMax_chosen = action_QMax_all[randMaxAction]; //if numMaxActions <= 1, randMaxAction = 0;
 
         
-        if (debug) {
-        	System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
+        if (debug_getMax || debug) {
+        	System.out.println("Action Chosen: " + action_QMax_chosen  + " qVal: " + Q_max);
         }
-//        System.out.println("Action Chosen: " + actionChosenForQValMax  + " qVal: " + qValMax);
+        
+        //Choosing next action based on policy. Greedy is default
+        if ((policy == SARSA) || (policy == exploratory)) { 
+	        random_actionBased = (int)(Math.random()*(numActions));
+        }
+        if (policy == SARSA) {
+        	action_QMax_chosen = random_actionBased;
+        }
+        else if(policy == exploratory) {
+        	action_QMax_chosen = (Math.random() > epsilon ? action_QMax_chosen : random_actionBased);
+        }
+        
+        for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
+		    for (int i_A1 = 0; i_A1 < Q_NNFP_all[0].length; i_A1++){
+		    	for (int i_A2 = 0; i_A2 < Q_NNFP_all[0][0].length; i_A2++){
+		    		if (action_QMax_chosen-- == 0) {
+		    			currentStateActionVector[0] = i_A0; //Joey: test the shit out of this LEL
+		    			currentStateActionVector[1] = i_A1;
+		    			currentStateActionVector[2] = i_A2;
+		    			return;
+		    		}
+		    	}
+		    }
+        }
     }
     
     /**
      * @name		calcNewPrevQVal
      * @purpose		1. Calculate the new prev q-value based on Qvalue function.
      * @param		n, but uses:
-     * 				1. qValMax
+     * 				1. Q_max
      * @return		prevQVal
      	Q(s’,a’)-Q(s,a)
      */
-    public double calcNewPrevQVal(){
-    	currentNetQVal +=  alpha*(reward + gamma*qValMax - previousNetQVal);
-//    	out.println("currentNetQVal " + currentNetQVal);
-//    	0.0, 0.0, 2.0, 0.0, 0.5, 0.0, 2.0
-   	if (currentStateActionVector[0] == 1 && currentStateActionVector[1] == 0 && currentStateActionVector[2] == 0 
-		&& currentStateActionVector[3] == 2 && currentStateActionVector[4] == 0 && currentStateActionVector[5] == 0.5 
-		&& currentStateActionVector[6] == 0 && currentStateActionVector[7] == 2){
-   		
-        QErrors[currentRoundOfError++] = currentNetQVal - previousNetQVal;
-        out.println("QErrors[currentRoundOfError-1] " + QErrors[currentRoundOfError-1]);     
-   	}  
-    	return currentNetQVal;
+    public void calcNewPrevQVal(){
+    	double reward_N = bipolarActivation(reward); //Joey: put this in reward fxn>
+    	//Joey ask andrea about papers for good gamma terms. (close to 1?)
+    	
+    	Q_prev_target += alpha*(reward_N + (gamma*Q_max) - Q_prev); //Joey: mby bipolar activate the reward
     }
     
     /**
      * @name:		runbackProp
-     * @purpose:	1. //TODO
+     * @brief:		pg 295 in Fundamentals of Neural Networks by Lauren Fausett, Backpropagation of error: steps 6 to 8.
      * @param:		1. //TODO
      * @return:		1. //TODO
      */
-    public void runBackProp(double Yreal, double[] Ycalc, boolean flag) {
-    	//first choose action. 
-    	int valueRandom = 0;
-    	//Choosing next action based on policy.
-        valueRandom = (int)(Math.random()*(num_actions));
-        if (policy == SARSA) {
-        	currentStateActionVector[0] = valueRandom;
-        }
-        
-        else if(policy == exploratory) {
-        	currentStateActionVector[0] = (Math.random() > epsilon ? actionChosenForQValMax : valueRandom);
-        }
-        
-        else if(policy == greedy){ 
-        	currentStateActionVector[0] = actionChosenForQValMax;
-        }
-        
-//        out.println("Yreal" + Yreal);
-//        out.println("YCalc " + Ycalc[0]);
+    public void runBackProp() {      
+        Y_calculated[0] = Q_prev; 
+        Y_target[0] = Q_prev_target; 
+    	//step 6: calculate output delta
 		for (int k = 0; k <numOutputsTotal; k++){
-
-			if (flag == true){
-				delta_out[k] = (Yreal - Ycalc[k])*binaryDerivative(Y_in[k]); 
+			if (activationMethod == binaryMethod){
+				delta_out[k] = (Y_target[k] - Y_calculated[k])*binaryDerivative(Y_in[k]); 
 			}
 			else{
-				delta_out[k] = (Yreal - Ycalc[k])*bipolarDerivative(Y_in[k]);	
+				delta_out[k] = (Y_target[k] - Y_calculated[k])*bipolarDerivative(Y_in[k]);	
 			}
 //			System.out.println("\n");
 //			System.out.println("delta " + delta_out[k]);
 			for (int j = 0; j < numHiddensTotal; j++){
 //				System.out.println("wPast[j][k] " + wPast[j][k]);
-//				System.out.println("NNWeights_hiddenToOutput[j][k] " + NNWeights_hiddenToOutput[j][k]);
-				deltaW[j][k] = alpha*delta_out[k]*Z[j];
-				wNext[j][k] = NNWeights_hiddenToOutput[j][k] + deltaW[j][k] + momentum*(NNWeights_hiddenToOutput[j][k] - wPast[j][k]); 
-				wPast[j][k] = NNWeights_hiddenToOutput[j][k]; 
-				NNWeights_hiddenToOutput[j][k] = wNext[j][k]; 
+//				System.out.println("arr_wHO[j][k] " + arr_wHO[j][k]);
+				wDelta[j][k] = alpha*delta_out[k]*Z[j];
+				wNext[j][k] = arr_wHO[j][k] + wDelta[j][k] + momentum*(arr_wHO[j][k] - wPast[j][k]); 
+				wPast[j][k] = arr_wHO[j][k]; 
+				arr_wHO[j][k] = wNext[j][k]; 
 //				System.out.println("wPast[j][k] " + wPast[j][k]);
-//				System.out.println("NNWeights_hiddenToOutput[j][k] " + NNWeights_hiddenToOutput[j][k]);
+//				System.out.println("arr_wHO[j][k] " + arr_wHO[j][k]);
 //				System.out.println("wNext[j][k] " + wNext[j][k]);
 			}
 		}
@@ -853,8 +899,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		for (int j = 0; j < numHiddensTotal; j++){
 			double sumDeltaInputs = 0.0;
 			for (int k = 0;  k < numOutputsTotal; k++){
-				sumDeltaInputs += delta_out[k]*NNWeights_hiddenToOutput[j][k];
-				if (flag == true){
+				sumDeltaInputs += delta_out[k]*arr_wHO[j][k];
+				if (activationMethod == binaryMethod){
 					 delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
 				}
 				else{
@@ -863,20 +909,20 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			}
 			for (int i = 0; i< numInputsTotal; i++){
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
-//				System.out.println("NNWeights_inputToHidden[i][j] " + NNWeights_inputToHidden[i][j]);
-				deltaV[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i];
-				vNext[i][j]  = NNWeights_inputToHidden[i][j] + deltaV[i][j] + momentum*(NNWeights_inputToHidden[i][j] - vPast[i][j]); 
-				vPast[i][j] = NNWeights_inputToHidden[i][j]; 
-				NNWeights_inputToHidden[i][j] = vNext[i][j]; 
+//				System.out.println("arr_wIH[i][j] " + arr_wIH[i][j]);
+				vDelta[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i]; //Joey: what about the action vectors?
+				vNext[i][j] = arr_wIH[i][j] + vDelta[i][j] + momentum*(arr_wIH[i][j] - vPast[i][j]); 
+				vPast[i][j] = arr_wIH[i][j]; 
+				arr_wIH[i][j] = vNext[i][j]; 
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
-//				System.out.println("NNWeights_inputToHidden[i][j] " + NNWeights_inputToHidden[i][j]);
+//				System.out.println("arr_wIH[i][j] " + arr_wIH[i][j]);
 //				System.out.println("vNext[i][j] " + vNext[i][j]);
 			}
 		}
 		//Step 9 - Calculate local error. 
 		double error = 0.0;
 		for (int k = 0; k < numOutputsTotal; k++){ 
-			error = 0.5*(java.lang.Math.pow((Yreal - Ycalc[k]), 2)); 
+			error = 0.5*(java.lang.Math.pow((Y_target[k] - Y_calculated[k]), 2)); 
 		}
 	}
 	/**
@@ -893,57 +939,54 @@ public class NN2_LUTMimic extends AdvancedRobot{
     }
     
     /**
-     * @name:		doAction
-     * @purpose: 	Converts state Action vector into action by reading currentSAV[0]
+     * @name:		doAction_updateLearningAlgo
+     * @purpose: 	Converts state Action vector into action by reading currentSAV[0], and other analysis specific actions.
      * @param: 		n, but uses:
      * 				1. Array currentSAV.
      * @return:		n
      */
     	
-    public void doAction(){
+    public void doAction_updateLearningAlgo(){
     	//maneuver behaviour (chase-offensive/defensive)
-    	if ((currentStateActionVector[0])%4 == 0) {
-    		setTurnRight(enemyBearingFromHeading);
-    		setAhead(50);
-    	}
-    	else if((currentStateActionVector[0])%4 == 1){
-    		setTurnRight(enemyBearingFromHeading);
-    		setAhead(-50);
-    	}
-    	else if((currentStateActionVector[0])%4 == 2){
-    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
-    		setAhead(50);
-    	}
-    	else if((currentStateActionVector[0])%4 == 3){
-    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
-    		setAhead(-50);
-    	}
+    	if      (currentStateActionVector[0] == 0) {setTurnRight(enemyBearingFromHeading); 										setAhead(50); }
+    	else if (currentStateActionVector[0] == 1) {setTurnRight(enemyBearingFromHeading); 										setAhead(-50);}
+    	else if (currentStateActionVector[0] == 2) {setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90)); 	setAhead(50); }
+    	else if (currentStateActionVector[0] == 3) {setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading + 90)); 	setAhead(50); }
     	
-    	if ( ((currentStateActionVector[0])/4) %2 == 0){
-    		setFire(1);
-    	}
-    	else if ( ((currentStateActionVector[0])/4) %2 == 1){
-    		setFire(3);
-    	}
+    	if      (currentStateActionVector[1] == 0) {setFire(1);}
+    	else if (currentStateActionVector[1] == 1) {setFire(3);}
     	
     	//firing behaviour (to counter defensive behaviour)
-    	if ((currentStateActionVector[0])/8 == 0){
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-    	}
-    	
-    	else if ((currentStateActionVector[0])/8 == 1){
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));
-    	}
-    	
-    	else if ((currentStateActionVector[0])/8 == 2){
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
-    	}
-    	
+    	if      (currentStateActionVector[2] == 0) {setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));}
+    	else if (currentStateActionVector[2] == 1) {setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));}
+    	else if (currentStateActionVector[2] == 2) {setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));}   	
 
 //    	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));     
-      if (debug_doAction || debug) {
-    	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
-      }
+    	if (debug_doAction_updateLearningAlgo || debug) {
+    		out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
+    	}
+    }
+
+    /**
+     * @name:		doAction_notLearning
+     * @purpose: 	performs actions for rounds that do not perform learning, mainly to maintain gun angle proximity to enemy.
+     * @param: 		n
+     * @return:		n
+     */
+    public void doAction_notLearning() {
+    	setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
+    }
+
+    /**
+     * @name:		doAction_mandatoryPerTurn
+     * @purpose: 	performs actions mandatory for the round, mostly to maintain radar lock on the enemy.
+     * @param: 		n
+     * @return:		n
+     */
+    public void doAction_mandatoryPerTurn() {
+	    setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+	    scan();
+	    execute();
     }
     
     /**
@@ -975,7 +1018,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //	            			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader.readLine()));
 //	            			out.println("i " + i); 
 //	            			out.println("j " + j); 
-	            			NNWeights_inputToHidden[i][j] = Double.parseDouble(reader.readLine());
+	            			arr_wIH[i][j] = Double.parseDouble(reader.readLine());
 		                }
 	            	}
 	            } 
@@ -996,7 +1039,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	for (int i = 0; i < numHiddensTotal; i++) {
 	            		for (int j = 0; j < numOutputsTotal; j++) {
 //	            			out.println("Double.parseDouble(reader.readLine())" + Double.parseDouble(reader2.readLine()));
-	            			NNWeights_hiddenToOutput[i][j] = Double.parseDouble(reader2.readLine());
+	            			arr_wHO[i][j] = Double.parseDouble(reader2.readLine());
 		                }
 	            	}
 	            } 
@@ -1050,7 +1093,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    		 
 	    		for (int i = 0; i < numInputsTotal; i++) {
 	         		for (int j = 0; j < numHiddensTotal; j++) {
-	         			w1.println(NNWeights_inputToHidden[i][j]);
+	         			w1.println(arr_wIH[i][j]);
 	                }
 	         	} 
 	    	}
@@ -1080,7 +1123,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    		 
 	    		for (int i = 0; i < numHiddensTotal; i++) {
 	         		for (int j = 0; j < numOutputsTotal; j++) {
-	         			w2.println(NNWeights_hiddenToOutput[i][j]);
+	         			w2.println(arr_wHO[i][j]);
 	                }
 	         	}
 	    	}
@@ -1107,6 +1150,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     }
     
     
+    //TODO
     /**
      * @name:		importData
      * @author:		partly written in sittingduckbot
@@ -1122,7 +1166,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				stringTest: 16400 (0x4010)
      * 				strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
      * 				WL:			16448 (0x4040)
-     * 				strSA: 		? 
      * 				
      * @param: 		1. stringname of file desired to be written. The fxn currently accepts 3(three) 
      * 				files: LUTTrackfire.dat, winlose.dat, and stringTest.dat. Any other string 
@@ -1135,69 +1178,140 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	if (debug_import || debug) {
     		out.println("@importData: at beginning of fxn");
     		out.println("printing fileSettings: ");
-    		out.println("fileSettings_default: " + fileSettings_default);
+    		out.println("fileSettings_temp: " + fileSettings_temp);
     		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
-    		out.println("fileSettings_LUT: " + fileSettings_LUT);
+//    		out.println("fileSettings_LUT: " + fileSettings_LUT);
     		out.println("fileSettings_WL: "+ fileSettings_WL);
+    		out.println("fileSettings_weights: " + fileSettings_weights);
     	}
     	
         try {
         	BufferedReader reader = null;
             try {
                 reader = new BufferedReader(new FileReader(getDataFile(strName)));
-                fileSettings_default = (short)Integer.parseInt(reader.readLine());			//reads first line of code to obtain what is in "fileSettings_default"
+                //reads first line of code to obtain what is in "fileSettings_temp"
+                fileSettings_temp = (short)Integer.parseInt(reader.readLine());			
                 
                 if (debug_import || debug) {
             		out.println("extracted fileSettings into default: ");
-            		out.println("fileSettings_default: " + fileSettings_default);
+            		out.println("fileSettings_temp: " + fileSettings_temp);
             	}
                 // CONFIGMASK_VERIFYSETTINGSAVAIL = 0x4000
-                // & is bit-wise "and" to compare every single bit of CONFIGMASK with fileSettings_default
-                // to ensure that a first line exists. 
-                if ((fileSettings_default & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
-                	if (debug_import || debug) {
-                		out.println("Import aborted (file not configured properly)");
-                	}
-                	
+                // & is bit-wise "and". It compares each bit of the chosen CONFIGMASK with fileSettings_temp.
+                // CONFIGMASK_VERIFYSETTINGSAVAIL is used to make sure the value in the first line is a fileSettings number (0x4000 is too large to be used as weights or LUT HOPEFULLY T_T)
+                if ((fileSettings_temp & CONFIGMASK_VERIFYSETTINGSAVAIL) != CONFIGMASK_VERIFYSETTINGSAVAIL) {
                 	return ERROR_3_import_verification;
                 }
-                else {
-                	//this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
-                	//flag prevents multiple imports and data overwrite since array is static
-                	if ( ((fileSettings_default & CONFIGMASK_FILETYPE_stringTest) == CONFIGMASK_FILETYPE_stringTest)
-                		&& (flag_stringTestImported == false) )
-                	{
+                
+                //else: we verified the file has a fileSettings line. Let's read what file it is!
+                //this prevents accidentally importing from wrong file. It matches the filename given to the function with the fileSettings read from the file.
+                else { 
+                	
+                	if ( ((fileSettings_temp & CONFIGMASK_FILETYPE_stringTest) == CONFIGMASK_FILETYPE_stringTest) && (flag_stringTestImported == false) ) {
                 		if (strName != "stringTest.dat") {
-            				if (debug_import || debug) {
-            					out.println ("Import aborted (Imported wrong file - file declared stringTest.dat in settings)");
-            				}
                 			return ERROR_4_import_wrongFileName_stringTest;
                 		}
-                		
-                		fileSettings_stringTest = fileSettings_default;
+                		//else: the fileSettings read from the file matches with the one given to the function, continue!
+                		//Clarification: the reason behind having both flag and file-specific fileSettings variable set, is due to the fact that the program
+                		//	may change the fileSettings (eg. zeroing file on purpose) by writing a different settings back, so there must be a way to store the settings.
+                		fileSettings_stringTest = fileSettings_temp; 
                 		flag_stringTestImported = true;
                 	}
+
+                	else if ( ((fileSettings_temp & CONFIGMASK_FILETYPE_weights) == CONFIGMASK_FILETYPE_weights) && (flag_weightsImported == false) ) {
+                		if (strName != "weights.dat") {
+                			return ERROR_19_import_wrongFileName_weights;
+                		}
+            			if ( (fileSettings_temp & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE ) {
+            				if (debug_import || debug) {
+                    			out.println("- writing blank weights into local weights array: ");
+                    		}
+            				for (int i = 0; i < numInputsTotal; i++) {
+        	            		for (int j = 0; j < numHiddensTotal; j++) { 
+        	            			arr_wIH[i][j] = 0;
+        		                }
+        	            	}
+            				for (int i = 0; i < numHiddensTotal; i++) {
+        	            		for (int j = 0; j < numOutputsTotal; j++) {
+        	            			arr_wHO[i][j] = 0;
+        		                }
+        	            	}
+            				//Subtracts zeroingfile setting from fileSettings, so that the weights are zeroed only once.
+            				fileSettings_temp -= CONFIGMASK_ZEROINGFILE;
+            				
+            				if (debug_import || debug) {
+                    			out.println("Imported blank weights.");
+                    		}
+            				
+            			}
+            			else {
+            				if (debug_import || debug) {
+                    			out.println("- writing recorded weights into local weights array: ");
+                    		}
+            				
+            				for (int i = 0; i < numInputsTotal; i++) {
+        	            		for (int j = 0; j < numHiddensTotal; j++) { 
+        	            			arr_wIH[i][j] = Double.parseDouble(reader.readLine());
+        		                }
+        	            	}
+            				for (int i = 0; i < numHiddensTotal; i++) {
+        	            		for (int j = 0; j < numOutputsTotal; j++) {
+        	            			arr_wHO[i][j] = Double.parseDouble(reader.readLine());
+        		                }
+        	            	}
+            				//value 999 is at the end of the weights file to make sure net is the desired size.
+            				//TODO learn interaction with EOF
+            	            if (Double.parseDouble(reader.readLine()) != 999) {
+            	            	return ERROR_20_import_weights_wrongNetSize;
+            	            }
+            	            
+            	            if (debug_import || debug) {
+                    			out.println("Imported recorded weights.");
+                    		}
+            			}
+            			fileSettings_weights = fileSettings_temp;
+            			flag_weightsImported = true;
+            		}
                 	
-                	// this if prevents accidentally importing from wrong file by matching coded filename with settings in read file.
-                	//flag prevents multiple file imports (mostly for preventing export bugs)
                 	
-                	else if( ((fileSettings_default & CONFIGMASK_FILETYPE_WinLose) == CONFIGMASK_FILETYPE_WinLose) && (flag_WLImported == false) ) {
+                	//continue onwards in the same manner to another file.
+                	else if( ((fileSettings_temp & CONFIGMASK_FILETYPE_winLose) == CONFIGMASK_FILETYPE_winLose) && (flag_WLImported == false) ) {
                 		if (strName != "winlose.dat") {
-                			if (debug_import || debug) {
-                				out.println ("Import aborted (Imported wrong file - file was labelled winlose.dat)");
-                			}
+
                 			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
                 		}
-                		totalFights = Integer.parseInt(reader.readLine());
-                    	for (int i = 0; i < battleResults.length; i++){
-                    		if (i < totalFights) {
-                    			battleResults[i] = Integer.parseInt(reader.readLine());
+                		if ( (fileSettings_temp & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE ) {
+            				if (debug_import || debug) {
+                    			out.println("- blanking fight records (winLose):");
                     		}
-                    		else {
-                    			battleResults[i] = 0;
+            				totalFights = 0; //these honestly should not be necessary; initialized as 0 and object(robot) is made new every fight.
+            				for (int i = 0; i < battleResults.length; i++){
+	                    			battleResults[i] = 0;
+	                    	}
+            				fileSettings_temp -= CONFIGMASK_ZEROINGFILE;
+            				
+            				if (debug_import || debug) {
+                    			out.println("Imported blank records.");
                     		}
-                    	}
-                    	fileSettings_WL = fileSettings_default;
+                		}
+                		else {
+            				if (debug_import || debug) {
+                    			out.println("- importing saved fight records (winLose):");
+                    		}
+	                		totalFights = Integer.parseInt(reader.readLine());
+	                    	for (int i = 0; i < battleResults.length; i++){
+	                    		if (i < totalFights) {
+	                    			battleResults[i] = Integer.parseInt(reader.readLine());
+	                    		}
+	                    		else {
+	                    			battleResults[i] = 0;
+	                    		}
+	                    	}
+	                    	if (debug_import || debug) {
+                    			out.println("Imported saved fight records.");
+                    		}
+                		}
+                    	fileSettings_WL = fileSettings_temp;
                     	flag_WLImported = true;
                 	} // end of WinLose
                 	
@@ -1209,15 +1323,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
                 	else {
                 		if (debug_import || debug) {
                     		out.println("error 8:");
-                    		out.println("fileSettings_default: " + fileSettings_default);
+                    		out.println("fileSettings_temp: " + fileSettings_temp);
                     		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
-                    		out.println("fileSettings_LUT: " + fileSettings_LUT);
+//                    		out.println("fileSettings_LUT: " + fileSettings_LUT);
                     		out.println("fileSettings_WL: "+ fileSettings_WL);
-                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire|verisett: " + (CONFIGMASK_FILETYPE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL));
-                    		out.println("CONFIGMASK_FILETYPE_WinLose|versett: " + (CONFIGMASK_FILETYPE_WinLose | CONFIGMASK_VERIFYSETTINGSAVAIL));
-                    		out.println("flag_LUTImported: " + flag_LUTImported);
-                    		out.println("fileSettings_default & CONFIGMASK_ZEROLUT: " + (fileSettings_default & CONFIGMASK_FILETYPE_LUTTrackfire));
-                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire: " + CONFIGMASK_FILETYPE_LUTTrackfire);
+                    		out.println("fileSettings_weights: " + fileSettings_weights);
+//                    		out.println("CONFIGMASK_FILETYPE_LUTTrackfire|verification: " + (CONFIGMASK_FILETYPE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL));
+                    		out.println("CONFIGMASK_FILETYPE_winLose|verification: " + (CONFIGMASK_FILETYPE_winLose | CONFIGMASK_VERIFYSETTINGSAVAIL));
+                    		out.println("CONFIGMASK_FILETYPE_weights|verification: " + (CONFIGMASK_FILETYPE_weights | CONFIGMASK_VERIFYSETTINGSAVAIL));
+//                    		out.println("flag_LUTImported: " + flag_LUTImported);
+                    		out.println("flag_weightsImported: " + flag_weightsImported);
+                    		out.println("fileSettings_temp & CONFIGMASK_ZEROINGFILE: " + (fileSettings_temp & CONFIGMASK_ZEROINGFILE));
+                    		out.println("CONFIGMASK_FILETYPE_weights: " + CONFIGMASK_FILETYPE_weights);
                     	}
                 		return ERROR_8_import_dump; //error 8 - missed settings/file dump.
                 	}
@@ -1231,29 +1348,27 @@ public class NN2_LUTMimic extends AdvancedRobot{
         } 
         //exception to catch when file is unreadable
         catch (IOException e) {
-        	if (debug_import || debug) {
-        		out.println("Something done messed up (Error0x01 error in file reading)");
-        	}
+        	//error in file reading
             return ERROR_1_import_IOException;
         } 
         // type of exception where there is a wrong number format (type is wrong or blank)  
         catch (NumberFormatException e) {
-            if (debug_import || debug) {
-            	out.println("Something done messed up (Error0x02 error in type conversion - check class throw for more details)");
-            }
+        	//Error0x02 error in type conversion - check class throw for more details
             return ERROR_2_import_typeConversionOrBlank;
         }
        
     	if (debug_import || debug) {
     		out.println("end of fxn fileSettings check (succeeded):");
-    		out.println("fileSettings_default: " + fileSettings_default);
+    		out.println("fileSettings_temp: " + fileSettings_temp);
     		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
-    		out.println("fileSettings_LUT: " + fileSettings_LUT);
+//    		out.println("fileSettings_LUT: " + fileSettings_LUT);
     		out.println("fileSettings_WL: "+ fileSettings_WL);
+    		out.println("fileSettings_weights: " + fileSettings_weights);
     	}
         return SUCCESS_importData;
     }
     
+
     /**
      * @name: 		exportData()
      * @author: 	partially written in robocode's sittingduckbot
@@ -1283,18 +1398,20 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	if (debug_export || debug) {
     		out.println("@exportData: beginning");
     		out.println("printing fileSettings: ");
-    		out.println("fileSettings_default: " + fileSettings_default);
+    		out.println("fileSettings_temp: " + fileSettings_temp);
     		out.println("fileSettings_stringTest: " + fileSettings_stringTest);
-    		out.println("fileSettings_LUT: " + fileSettings_LUT);
     		out.println("fileSettings_WL: "+ fileSettings_WL);
+    		out.println("fileSettings_weights: " + fileSettings_weights);
     		
     	}
     	
-    	//this condition prevents wrong file from being accidentally deleted due to access by printstream.
+    	//this condition prevents wrong file from being accidentally deleted. File is cleared whenever printstream accesses it (how?), so writing the correct information 
+    	//	into the desired file is paramount to data retention.
     	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
-    	  || ( (strName == strLUT) && (fileSettings_LUT > 0) && (flag_LUTImported == true) ) 
-    	  || ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) )
-    	  || ( (strName == strError))){
+    	  || ( (strName == strWL)         && (fileSettings_WL > 0)         && (flag_WLImported == true) )
+    	  || ( (strName == strWeights)    && (fileSettings_weights > 0)    && (flag_weightsImported == true) )
+    	  /* ||  ( (strName == strError) ) */ 
+    					){ 
 	    	
     		PrintStream w = null;
 	        
@@ -1312,41 +1429,73 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            //if scope for exporting files to stringTest
 	            if ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) {
 	            	
-	            	//debug
 	            	if (debug_export || debug) {
-	            		out.println("writing into strStringTest");
+	            		out.println("- writing into strStringTest:");
 	            	}
 	            	
 	            	w.println(fileSettings_stringTest);
-	            	flag_stringTestImported = false;
 	            	
+	            	if (debug_export || debug) {
+	            		out.println("Successfully written into strStringTest.");
+	            	}
+	            	
+	            	flag_stringTestImported = false;
 	            } //end of testString
 
-	            //winlose
-//	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
-//	            	if (debug_export || debug) {
-//	            		out.println("writing into winLose");
-//	            	}
-//	            	w.println(fileSettings_WL);
-//	            	w.println(totalFights+1);
-//	            	for (int i = 0; i < totalFights; i++){
-//	        			w.println(battleResults[i]);
-//	            	}
-//	        			w.println(currentBattleResult);
-//	            	flag_WLImported = false;
-//	            }// end winLose
-	            
-	            //strError
-	            else if((strName == strError)){
-	            	w.println("contains currentNetQVal-previousNetQVal for each tick");
-	            	for (int i = 0; i < currentRoundOfError; i++) {
-	            		w.println(QErrors[i]);
-//	            		w.println(Arrays.toString(QErrorSAV[i]));
+	            // weights
+	            else if ( (strName == strWeights) && (fileSettings_weights > 0) && (flag_weightsImported == true) ) {
+	            	if (debug_export || debug) {
+	            		out.println("- writing into weights.dat:");
 	            	}
-	            }
+	            	for (int i = 0; i < numInputsTotal; i++) {
+		         		for (int j = 0; j < numHiddensTotal; j++) {
+		         			w.println(arr_wIH[i][j]);
+		                }
+		         	} 
+	            	for (int i = 0; i < numHiddensTotal; i++) {
+		         		for (int j = 0; j < numOutputsTotal; j++) {
+		         			w.println(arr_wHO[i][j]);
+		                }
+		         		w.println("999");
+		         	}
+	            	
+	            	if (debug_export || debug) {
+	            		out.println("Successfully written into weights.");
+	            	}
+	            	
+	            	flag_weightsImported = false;
+	            } //end weights export
 	            
-	            /* to add new files for exporting data
-	             * such as saveData
+//	            winlose //Joey: why was winlose disabled
+	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
+	            	if (debug_export || debug) {
+	            		out.println("- writing into winLose:");
+	            	}
+	            	w.println(fileSettings_WL);
+	            	w.println(totalFights+1);
+	            	for (int i = 0; i < totalFights; i++){
+	        			w.println(battleResults[i]);
+	            	}
+	        		w.println(currentBattleResult);
+	            	
+	            	if (debug_export || debug) {
+	            		out.println("Successfully written into winLose.");
+	            	}
+	            	
+	            	flag_WLImported = false;
+	            }// end winLose
+	            
+//	            //strError
+//	            else if((strName == strError)){
+//	            	w.println("contains Q_curr-Q_prev for each tick");
+//	            	for (int i = 0; i < currentRoundOfError; i++) {
+//	            		w.println(QErrors[i]);
+////	            		w.println(Arrays.toString(QErrorSAV[i]));
+//	            	}
+//	            }
+//	            
+	            /* 
+	             * add new files here - remember to add config settings and add to the beginning ifs
 	             */
 	                        
 	            
@@ -1371,28 +1520,30 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            if (w != null) {
 	                w.close();
 	            }
-	        }      
+	        }
+	        
+	        flag_alreadyExported = true;
+	        
 	        if (debug_export || debug) {
 	        	out.println("(succeeded export)");
 	        }
 	        return SUCCESS_exportData;
-    	}
+    	} //end of big if.
     	
-    	//this should prevent wiping INDIRECTLY if import error. If import was successful, then config flag was set.
-    	//goal is to prevent accidentally wiping irrelevant file
+    	//this should prevent wipes by writing when data isn't ready or available. If import was successful, then fileSettings would already be set.
+    	//goal is to prevent accidentally wiping irrelevant file.
     	else {
     		return ERROR_10_export_mismatchedStringName;
     	}
     }
  
+    
     /**binaryActivation function
      * @param x
-     * @return squashedValue. 
+     * @return newVal. 
      */
  	public double binaryActivation(double x) {
-// 		System.out.println("BINARY ");
  		double newVal = 1/(1 + Math.exp(-x)); 
-// 		System.out.println("binary " + newVal );
  		return newVal;
  	}
  	
@@ -1424,6 +1575,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
  		double bipDeriv = 0.5*(1 + bipFunc)*(1 - bipFunc);  
  		return bipDeriv;
  	}
+}
+
 	/* 
 	 * If want to emphasize a certain event, then call the event and add external reward. 
 	 * */
@@ -1489,4 +1642,3 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //	
 	
  	
-}

@@ -36,7 +36,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	 */
 	 //variables for the q-function. Robot will NOT change analysis pattern mid-fight.
     private static final double alpha = 0.1;                //to what extent the newly acquired information will override the old information.
-    private static final double gamma = 1;                //importance of future rewards
+    private static final double gamma = 0.8;                //importance of future rewards
     private static final double epsilon = 0.05; 				//degree of exploration 
     
     //policy:either greedy or exploratory or SARSA 
@@ -217,9 +217,10 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private double prevStateActionVector[]    = new double [numInputsTotal]; //might not be used 
 
     private double Q_curr = 0.0;
-    private double Q_prev= 0.0; 
+    private double Q_prev = 0.0;
+    private double Q_prev_target = 0.0;
     private double[] Y_calculated = new double [numOutputsTotal]; 			//because backProp takes in a vector for Y_calculated (which is qprevious).  //Joey: might delete this comment
-    private double[] Y_training = new double [numOutputsTotal]; 
+    private double[] Y_target = new double [numOutputsTotal]; 
     
     //array to store the q values obtained from net forward propagation, using the current state values as well as all possible actions as inputs. 
     private double [][][] Q_NNFP_all = new double 
@@ -278,7 +279,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     // analysis rate //Joey: huh
 	private double lRate = 0.05; 			
 	//value of momentum //Joey: consider adding some momentum lel
-	private double momentum = 0.0;  		
+	private double momentum = 0.1;  		
 	
 	// arrays used for momentum
 	private double [][] vPast  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights for Past.
@@ -552,9 +553,10 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @return:		n
      */
     public void copyCurrentSAVIntoPrevSAV(){
-    	for (int i = 0; i < currentStateActionVector.length; i++) {
-    		prevStateActionVector[i] = currentStateActionVector[i];
-    	}
+//    	for (int i = 0; i < currentStateActionVector.length; i++) {
+//    		prevStateActionVector[i] = currentStateActionVector[i];
+//    	}
+    	//Joey: that was not necessary
     	Q_prev = Q_curr; 
     }
     
@@ -649,10 +651,8 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     public void qFunction(){
     	getAllQsFromNet();
         getMax(); 
-        Q_curr =  calcNewPrevQVal();
+        calcNewPrevQVal();
         //currentStateActionVector = X inputs, prevQVal (double) is the target, qNew, 
-        Y_calculated[0] = Q_prev; //this is wrong
-        Y_training[0] = Q_curr; 
         runBackProp(); 
     }
 
@@ -774,23 +774,23 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
         int randMaxAction = 0;
         int actionLinearized = 0;
 //        out.println("Q_NNFP_all.length " + Q_NNFP_all.length); 
-    	for (int i = 0; i < Q_NNFP_all.length; i++){
-		    for (int j = 0; j < Q_NNFP_all[0].length; j++){
-		    	for (int k = 0; k < Q_NNFP_all[0][0].length; k++, actionLinearized++){
+    	for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
+		    for (int i_A1 = 0; i_A1 < Q_NNFP_all[0].length; i_A1++){
+		    	for (int i_A2 = 0; i_A2 < Q_NNFP_all[0][0].length; i_A2++, actionLinearized++){
 		    		
 //		    		out.println("Q_NNFP_all " + Q_NNFP_all[i][j][k]);
-		    		if (Q_NNFP_all[i][j][k] > currMax){
-		    			currMax = Q_NNFP_all[i][j][k];
+		    		if (Q_NNFP_all[i_A0][i_A1][i_A2] > currMax){
+		    			currMax = Q_NNFP_all[i_A0][i_A1][i_A2];
 		            	numMaxActions = 1;
 		            	action_QMax_all[numMaxActions-1] = actionLinearized;		
 		            }
-		            else if (Q_NNFP_all[i][j][k] == currMax){
+		            else if (Q_NNFP_all[i_A0][i_A1][i_A2] == currMax){
 		            	action_QMax_all[numMaxActions++] = actionLinearized;
 		            }	            
 		    		
 		    		
 		            if (debug_getMax || debug) {
-		            	out.print(i + ": " + Q_NNFP_all[i][j][k] + "  ");
+		            	out.print(i_A0 + ": " + Q_NNFP_all[i_A0][i_A1][i_A2] + "  ");
 		            }
 		    	}
     		}
@@ -845,12 +845,11 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @return		prevQVal
      	Q(s’,a’)-Q(s,a)
      */
-    public double calcNewPrevQVal(){
+    public void calcNewPrevQVal(){
     	double reward_N = bipolarActivation(reward); //Joey: put this in reward fxn>
     	//Joey ask andrea about papers for good gamma terms. (close to 1?)
     	
-    	Q_curr = Q_prev + alpha*(reward_N + (gamma*Q_max) - Q_prev); //Joey: mby bipolar activate the reward
-    	return Q_curr;
+    	Q_prev_target += alpha*(reward_N + (gamma*Q_max) - Q_prev); //Joey: mby bipolar activate the reward
     }
     
     /**
@@ -860,13 +859,15 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @return:		1. //TODO
      */
     public void runBackProp() {      
+        Y_calculated[0] = Q_prev; 
+        Y_target[0] = Q_prev_target; 
     	//step 6: calculate output delta
 		for (int k = 0; k <numOutputsTotal; k++){
 			if (activationMethod == binaryMethod){
-				delta_out[k] = (Y_training[k] - Y_calculated[k])*binaryDerivative(Y_in[k]); 
+				delta_out[k] = (Y_target[k] - Y_calculated[k])*binaryDerivative(Y_in[k]); 
 			}
 			else{
-				delta_out[k] = (Y_training[k] - Y_calculated[k])*bipolarDerivative(Y_in[k]);	
+				delta_out[k] = (Y_target[k] - Y_calculated[k])*bipolarDerivative(Y_in[k]);	
 			}
 //			System.out.println("\n");
 //			System.out.println("delta " + delta_out[k]);
@@ -899,7 +900,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
 //				System.out.println("arr_wIH[i][j] " + arr_wIH[i][j]);
 				vDelta[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i]; //Joey: what about the action vectors?
-				vNext[i][j]  = arr_wIH[i][j] + vDelta[i][j] + momentum*(arr_wIH[i][j] - vPast[i][j]); 
+				vNext[i][j] = arr_wIH[i][j] + vDelta[i][j] + momentum*(arr_wIH[i][j] - vPast[i][j]); 
 				vPast[i][j] = arr_wIH[i][j]; 
 				arr_wIH[i][j] = vNext[i][j]; 
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
@@ -910,7 +911,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 		//Step 9 - Calculate local error. 
 		double error = 0.0;
 		for (int k = 0; k < numOutputsTotal; k++){ 
-			error = 0.5*(java.lang.Math.pow((Y_training[k] - Y_calculated[k]), 2)); 
+			error = 0.5*(java.lang.Math.pow((Y_target[k] - Y_calculated[k]), 2)); 
 		}
 	}
 	/**
@@ -936,45 +937,23 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     	
     public void doAction_updateLearningAlgo(){
     	//maneuver behaviour (chase-offensive/defensive)
-    	if (currentStateActionVector[0] == 0) {
-    		setTurnRight(enemyBearingFromHeading);
-    		setAhead(50);
-    	}
-    	else if(currentStateActionVector[0] == 1){
-    		setTurnRight(enemyBearingFromHeading);
-    		setAhead(-50);
-    	}
-    	else if(currentStateActionVector[0] == 2){
-    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
-    		setAhead(50);
-    	}
-    	else if(currentStateActionVector[0] == 3){
-    		setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90));
-    		setAhead(-50);
-    	}
+    	if      (currentStateActionVector[0] == 0) {setTurnRight(enemyBearingFromHeading); 										setAhead(50); }
+    	else if (currentStateActionVector[0] == 1) {setTurnRight(enemyBearingFromHeading); 										setAhead(-50);}
+    	else if (currentStateActionVector[0] == 2) {setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90)); 	setAhead(50); }
+    	else if (currentStateActionVector[0] == 3) {setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading + 90)); 	setAhead(50); }
     	
-    	if (currentStateActionVector[1] == 0){
-    		setFire(1);
-    	}
-    	else if (currentStateActionVector[1] == 1){
-    		setFire(3);
-    	}
+    	if      (currentStateActionVector[1] == 0) {setFire(1);}
+    	else if (currentStateActionVector[1] == 1) {setFire(3);}
     	
     	//firing behaviour (to counter defensive behaviour)
-    	if (currentStateActionVector[2] == 0){
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));
-    	}
-    	else if (currentStateActionVector[2] == 1){
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));
-    	}
-    	else if (currentStateActionVector[2] == 2){
-    		setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));
-    	}   	
+    	if      (currentStateActionVector[2] == 0) {setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));}
+    	else if (currentStateActionVector[2] == 1) {setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));}
+    	else if (currentStateActionVector[2] == 2) {setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));}   	
 
 //    	out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));     
-      if (debug_doAction_updateLearningAlgo || debug) {
-    	  out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
-      }
+    	if (debug_doAction_updateLearningAlgo || debug) {
+    		out.println("currentStateActionVector" + Arrays.toString(currentStateActionVector));
+    	}
     }
 
     /**
