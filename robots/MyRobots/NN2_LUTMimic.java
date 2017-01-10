@@ -24,6 +24,7 @@ import robocode.ScannedRobotEvent;
 import robocode.WinEvent;
 
 public class NN2_LUTMimic extends AdvancedRobot{
+	//joey: gotta track Q_val somehow, maybe tally up differences and write it in at the end
 	/*
 	 * SAV Change Rules:
 	 * 1. update STATEACTION VARIABLES
@@ -332,23 +333,19 @@ public class NN2_LUTMimic extends AdvancedRobot{
         
         // Import data. ->Change imported filename here<-
 
-        flag_error = importData(strWeights);
+        flag_error = importDataWeights();
         if(flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run LUT: " + flag_error);
+        	out.println("ERROR @run weights: " + flag_error);
         }
         
-        flag_error = importData(strWL);
-        if( flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run WL: " + flag_error);
-        }
+
             
-        //set independent movement for gun, radar and body (robocode properties). 
+        //set gun and radar for robot turn separate gun, radar and robot (robocode properties). 
         setAdjustGunForRobotTurn(true);
     	setAdjustRadarForGunTurn(true);	
     	setAdjustRadarForRobotTurn(true);
 
     	// anything in infinite loop is initial behaviour of robot
-    	// current initial behaviour is to turn radar until enemy located.
         for(;;){
         	setTurnRadarRight(20);
     		execute();					//from "AdvancedRobot" to allow parallel commands. 
@@ -356,48 +353,59 @@ public class NN2_LUTMimic extends AdvancedRobot{
          
     }
     
-
     /**
      * @name: 		onBattleEnded
-     * @brief:		Overwrites default onBattleEnded class fxn in order to perform exports data.
-     * @purpose: 	1. 	Exports weights and win/lose on end of battle to datafile - IN CASES WHERE ONDEATH OR ONWIN DOES NOT TRIGGER 
+     * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
+     * 				   	linearly. Exporting will occur only once per fight, either during 
+     * 				   	death or fight end.
      * @param:		1.	BattleEndedEvent class from Robot
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-    	
-    	if (!flag_alreadyExported) {
-	        flag_error = exportData(strWeights);				//strWeights = weights.dat
-	        if(flag_error != SUCCESS_exportData) {
-	        	out.println("ERROR @onBattleEnded: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
-	        }
-	        
-	        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-	        if( flag_error != SUCCESS_exportData) {
-	        	out.println("ERROR @onBattleEnded: " + flag_error);
-	        }
-    	}
+        flag_error = exportDataWeights();	
+        if(flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded weights: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
+        	//LUT is 0'd, causing error 9 (export_dump)
+        }
+        
+//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onBattleEnded WL: " + flag_error);
+//        }
+        
+        flag_error = exportData(strError);					//"strError" = saveError.dat
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded Error: " + flag_error);
+        }       
+        
     }
     
     /**
      * @name: 		onDeath
-     * @purpose: 	1. 	Exports weights and win/lose on death(we lost lel) to datafile.
+     * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
+     * 				   	linearly. Exporting will occur only once per fight, either during 
+     * 				   	death or fight end.
+     * 				2.  Sets a terminal reward of -100 
      * @param:		1.	DeathEvent class from Robot
      * @return:		n
      */
     public void onDeath(DeathEvent event){
-    	
     	currentBattleResult = 0;    					//global variable. 
-    	
-        flag_error = exportData(strWeights);
+        flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath: " + flag_error);
+        	out.println("ERROR @onDeath weights: " + flag_error);
         }
         
-        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+//        flag_error = exportData(strWL);					//"strWL" = winLose.dat
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onDeath WL: " + flag_error);
+//        }
+        
+        flag_error = exportData(strError);					//"strError" = saveError.dat
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR: " + flag_error);
-        }
+        	out.println("ERROR @onDeath WL: " + flag_error);
+        }        
+
     }
     
     /**
@@ -411,20 +419,24 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */    
 	public void onWin(WinEvent e) {
-		
-		currentBattleResult = 1;
+    	currentBattleResult = 1;
     	
-        flag_error = exportData(strWeights);
+        flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR: " + flag_error);
+        	out.println("ERROR @onWin weights: " + flag_error);
         }
         
-        flag_error = exportData(strWL);
+//        flag_error = exportData(strWL);
+//        if( flag_error != SUCCESS_exportData) {
+//        	out.println("ERROR @onWin WL: " + flag_error);
+//        }
+        
+        flag_error = exportData(strError);
         if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR: " + flag_error);
+        	out.println("ERROR @onWin WL: " + flag_error);
         }
+
 	}
-	
 
 	/**
      * @name:		onScannedRobot
