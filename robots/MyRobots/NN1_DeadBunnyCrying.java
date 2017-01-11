@@ -118,12 +118,12 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private static final int input_state2_enemyEnergy_originalPossibilities = 2;    //>30, <30
     private static final int input_state3_enemyDistance_originalPossibilities = 3;    //<150, <350, >=350
     private static final int input_state4_enemyDirection_originalPossibilities = 3;    //head-on (still (abs <30 || >150), left (<0 relative dir w/ positive velo || >0 with negative velo), right (<0 dir w/ negative velo || >0 with positive velo)
-    private static final int numStates = 5;
+    private static final int numStateContainers = 5;
     
-    private static final int numInputBias = 0;
-    private static final int numHiddenBias = 1;
+    private static final int numInputBias    = 0;
+    private static final int numHiddenBias   = 1;
     private static final int numHiddenNeuron = 4;
-    private static final int numInputsTotal = ( numInputBias + numActionContainers + numStates ); 
+    private static final int numInputsTotal  = ( numInputBias + numActionContainers + numStateContainers ); 
     private static final int numHiddensTotal = ( numHiddenBias+ numHiddenNeuron );
     private static final int numOutputsTotal = 1;
     
@@ -643,7 +643,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Y_calculated is prevNetQVal 
      * @param: 		none, but uses:
      * 				1.	double reward 
-     * 				2.	int currentStateVector[] already discretized (size numStates)
+     * 				2.	int currentStateVector[] already discretized (size numStateContainers)
      * 				3.	double[].. LUT table, 
      * 				4.	int [] currentStateActionVector. 
      * @return: 	n
