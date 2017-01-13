@@ -177,10 +177,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	private final static boolean DEBUG_generateCurrentStateVector = false;
 	private final static boolean DEBUG_RL_and_NN = false;
 	private final static boolean DEBUG_getAllQsFromNet = false;
-	private final static boolean DEBUG_forwardProp = false;
+	private final static boolean DEBUG_forwardProp = false; //can be used to debug for the multiple fxns encompassed by FP.
 	private final static boolean DEBUG_getMax = false;
 	private final static boolean DEBUG_qFunction = false;
-	private final static boolean DEBUG_runBackProp = false;
+	private final static boolean DEBUG_backProp = false;
 	private final static boolean DEBUG_resetReward = false;
     private final static boolean DEBUG_doAction_updateLearningAlgo = false;
 	private final static boolean DEBUG_doAction_notLearning = false;
@@ -249,7 +249,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
     private double Q_curr = 0.0;
     private double Q_prev = 0.0;
-    private double Q_prev_target = 0.0;
+    private double Q_target = 0.0;
     private double[] Y_calculated = new double [numOutputsTotal]; 			//because backProp takes in a vector for Y_calculated (which is qprevious).  //Joey: might delete this comment
     private double[] Y_target = new double [numOutputsTotal]; 
     
@@ -698,7 +698,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				2. The q value is the maximum "Y" from array
      * 				3. Q_curr is assigned prevQVal 
      * 				4. Y_calculated is previousNetQ
-     * 			    5. run runBackProp with the input X as currentStateActionVector, qExpected as currentNetQ, Y_calculated is prevNetQVal 
+     * 			    5. run backProp with the input X as currentStateActionVector, qExpected as currentNetQ, Y_calculated is prevNetQVal 
      * @param: 		none, but uses:
      * 				1.	double reward 
      * 				2.	int currentStateVector[] already discretized (size numStateContainers)
@@ -710,7 +710,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	getAllQsFromNet();
         getMax(); 
         qFunction();
-        runBackProp(); 
+        backProp(); 
     }
 
     /** 
@@ -745,8 +745,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	return;
 	}
 	
-
-	/** function for forwardpropagation
+//Joey: check all fxn readme's to make sure they all make sense
+	/** function for forwardpropagation //Joey: update the terms to be more readable
 	 * @brief: forward propagation done in accordance to pg294 in Fundamentals of Neural Network, by Laurene Fausett.
 	 * 			Feedforward (step 3 to 5):
 	 * 				step 3: Each input unit (Xi, i = 1, ..., n) receives input signal xi and broadcasts this signal to all units in the layer above (the hidden units).
@@ -924,23 +924,56 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void qFunction(){
     	
     	//Joey ask andrea about papers for good gamma terms. (close to 1?)
+    	Q_target = Q_prev + alpha*(reward_normalized + (gamma*Q_max) - Q_prev); //Joey: mby bipolar activate the reward
+    	
     	if (DEBUG_qFunction || DEBUG) {
-    		
+    		LOG[lineCount++] = "- Q function";
+    		LOG[lineCount++].format("Q_target%.2f  Q_prev:%.2f  Q_max:%.2f", Q_target, Q_prev, Q_max);
+    		LOG[lineCount++].format("alpha:%f reward_N:%.2f gamma:%f", alpha, reward_normalized, gamma);
     	}
-    	Q_prev_target = Q_prev + alpha*(reward_normalized + (gamma*Q_max) - Q_prev); //Joey: mby bipolar activate the reward
     }
     
     /**
      * @name:		runbackProp
      * @brief:		pg 295 in Fundamentals of Neural Networks by Lauren Fausett, Backpropagation of error: steps 6 to 8.
-     * @param:		1. //TODO
-     * @return:		1. //TODO
+     * 				step 6:
+     * 				Each output unit (Y[k], k = 1, ..., m) receives a target pattern corresponding to the input training pattern, computes its error information term,
+     * 					delta[k] = (t[k] - y[k])f'(y_in[k]),
+     * 				calculates its weight correction term (used to update w[j][k] later),
+     * 					delta_weight_w[j][k] = alpha * delta[k] * Z[j],
+     * 				calculates its bias correction term (used to update w[0][k] later),
+     * 					delta_weight_w[0][k] = alpha * delta[k],
+     * 				and continue to use delta[k] for lower levels.
+     *				
+     *				step 7: 
+     *				Each hidden unit (Z[j], j = 1 ..., p) sums its delta inputs (from units in the layer above),
+     *					delta_in[j] = (sum of from k = 1 to m)(delta[k] * w[j][k]),
+     *				multiplies by the derivative of its activation fxn to calculate its error information term,
+     *					delta[j] = delta_in[j] * f'(z_in[j]),
+     *				calculates its weight correction term (used to update v[i][j] later),
+     *					delta_weight_v[i][j] = alpha * delta[j] * x[i],
+     *				and calculates its bias correction term (used to update v[0][j] later),
+     *					delta_weight_v[0][j] = alpha * delta[j].
+     *				
+     *				step 8: Update weights and biases
+     *				Each output unit (Y[k], k = 1, ..., m) updates its bias and weights (j = 0, ..., p):
+     *					w[j][k](new) = w[j][k](old) + delta_weights_w[j][k].
+     *				Each hidden unit (Z[j], j = 1, ..., p) updates its bias and weights (i = 0, ..., n):
+     *					v[i][j](new) = v[i][j](old) + delta_weights_v[i][j].
+     *
+     *				To assist with rate of convergence, we have also included the ability for the net to use momentum. Momentum requires data one or more previous
+     *				training patterns. In the simplest form, the weights at t+1 are based on the weights at t and t-1:
+     *					w[j][k](t+1) = w[j][k](t) + alpha*delta_out[k]*Z[j] + mu[w[j][k](t) - w[j][k](t-1)],
+     *				and
+     *					v[i][j](t+1) = v[i][j](t) + alpha*delta_in[j]*X[i] + mu[v[i][j](t) - v[j][k](t-1)].
+     * @param:		n, but uses many global NN parameters.
+     * @return:		n
      */
-    public void runBackProp() {      
+    public void backProp() {      
         Y_calculated[0] = Q_prev; 
-        Y_target[0] = Q_prev_target; 
-    	//step 6: calculate output delta
-		for (int k = 0; k <numOutputsTotal; k++){
+        Y_target[0] = Q_target; 
+    	//step 6-8 for hidden-to-output weights:
+		for (int k = 0; k <numOutputsTotal; k++){ // m = numOutputsTotal. pretending output bias doesn't exist so our output vector starts at 0 (horrificallylazyXD)
 			if (activationMethod == binaryMethod){
 				delta_out[k] = (Y_target[k] - Y_calculated[k])*binaryDerivative(Y_in[k]); 
 			}
@@ -953,6 +986,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //				System.out.println("wPast[j][k] " + wPast[j][k]);
 //				System.out.println("arr_wHO[j][k] " + arr_wHO[j][k]);
 				wDelta[j][k] = alpha*delta_out[k]*Z[j];
+				//momentum equations
 				wNext[j][k] = arr_wHO[j][k] + wDelta[j][k] + momentum*(arr_wHO[j][k] - wPast[j][k]); 
 				wPast[j][k] = arr_wHO[j][k]; 
 				arr_wHO[j][k] = wNext[j][k]; 
@@ -962,19 +996,19 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			}
 		}
 		
-		//for hidden layer
+		//for input-to-hidden layer
 		for (int j = 0; j < numHiddensTotal; j++){
 			double sumDeltaInputs = 0.0;
-			for (int k = 0;  k < numOutputsTotal; k++){
+			for (int k = 0;  k < numOutputsTotal; k++){ //pretending output bias doesn't exist so our output vector starts at 0
 				sumDeltaInputs += delta_out[k]*arr_wHO[j][k];
 				if (activationMethod == binaryMethod){
-					 delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
+					delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
 				}
 				else{
 					delta_hidden[j] = sumDeltaInputs*bipolarDerivative(Z_in[j]);	
 				}
 			}
-			for (int i = 0; i< numInputsTotal; i++){
+			for (int i = 0; i< numInputsTotal; i++){ //because no input bias, i = 0 will be a wasted cycle (ah wellz)
 //				System.out.println("vPast[i][j] " + vPast[i][j]);
 //				System.out.println("arr_wIH[i][j] " + arr_wIH[i][j]);
 				vDelta[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i]; //Joey: what about the action vectors?
@@ -986,11 +1020,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //				System.out.println("vNext[i][j] " + vNext[i][j]);
 			}
 		}
-		//Step 9 - Calculate local error. 
-		double error = 0.0;
-		for (int k = 0; k < numOutputsTotal; k++){ 
-			error = 0.5*(java.lang.Math.pow((Y_target[k] - Y_calculated[k]), 2)); 
-		}
+//		
+//		//Step 9 - Calculate local error. 
+//		double error = 0.0;
+//		for (int k = 0; k < numOutputsTotal; k++){ 
+//			error = 0.5*(java.lang.Math.pow((Y_target[k] - Y_calculated[k]), 2)); 
+//		}
 	}
 	/**
      * @name:		resetReward
