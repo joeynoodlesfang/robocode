@@ -401,7 +401,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
         flag_error = exportData(strError);					//"strError" = saveError.dat
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded Error: " + flag_error);
-        }       
+        }
+        
+        flag_error = exportData(strLog);					
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded Log: " + flag_error);
+        }
         
     }
     
@@ -1623,7 +1628,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //	            }
 //	           
 	            else if (strName == strLog) {
-	            	
+	            	for (int i = 0; i < lineCount; i++){
+	        			w.println(LOG[i]);
+	            	}
 	            }
 	            /* 
 	             * add new files here - remember to add config settings and add to the beginning ifs
