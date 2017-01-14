@@ -167,26 +167,26 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * FLAGS AND COUNTS ===========================================================================
      */
     //DEBUG flags. Each allows printouts written for specific functions. DEBUG will print out all.
-    private final static boolean DEBUG = true;
-	private final static boolean DEBUG_run = false;
-	private final static boolean DEBUG_onScannedRobot = false;
-	private final static boolean DEBUG_analysis = false;
-	private final static boolean DEBUG_learnThisRound = false;
-	private final static boolean DEBUG_obtainReward = false;
-	private final static boolean DEBUG_copyCurrentQValueIntoPrev = false;
-	private final static boolean DEBUG_generateCurrentStateVector = false;
-	private final static boolean DEBUG_RL_and_NN = false;
-	private final static boolean DEBUG_getAllQsFromNet = false;
+    private final static boolean DEBUG = false;
+//	private final static boolean DEBUG_run = false;
+	private final static boolean DEBUG_onScannedRobot = true;
+	private final static boolean DEBUG_analysis = true;
+//	private final static boolean DEBUG_learnThisRound = false;
+	private final static boolean DEBUG_obtainReward = true;
+//	private final static boolean DEBUG_copyCurrentQValueIntoPrev = false;
+	private final static boolean DEBUG_generateCurrentStateVector = true;
+//	private final static boolean DEBUG_RL_and_NN = false;
+//	private final static boolean DEBUG_getAllQsFromNet = false;
 	private final static boolean DEBUG_forwardProp = false; //can be used to debug for the multiple fxns encompassed by FP.
 	private final static boolean DEBUG_getMax = false;
-	private final static boolean DEBUG_qFunction = false;
+	private final static boolean DEBUG_qFunction = true;
 	private final static boolean DEBUG_backProp = false;
-	private final static boolean DEBUG_resetReward = false;
-    private final static boolean DEBUG_doAction_Q = false;
-	private final static boolean DEBUG_doAction_notLearning = false;
-	private final static boolean DEBUG_doAction_mandatoryPerTurn = false;
-	private final static boolean DEBUG_importDataWeights = false;
-	private final static boolean DEBUG_exportDataWeights = false;
+//	private final static boolean DEBUG_resetReward = false;
+    private final static boolean DEBUG_doAction_Q = true;
+//	private final static boolean DEBUG_doAction_notLearning = false;
+//	private final static boolean DEBUG_doAction_mandatoryPerTurn = false;
+//	private final static boolean DEBUG_importDataWeights = false;
+//	private final static boolean DEBUG_exportDataWeights = false;
     private final static boolean DEBUG_import = false;
     private final static boolean DEBUG_export = false;
     
@@ -201,7 +201,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
     private boolean flag_alreadyExported = false;    
-    private static boolean flag_useOfflineTraining = true; //Joey: check usage 
+    private static boolean flag_useOfflineTraining = false; //Joey: check usage 
 
     // printout error flag - used to check function return statuses.
     // initialized to 0, which is no error.
@@ -239,15 +239,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
     // vars used for storing reward, and reward calculation.
     private double reward = 0.0;
     private double reward_normalized = 0.0;
-    private int energyDiffCurr = 0;
-    private int energyDiffPrev = 0;
+    private double energyDiffCurr = 0.0;
+    private double energyDiffPrev = 0.0;
     
 
     //vars that store current and previous stateAction vectors
     private double currentStateActionVector[] = new double [numInputsTotal];
     private double prevStateActionVector[]    = new double [numInputsTotal]; //might not be used 
 
-    private double Q_curr = 0.0;
+    private double Q_curr = 0.0; // stores the maximum currSAV QMax
     private double Q_prev = 0.0;
     private double Q_target = 0.0;
     private double[] Y_calculated = new double [numOutputsTotal]; 			//because backProp takes in a vector for Y_calculated (which is qprevious).  //Joey: might delete this comment
@@ -261,29 +261,28 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
     //variables used for getMax.
     private int [] action_QMax_all = new int [numActions]; //array for storing all actions with maxqval
-    private int action_QMax_chosen = 0; 				//stores the chosen currSAV with maxqval before policy
-    private double Q_max = 0.0; 							// stores the maximum currSAV QMax
-    private int random_actionBased = numActions;
+    private int action_QMax_chosen = 0; 				//stores the chosen currSAV with maxqval before policy							
+    private int randomVal_actions = numActions;
 
     //chosen policy. greedy or exploratory or SARSA 
     private static int policy = exploratory; //SARSA 
     private static int learningRate = 4; //learningAlgo is run every 4 ticks. //Joey: consider allowing robot to self-optimize for this.
 
     //enemy bot information
-    private int enemyDistance = 0;
-    private int enemyHeadingRelative = 0;
-    private int enemyHeadingRelativeAbs = 0;
-    private int enemyVelocity = 0;    
+    private double enemyDistance = 0.0;
+    private double enemyHeadingRelative = 0.0;
+    private double enemyHeadingRelativeAbs = 0.0;
+    private double enemyVelocity = 0.0;
     private double enemyBearingFromRadar = 0.0;
     private double enemyBearingFromGun = 0.0;
     private double enemyBearingFromHeading = 0.0;
-    private int enemyEnergy = 0;
+    private double enemyEnergy = 0.0;
     
     //my bot information
-    private int myHeading = 0; 
-    private int myEnergy = 0;
-    private int myPosX = 0;
-    private int myPosY = 0;
+    private double myHeading = 0.0; 
+    private double myEnergy = 0.0;
+    private double myPosX = 0.0;
+    private double myPosY = 0.0;
     
     //misc battle information
     private int turn = 0;
@@ -340,8 +339,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     /**
      * @name: 		run
      * @purpose:	1. Initializes robot colour
-     * 				2. Imports LUT data from file into local memory array.
-     * 				4. Runs LUT-based analysis code. See fxn learningLoop for details.
+     * 				2. Enters infinite scan mode until enemy robot is scanned, which triggers event onScannedRobot. This is where
+     * 				   most of the robot's logic begins.
      * @brief:		To import desired file name, simply write Stringvar of filename or "filenamehere.dat" as param of importData. 
      * @brief:		To ZeroLUT, add 1 to top line in .dat file (or change 16416 to 16417)
      * @param:		n
@@ -505,6 +504,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		enemyEnergy = (int)event.getEnergy();
 		turn = (int)getTime();
 		
+		
+    	if(DEBUG_onScannedRobot || DEBUG) {
+    		LOG[lineCount++] = "@@@ TURN " + turn + ":";
+    		LOG[lineCount++] = "myHeading:" + myHeading + "\tmyPosX:" + myPosX + "\tmyPosY:" + myPosY + "\tmyEnergy:" + myEnergy;
+    		LOG[lineCount++] = "enemyHeadingRelative:" + enemyHeadingRelative + "\tenemyVelocity:" + enemyVelocity;
+    		LOG[lineCount++] = String.format("enemyBearingFromRadar:%.1f enemyBearingFromGun:%.1f enemyBearingFromHeading:%.1f", enemyBearingFromRadar, enemyBearingFromGun, enemyBearingFromHeading);
+    		LOG[lineCount++] = "enemyDistance:" + enemyDistance + "\tenemyEnergy" + enemyEnergy;
+    	}
+    	
     	analysis();
     }
 
@@ -551,6 +559,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
      */
     public void analysis() {
+    	if(DEBUG_analysis || DEBUG) {
+    		LOG[lineCount++] = "- analysis (weight vals)";
+    		LOG[lineCount++] = "arr_wIH:" + Arrays.deepToString(arr_wIH);
+    		LOG[lineCount++] = "arr_wHO:" + Arrays.deepToString(arr_wHO);
+    	}
     	
     	if (learnThisRound()){
     		obtainReward();
@@ -593,17 +606,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	reward += energyDiffCurr - energyDiffPrev;
     	reward_normalized = bipolarActivation(reward); 
     	
-    	if(DEBUG_onScannedRobot || DEBUG) {
-    		LOG[lineCount++] = "@@@ TURN " + turn + ":";
-    		LOG[lineCount++] = "myHeading:" + myHeading + "\tmyPosX:" + myPosX + "\tmyPosY:" + myPosY + "\tmyEnergy:" + myEnergy;
-    		LOG[lineCount++] = "enemyHeadingRelative:" + enemyHeadingRelative + "\tenemyVelocity:" + enemyVelocity;
-    		LOG[lineCount++] = String.format("enemyBearingFromRadar:%.1f enemyBearingFromGun:%.1f enemyBearingFromHeading:%.1f", enemyBearingFromRadar, enemyBearingFromGun, enemyBearingFromHeading);
-    		LOG[lineCount++] = "enemyDistance:" + enemyDistance + "\tenemyEnergy" + enemyEnergy;
-    	}
-    	
     	if(DEBUG_obtainReward || DEBUG) {
     		LOG[lineCount++] = "- rewards";
-    		LOG[lineCount++] = String.format("reward(normalized):%.5f", reward_normalized);
+    		LOG[lineCount++] = String.format("reward:%f reward(normalized):%.5f", reward, reward_normalized);
     	}
     }
     
@@ -632,7 +637,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	//First few INPUTS are ACTIONS and hence will be IGNORED for generating CSAV
     	//INPUTS 0, 1 and 2 are ACTION
         
-    	//Dimension 1 - private static final int input_state0_myPos_possibilities = 5;
+    	//Dimension 3 - private static final int input_state0_myPos_possibilities = 5;
     	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					//left
     		currentStateActionVector[3] = 1;						
     	}
@@ -649,10 +654,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
     		currentStateActionVector[3] = 0; 
     	}
 
-    	//Dimension 3 - private static final int input_state1_myHeading_originalPossilibities = 4;
-    	currentStateActionVector[4] = myHeading*(4/360);			//to normalize. 
+    	//Dimension 4 - private static final int input_state1_myHeading_originalPossilibities = 4;
+    	currentStateActionVector[4] = myHeading*4/360;			//to normalize. 
     	
-    	//Dimension 4 - enemyEnergy
+    	//Dimension 5 - enemyEnergy
     	if (enemyEnergy < 30){
     		currentStateActionVector[5] = enemyEnergy/60;
     	}
@@ -660,7 +665,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	else if (enemyEnergy >= 30){
     		currentStateActionVector[5] =((enemyEnergy-30)/70)+0.5;
     	}
-    	//Dimension 5:  //<150, <350, >=350(to1000)
+    	//Dimension 6:  //<150, <350, >=350(to1000)
     	currentStateActionVector[6] = enemyDistance;
     	if (enemyDistance < 150){
     		currentStateActionVector[6] = enemyDistance/100;
@@ -673,7 +678,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     		currentStateActionVector[6] = (enemyDistance/2000); 
     	}
     	
-		//Dimension 5: is enemy moving right, left, or within the angle of my gun?
+		//Dimension 7: is enemy moving right, left, or within the angle of my gun?
 		//requires mygunheading, enemyheading, enemyvelocity
     	if ((enemyHeadingRelativeAbs < 30) || (enemyHeadingRelativeAbs > 150) || (enemyVelocity == 0)) {
 			currentStateActionVector[7] = 0; //within angle of gun
@@ -687,6 +692,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	
     	if (DEBUG_generateCurrentStateVector || DEBUG){
     		LOG[lineCount++] = "currentSAV:" + Arrays.toString(currentStateActionVector);
+    		LOG[lineCount++] = "myheading*4/360" + myHeading*4/360 + " " + currentStateActionVector[4];
     	}
     }
      
@@ -843,13 +849,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
         int numMaxActions = 0;
         int randMaxAction = 0;
         int actionLinearized = 0;
+        action_QMax_chosen = 0;
+        Arrays.fill(action_QMax_all, 0);
         
-//        LOG[lineCount++] = "Q_NNFP_all.length " + Q_NNFP_all.length); 
     	for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
 		    for (int i_A1 = 0; i_A1 < Q_NNFP_all[0].length; i_A1++){
 		    	for (int i_A2 = 0; i_A2 < Q_NNFP_all[0][0].length; i_A2++, actionLinearized++){
-		    		
-//		    		LOG[lineCount++] = "Q_NNFP_all " + Q_NNFP_all[i][j][k]);
 		    		if (Q_NNFP_all[i_A0][i_A1][i_A2] > currMax){
 		    			currMax = Q_NNFP_all[i_A0][i_A1][i_A2];
 		            	numMaxActions = 1;
@@ -865,7 +870,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	if (DEBUG_forwardProp || DEBUG_getMax || DEBUG) {
         	LOG[lineCount++] = "action_QMax_all:" + Arrays.toString(action_QMax_all);
         }
-        Q_max = currMax;
+        Q_curr = currMax;
         
         if (numMaxActions > 1) {
         	randMaxAction = (int)(Math.random()*(numMaxActions)); //math.random randoms btwn 0.0 and 0.999. Add 1 to avoid truncation after typecasting to int.
@@ -881,18 +886,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
         }
         
         else{
-        	random_actionBased = (int)(Math.random()*(numActions));
+        	randomVal_actions = (int)(Math.random()*(numActions));
 	        if (policy == SARSA) {
-	        	action_QMax_chosen = random_actionBased;
+	        	action_QMax_chosen = randomVal_actions;
 	        }
 	        else if(policy == exploratory) {
-	        	action_QMax_chosen = (Math.random() > epsilon ? action_QMax_chosen : random_actionBased);
+	        	action_QMax_chosen = (Math.random() > epsilon ? action_QMax_chosen : randomVal_actions);
 	        }
         }
 	        
         if (DEBUG_forwardProp || DEBUG_getMax || DEBUG) {
-        	LOG[lineCount++] = "enacting policy:" + policy;
-        	LOG[lineCount++] = String.format("Action Chosen:%d, with QVal:%.5f", action_QMax_chosen, Q_max);
+        	LOG[lineCount++] = "enacting policy:" + policy + "(0=gre 1=exp 2=SAR)";
+        	LOG[lineCount++] = String.format("Action Chosen:position %d in action_QMax_all, with QVal:%.5f", action_QMax_chosen, Q_curr);
         }
         
         for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
@@ -918,18 +923,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @name		qFunction
      * @purpose		1. Calculate the new prev q-value based on Qvalue function.
      * @param		n, but uses:
-     * 				1. Q_max
+     * 				1. Q_curr
      * @return		prevQVal
      	Q(s’,a’)-Q(s,a)
      */
     public void qFunction(){
     	
     	//Joey: ask andrea about papers for good gamma terms. (close to 1?)
-    	Q_target = Q_prev + alpha*(reward_normalized + (gamma*Q_max) - Q_prev); //Joey: mby bipolar activate the reward
+    	Q_target = Q_prev + alpha*(reward_normalized + (gamma*Q_curr) - Q_prev); //Joey: mby bipolar activate the reward
     	
     	if (DEBUG_qFunction || DEBUG) {
     		LOG[lineCount++] = "- Q function";
-    		LOG[lineCount++] = String.format("Q_target%.5f  Q_prev:%.5f  Q_max:%.5f", Q_target, Q_prev, Q_max);
+    		LOG[lineCount++] = String.format("Q_target%.5f  Q_prev:%.5f  Q_curr:%.5f", Q_target, Q_prev, Q_curr);
     		LOG[lineCount++] = String.format("alpha:%.2f reward_N:%.5f gamma:%.2f", alpha, reward_normalized, gamma);
     	}
     }
