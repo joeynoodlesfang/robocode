@@ -597,13 +597,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
     		LOG[lineCount++] = "@@@ TURN " + turn + ":";
     		LOG[lineCount++] = "myHeading:" + myHeading + "\tmyPosX:" + myPosX + "\tmyPosY:" + myPosY + "\tmyEnergy:" + myEnergy;
     		LOG[lineCount++] = "enemyHeadingRelative:" + enemyHeadingRelative + "\tenemyVelocity:" + enemyVelocity;
-    		LOG[lineCount++].format("enemyBearingFromRadar:%.1f enemyBearingFromGun:%.1f enemyBearingFromHeading:%.1f", enemyBearingFromRadar, enemyBearingFromGun, enemyBearingFromHeading);
+    		LOG[lineCount++] = String.format("enemyBearingFromRadar:%.1f enemyBearingFromGun:%.1f enemyBearingFromHeading:%.1f", enemyBearingFromRadar, enemyBearingFromGun, enemyBearingFromHeading);
     		LOG[lineCount++] = "enemyDistance:" + enemyDistance + "\tenemyEnergy" + enemyEnergy;
     	}
     	
     	if(DEBUG_obtainReward || DEBUG) {
     		LOG[lineCount++] = "- rewards";
-    		LOG[lineCount++].format("reward(raw):%-3d reward(normalized):%.1f", reward, reward_normalized);
+    		LOG[lineCount++] = String.format("reward(normalized):%.5f", reward_normalized);
     	}
     }
     
@@ -750,16 +750,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	/** function for forwardpropagation //Joey: update the terms to be more readable
 	 * @brief: forward propagation done in accordance to pg294 in Fundamentals of Neural Network, by Laurene Fausett.
 	 * 			Feedforward (step 3 to 5):
-	 * 				step 3: Each input unit (Xi, i = 1, ..., n) receives input signal xi and broadcasts this signal to all units in the layer above (the hidden units).
-	 * 				step 4: Each hidden unit (Zj, j = 1, ..., p) sums its weighted input signals,
-	 * 								z_inj = v0j + (sum of from i = 1 to n)xivij,                <- v = weights between input and hidden.
+	 * 				step 3: Each input unit (X[i], i = 1, ..., n) receives input signal xi and broadcasts this signal to all units in the layer above (the hidden units).
+	 * 				step 4: Each hidden unit (Z[j], j = 1, ..., p) sums its weighted input signals,
+	 * 								Z_in[j] = v[0][j] + (sum of from i = 1 to n)x[i]v[i][j],                <- v = weights between input and hidden.
 	 * 						applies its activation fxn to compute its output signal,
-	 * 								zj = f(z_inj),
+	 * 								Z[j] = f(Z_in[j]),
 	 * 						and sends this signal to all units in the layer above (output units).
-	 * 				step 5: Each output unit (Yk, k = 1, ..., m) sums its weighted input signals,
-	 * 								y_ink = w0k + (sum of from j = 1 to p)zjwjk                 <- w = weights between hidden and output.
+	 * 				step 5: Each output unit (Y[k], k = 1, ..., m) sums its weighted input signals, (treating k = 0 to start instead of 1 for now b/c no output)
+	 * 								Y_in[k] = w[0][k] + (sum of from j = 1 to p)Z[j]w[j][k]                 <- w = weights between hidden and output.
 	 * 						and applies its activation fxn to compute its output signal,
-	 * 								yk = f(y_ink)
+	 * 								Y[k] = f(Y_in[k])
 	 * @purpose: does forwardPropagation on the inputs from the robot. 
 	 * @return: an array of Y values for all the state pairs. 
 	 **/
@@ -784,7 +784,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 				Z[j] = bipolarActivation(Z_in[j]);
 			
 			if (DEBUG_forwardProp || DEBUG){
-				LOG[lineCount++].format("Z[%d]:%.1f Z_in[%d]:%.1f sumIn%.1f (%s)", j, Z[j], j, Z_in[j], sumIn, (activationMethod==binaryMethod)?"bin":"bip");
+				LOG[lineCount++] = String.format("Z[%d]:%.5f Z_in[%d]:%.5f sumIn%.5f (%s)", j, Z[j], j, Z_in[j], sumIn, (activationMethod==binaryMethod)?"bin":"bip");
 			}
 			
 		}
@@ -802,7 +802,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 				Y[k] = bipolarActivation(Y_in[k]);
 			
 			if (DEBUG_forwardProp || DEBUG){
-				LOG[lineCount++].format("Y[%d]:%.1f Y_in[%d]:%.1f sumOut%.1f (%s)", k, Y[k], k, Y_in[k], sumOut, (activationMethod==binaryMethod)?"bin":"bip");
+				LOG[lineCount++] = String.format("Y[%d]:%.5f Y_in[%d]:%.5f sumOut%.5f (%s)", k, Y[k], k, Y_in[k], sumOut, (activationMethod==binaryMethod)?"bin":"bip");
 			}
 			
 		}
@@ -892,7 +892,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	        
         if (DEBUG_forwardProp || DEBUG_getMax || DEBUG) {
         	LOG[lineCount++] = "enacting policy:" + policy;
-        	LOG[lineCount++].format("Action Chosen:%-2d, with QVal:%.2f", action_QMax_chosen, Q_max);
+        	LOG[lineCount++] = String.format("Action Chosen:%d, with QVal:%.5f", action_QMax_chosen, Q_max);
         }
         
         for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
@@ -904,7 +904,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		    			currentStateActionVector[2] = i_A2;
 		    			
 		    			if (DEBUG_forwardProp || DEBUG_getMax || DEBUG) {
-		    	        	LOG[lineCount++].format("chosen actions(in containers):%d %d %d", currentStateActionVector[0], currentStateActionVector[1], currentStateActionVector[2]);
+		    	        	LOG[lineCount++] = String.format("chosen actions(in containers):%d %d %d", currentStateActionVector[0], currentStateActionVector[1], currentStateActionVector[2]);
 		    	        }
 		    			
 		    			return;
@@ -929,8 +929,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	
     	if (DEBUG_qFunction || DEBUG) {
     		LOG[lineCount++] = "- Q function";
-    		LOG[lineCount++].format("Q_target%.2f  Q_prev:%.2f  Q_max:%.2f", Q_target, Q_prev, Q_max);
-    		LOG[lineCount++].format("alpha:%f reward_N:%.2f gamma:%f", alpha, reward_normalized, gamma);
+    		LOG[lineCount++] = String.format("Q_target%.5f  Q_prev:%.5f  Q_max:%.5f", Q_target, Q_prev, Q_max);
+    		LOG[lineCount++] = String.format("alpha:%.2f reward_N:%.5f gamma:%.2f", alpha, reward_normalized, gamma);
     	}
     }
     
@@ -999,15 +999,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			}
 
 			if (DEBUG_backProp || DEBUG) {
-				LOG[lineCount++].format("delta_out[%d]:%.2f (%s)", k, delta_out[k], (activationMethod==binaryMethod)?"bin":"bip");
-				LOG[lineCount++].format("Y_target[%d]:%.2f Y_calculated[%d]:%.2f Y_in[%d]:%.2f Y_in_der[%d]:%.2f", k, Y_target[k], k, Y_calculated[k], k, Y_in[k], k, temp[k]);
+				LOG[lineCount++] = String.format("delta_out[%d]:%.5f (%s)", k, delta_out[k], (activationMethod==binaryMethod)?"bin":"bip");
+				LOG[lineCount++] = String.format("Y_target[%d]:%.5f Y_calculated[%d]:%.5f Y_in[%d]:%.5f Y_in_der[%d]:%.5f", k, Y_target[k], k, Y_calculated[k], k, Y_in[k], k, temp[k]);
 				
 			}
 			for (int j = 0; j < numHiddensTotal; j++){
 				wDelta[j][k] = alpha*delta_out[k]*Z[j];
 				
 				if (DEBUG_backProp || DEBUG) {
-					LOG[lineCount++].format("wDelta[%d][%d]:%.2f wNext[%d][%d]:%.2f wPast[%d][%d]:%.2f", j, k, wDelta[j][k], j, k, wNext[j][k], j, k, wPast[j][k]);
+					LOG[lineCount++] = String.format("wDelta[%d][%d]:%.5f wNext[%d][%d]:%.5f wPast[%d][%d]:%.5f", j, k, wDelta[j][k], j, k, wNext[j][k], j, k, wPast[j][k]);
 				}
 				
 				//momentum equations
@@ -1043,7 +1043,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 				vDelta[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i]; //Joey: what about the action vectors?
 				
 				if (DEBUG_backProp || DEBUG) {
-					LOG[lineCount++].format("vDelta[%d][%d]:%.2f vNext[%d][%d]:%.2f vPast[%d][%d]:%.2f", i, j, vDelta[i][j], i, j, vNext[i][j], i, j, vPast[i][j]);
+					LOG[lineCount++] = String.format("vDelta[%d][%d]:%.5f vNext[%d][%d]:%.5f vPast[%d][%d]:%.5f", i, j, vDelta[i][j], i, j, vNext[i][j], i, j, vPast[i][j]);
 				}
 				
 				vNext[i][j] = arr_wIH[i][j] + vDelta[i][j] + momentum*(arr_wIH[i][j] - vPast[i][j]); 
