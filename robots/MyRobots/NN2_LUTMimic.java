@@ -390,7 +390,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-        flag_error = exportDataWeights();	
+    	flag_error = exportData(strLog); //export log first					
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded Log: " + flag_error);
+        }
+    	
+    	flag_error = exportDataWeights();	
         if(flag_error != SUCCESS_exportDataWeights) {
         	out.println("ERROR @onBattleEnded weights: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
         	//LUT is 0'd, causing error 9 (export_dump)
@@ -402,10 +407,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         	out.println("ERROR @onBattleEnded Error: " + flag_error);
         }
         
-        flag_error = exportData(strLog);					
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded Log: " + flag_error);
-        }
+        
         
     }
     
@@ -504,14 +506,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		enemyEnergy = (int)event.getEnergy();
 		turn = (int)getTime();
 		
-		
-    	if(DEBUG_onScannedRobot || DEBUG) {
-    		LOG[lineCount++] = "@@@ TURN " + turn + ":";
-    		LOG[lineCount++] = "myHeading:" + myHeading + "\tmyPosX:" + myPosX + "\tmyPosY:" + myPosY + "\tmyEnergy:" + myEnergy;
-    		LOG[lineCount++] = "enemyHeadingRelative:" + enemyHeadingRelative + "\tenemyVelocity:" + enemyVelocity;
-    		LOG[lineCount++] = String.format("enemyBearingFromRadar:%.1f enemyBearingFromGun:%.1f enemyBearingFromHeading:%.1f", enemyBearingFromRadar, enemyBearingFromGun, enemyBearingFromHeading);
-    		LOG[lineCount++] = "enemyDistance:" + enemyDistance + "\tenemyEnergy" + enemyEnergy;
-    	}
     	
     	analysis();
     }
@@ -559,13 +553,23 @@ public class NN2_LUTMimic extends AdvancedRobot{
         step (7) - repeat steps 1-6 using saved weights from backpropagation to feed into NN for step (2)  
      */
     public void analysis() {
-    	if(DEBUG_analysis || DEBUG) {
-    		LOG[lineCount++] = "- analysis (weight vals)";
-    		LOG[lineCount++] = "arr_wIH:" + Arrays.deepToString(arr_wIH);
-    		LOG[lineCount++] = "arr_wHO:" + Arrays.deepToString(arr_wHO);
-    	}
-    	
     	if (learnThisRound()){
+    		
+    		//this debug fxn is related to onScannedRobot fxn, but placed here so that we can log it only when RL is firing.
+        	if(DEBUG_onScannedRobot || DEBUG) {
+        		LOG[lineCount++] = "@@@ TURN " + turn + ":";
+        		LOG[lineCount++] = "myHeading:" + myHeading + "\tmyPosX:" + myPosX + "\tmyPosY:" + myPosY + "\tmyEnergy:" + myEnergy;
+        		LOG[lineCount++] = "enemyHeadingRelative:" + enemyHeadingRelative + "\tenemyVelocity:" + enemyVelocity;
+        		LOG[lineCount++] = String.format("enemyBearingFromRadar:%.1f enemyBearingFromGun:%.1f enemyBearingFromHeading:%.1f", enemyBearingFromRadar, enemyBearingFromGun, enemyBearingFromHeading);
+        		LOG[lineCount++] = "enemyDistance:" + enemyDistance + "\tenemyEnergy" + enemyEnergy;
+        	}
+    		
+    		if(DEBUG_analysis || DEBUG) {
+        		LOG[lineCount++] = "- analysis (weight vals)";
+        		LOG[lineCount++] = "arr_wIH:" + Arrays.deepToString(arr_wIH);
+        		LOG[lineCount++] = "arr_wHO:" + Arrays.deepToString(arr_wHO);
+        	}
+    		
     		obtainReward();
             copyCurrentQValueIntoPrev();
             generateCurrentStateVector();
@@ -614,10 +618,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     /**
      * @name:		copyCurrentQValueIntoPrev
-     * @purpose:	Copies array currentStateActionVector into array prevStateActionVector
+     * @purpose:	Copies max Q obtained from FP in last round into Q_prev.
      * @param:		n, but uses:
-     * 				1. currentStateActionVector
-     * 				2. previous and current Net Q Val 
+     * 				1. Q_curr 
      * @return:		n
      */
     public void copyCurrentQValueIntoPrev(){

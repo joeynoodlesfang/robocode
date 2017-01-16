@@ -1,10 +1,14 @@
+1-16 mon
+- add in ability to clear log first: mby send blank log first at end of battle before sending others?
+- review getmax and fp for action selection (log indicates all currSAV seems 0'd for action.
 1-14 sat
 - add sheet for monitoring Q (per turn? any indication for after fight?)
 - review log data.
-	- - current logging abilities for FP have no idea whether weights are being used properly: consider adding in printout for weights.
+	- current logging abilities for FP have no idea whether weights are being used properly: consider adding in printout for weights.
 - fix bug whwere Q_curr is NOT used Good Lord.
 - Consider changing relationship between Q_cur and Q_prev in Qfxn, so that gamma is either 1, or gamma applies to both.
 - Consider reducing effect of reward, or change reward fxnalities.
+
 1-4 wed (extended from 12-25 sun)
 - Finish first draft of NN1 v1.0.1
 	1. Import NN framework from NN2.
