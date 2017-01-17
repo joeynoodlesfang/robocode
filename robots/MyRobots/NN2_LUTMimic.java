@@ -83,9 +83,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final short CONFIGMASK_FILETYPE_winLose = 			0x0040;
     private static final short CONFIGMASK_FILETYPE_weights =			0x0080;
     
-    /*
-     * IMPORT/EXPORT status returns.
-     */
+    //IMPORT/EXPORT status returns.
+    
     private static final int SUCCESS_importData = 						0x00;
     private static final int SUCCESS_exportData = 						0x00;
     private static final int SUCCESS_importDataWeights =				0x00;
@@ -117,17 +116,19 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 * NN STATEACTION VARIABLES for stateAction ceilings (for array designs and other modular function interactions).
 	 * 
 	 */
-    //One concern with the complexity of the robot action design is the amount of calculation time spent in forward propagation. 
-    //As of now, the No. times NN needs to forward propagate per round = 4 * 2 * 3 = 24
+    //Action related finals.
+    //- One concern with the complexity of the action design for the robot is the amount of calculation time spent in forward propagation. 
+    //- As of now, the No. times NN needs to forward propagate per round = 4 * 2 * 3 = 24
     private static final int input_action0_moveReferringToEnemy_possibilities = 4; //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
     private static final int input_action1_fire_possibilities = 2;    //1, 3
     private static final int input_action2_fireDirection_possibilities = 3;    //-10deg, 0, 10deg
     private static final int numActionContainers = 3;
     
-    private static final int numActions = input_action0_moveReferringToEnemy_possibilities * 
-    									  input_action1_fire_possibilities *
-    									  input_action2_fireDirection_possibilities;
+    private static final int numActions = input_action0_moveReferringToEnemy_possibilities 
+    									  * input_action1_fire_possibilities
+    									  * input_action2_fireDirection_possibilities;
     
+    //State related finals.
     private static final int input_state0_myPos_possibilities = 5;    //center, left, right, top, bottom (cannot be undiscretized) 
     private static final int input_state1_myHeading_originalPossilibities = 4;    //0-89deg, 90-179, 180-269, 270-359
     private static final int input_state2_enemyEnergy_originalPossibilities = 2;    //>30, <30
@@ -135,17 +136,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int input_state4_enemyDirection_originalPossibilities = 3;    //head-on (still (abs <30 || >150), left (<0 relative dir w/ positive velo || >0 with negative velo), right (<0 dir w/ negative velo || >0 with positive velo)
     private static final int numStateContainers = 5;
     
+    //NN neuron parameters.
     private static final int numInputBias = 0;
     private static final int numHiddenBias = 1;
+    private static final int numOutputBias = 0; //Actual code disregards possibility of output bias by starting loops relating to output at 0 for first output.
     private static final int numHiddenNeuron = 4;
     private static final int numInputsTotal = ( numInputBias + numActionContainers + numStateContainers ); 
     private static final int numHiddensTotal = ( numHiddenBias+ numHiddenNeuron );
     private static final int numOutputsTotal = 1;
     
     
-    /*
-     * Activation function choices for the back propagation net
-     */
+    
+    //NN activation function choices
     private static final boolean binaryMethod = true;
     private static final boolean bipolarMethod = false;
  
@@ -161,7 +163,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
     String strError = "saveErrorForActions.dat" ;
     String strWeights = "weights.dat";
     String strLog = "templog.txt";
-    
     
     /**
      * FLAGS AND COUNTS ===========================================================================
@@ -209,7 +210,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
 
     /**
-     *  OTHER VARIABLES USABLE BY ALL CLASS FUNCTIONS ==============================================================================
+     *  OTHER VARIABLES USABLE BY THIS ROBOT'S CLASS FUNCTIONS ==============================================================================
      */
     
     
@@ -228,15 +229,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	;
     
 
-    // temp vars: config settings for the external files, stored in the first line of .dat
+    // temp vars for importing/exporting files: config settings for the external files, stored in the first line of .dat
     private short fileSettings_temp = 0;
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
     private short fileSettings_WL = 0;
     private short fileSettings_weights = 0;
+    private short fileSettings_log = 0;
     
 
-    // vars used for storing reward, and reward calculation.
+    // reward and reward calculation vars.
     private double reward = 0.0;
     private double reward_normalized = 0.0;
     private double energyDiffCurr = 0.0;
@@ -247,10 +249,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private double currentStateActionVector[] = new double [numInputsTotal];
     private double prevStateActionVector[]    = new double [numInputsTotal]; //might not be used 
 
+    //Q-var storages.
+    //- "Y" and "Q" pretty much refers to the same thing, but to make it easier to understand when coding, we use "Y" for the BP calculations.
     private double Q_curr = 0.0; // stores the maximum currSAV QMax
     private double Q_prev = 0.0;
     private double Q_target = 0.0;
-    private double[] Y_calculated = new double [numOutputsTotal]; 			//because backProp takes in a vector for Y_calculated (which is qprevious).  //Joey: might delete this comment
+    private double[] Y_calculated = new double [numOutputsTotal]; 	//because backProp takes in a vector for Y_calculated (which is qprevious).  //Joey: might delete this comment
     private double[] Y_target = new double [numOutputsTotal]; 
     
     //array to store the q values obtained from net forward propagation, using the current state values as well as all possible actions as inputs. 
@@ -292,7 +296,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
-    //used for DEBUGging purposes (deprecated)
+    //used for debugging purposes (deprecated)
     private static double[] QErrors = new double [520000];
     private static int currentRoundOfError = 0;
 
@@ -339,10 +343,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
     /**
      * @name: 		run
      * @purpose:	1. Initializes robot colour
-     * 				2. Enters infinite scan mode until enemy robot is scanned, which triggers event onScannedRobot. This is where
+     * 				2. Clears log from previous session in case it used up all alloted space.
+     * 				3. Imports weights, win-lose records, and any other files desired by the user.
+     * 				4. Enters infinite scan mode until enemy robot is scanned, which triggers event onScannedRobot. This is where
      * 				   most of the robot's logic begins.
-     * @brief:		To import desired file name, simply write Stringvar of filename or "filenamehere.dat" as param of importData. 
-     * @brief:		To ZeroLUT, add 1 to top line in .dat file (or change 16416 to 16417)
      * @param:		n
      * @return:		n
      */
@@ -356,7 +360,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
         }
         
         // Import data. ->Change imported filename here<-
-
+        
+        //clears log from previous session in case it used up all allowed harddrive. (robocode allows for 200kB of external data per robot)
+        fileSettings_log += CONFIGMASK_ZEROINGFILE;
+        flag_error = exportData(strLog);
+        if(flag_error != SUCCESS_importData) {
+        	out.println("ERROR @run blankingWeights: " + flag_error);
+        }
+        fileSettings_log -= CONFIGMASK_ZEROINGFILE;
+        
         flag_error = importDataWeights();
         if(flag_error != SUCCESS_importDataWeights) {
         	out.println("ERROR @run weights: " + flag_error);
@@ -390,10 +402,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-    	flag_error = exportData(strLog); //export log first					
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded Log: " + flag_error);
-        }
+
     	
     	flag_error = exportDataWeights();	
         if(flag_error != SUCCESS_exportDataWeights) {
@@ -407,7 +416,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
         	out.println("ERROR @onBattleEnded Error: " + flag_error);
         }
         
-        
+    	flag_error = exportData(strLog); //export log first					
+        if( flag_error != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded Log: " + flag_error);
+        }
         
     }
     
@@ -884,12 +896,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
         }
         
         //Choosing next action based on policy. Greedy is default
-        if (policy == greedy) {
-        	action_QMax_chosen = action_QMax_all[randMaxAction]; //if numMaxActions <= 1, randMaxAction = 0;
-        }
+        //exploratory uses this line to perform if-false actions.
+        action_QMax_chosen = action_QMax_all[randMaxAction]; //if numMaxActions <= 1, randMaxAction = 0;
         
-        else{
-        	randomVal_actions = (int)(Math.random()*(numActions));
+        if (policy == SARSA || policy == exploratory) {
+	    	randomVal_actions = (int)(Math.random()*(numActions));
 	        if (policy == SARSA) {
 	        	action_QMax_chosen = randomVal_actions;
 	        }
@@ -1110,7 +1121,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //    	LOG[lineCount++] = "currentStateActionVector" + Arrays.toString(currentStateActionVector));     
     	if (DEBUG_doAction_Q || DEBUG) {
     		LOG[lineCount++] = "- doAction(Q)";
-    		LOG[lineCount++] = "currSAV:" + Arrays.toString(currentStateActionVector);
+    		LOG[lineCount++] = "currSAV (chosen actions):" + Arrays.toString(currentStateActionVector);
     	}
     }
 
@@ -1636,8 +1647,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //	            }
 //	           
 	            else if (strName == strLog) {
-	            	for (int i = 0; i < lineCount; i++){
-	        			w.println(LOG[i]);
+	            	//zeroes the log file in case it was filled from previous log session.
+	            	if ((fileSettings_log & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE){
+	            		w.println(0);
+	            	}
+	            	else {
+		            	for (int i = 0; i < lineCount; i++){
+		        			w.println(LOG[i]);
+		            	}
 	            	}
 	            }
 	            /* 
