@@ -1,3 +1,17 @@
+1-19 thur
+- Set up Qval recording
+- implement NN2 changes into NN1
+	- review imp/exp.
+	- improve reward system
+	- consider states that build for a smoother net.
+	- consider discrete actions, and possibility of combining actions into states. Note the goal of the net to converge into a Q value.
+- if time allows, implement seFire changes (described in 1-18wed)
+1-18 wed
+- implement NN2 changes into NN1
+- NN1 adjustments to include rewards.
+- Investigate negative Q_max.
+- Implement setFire after turning gun as instructed by robowiki.
+	- investigate if it is true.
 1-16 mon
 - add in ability to clear log first: mby send blank log first at end of battle before sending others?
 - review getmax and fp for action selection (log indicates all currSAV seems 0'd for action.

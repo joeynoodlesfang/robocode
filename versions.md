@@ -1,3 +1,13 @@
+## Version 1.9.2.6 (01-01-2017)
+
+### Bug fixes
+* [Bug-381][]: Improve feedback after entering empty package name during robot creation.
+* [Bug-382][]: Unable to run robocode.bat -- AccessControlException.
+* [Bug-383][]: Java 8 lamba expressions cause ClassNotFoundException.
+
+### Changes
+* Upgraded Eclipse Compiler for Java (ECJ) to version 4.6.1
+
 ## Version 1.9.2.5 (30-Dec-2015)
 
 ### Bug fixes
@@ -2998,6 +3008,9 @@ Currently, there is one known issue, which will be fixed with the next Beta or i
 [Bug-375]: http://sourceforge.net/p/robocode/bugs/375/  (Wrong width and height returned for .NET robots)
 [Bug-378]: http://sourceforge.net/p/robocode/bugs/378/  (robocode.robocodeGL.system.GLRenderer ClassNotFoundException)
 [Bug-380]: http://sourceforge.net/p/robocode/bugs/380/  (Yet another historical bot related bug)
+[Bug-381]: http://sourceforge.net/p/robocode/bugs/381/  (Improve feedback after entering empty package name during robot creation)
+[Bug-382]: http://sourceforge.net/p/robocode/bugs/382/  (Unable to run robocode.bat -- AccessControlException)
+[Bug-383]: http://sourceforge.net/p/robocode/bugs/383/  (Java 8 lamba expressions cause ClassNotFoundException)
 
 [Req-1]:   http://sourceforge.net/p/robocode/feature-requests/1/    (Multiple or hyperthreading CPUs (most P4s) hangs Robocode)
 [Req-2]:   http://sourceforge.net/p/robocode/feature-requests/2/    (Keep window size of "New battle" window)
