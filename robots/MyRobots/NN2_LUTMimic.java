@@ -1000,7 +1000,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public void backProp() {      
-    	double[] temp = new double [numOutputsTotal];
+    	//local var used to store activation derivative of Y.
+    	double[] temp_OutputDerivative = new double [numOutputsTotal];
     	
     	if (DEBUG_backProp || DEBUG) {
 			LOG[lineCount++] = "- BP";
@@ -1008,6 +1009,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		}
     	
     	Y_calculated[0] = Q_prev; 
+    	//Q_target is the variable calculated in QFunction, to depict NN's converging(hopefully) approximation of the RL LUT.
         Y_target[0] = Q_target; 
         
     	//step 6-8 for hidden-to-output weights
@@ -1019,17 +1021,17 @@ public class NN2_LUTMimic extends AdvancedRobot{
         
 		for (int k = 0; k <numOutputsTotal; k++){ // m = numOutputsTotal. pretending output bias doesn't exist so our output vector starts at 0 (horrificallylazyXD)
 			if (activationMethod == binaryMethod){
-				temp[k] = binaryDerivative(Y_in[k]);
-				delta_out[k] = (Y_target[k] - Y_calculated[k])*temp[k]; 
+				temp_OutputDerivative[k] = binaryDerivative(Y_in[k]);
+				delta_out[k] = (Y_target[k] - Y_calculated[k])*temp_OutputDerivative[k]; 
 			}
 			else{
-				temp[k] = bipolarDerivative(Y_in[k]);
-				delta_out[k] = (Y_target[k] - Y_calculated[k])*temp[k];	
+				temp_OutputDerivative[k] = bipolarDerivative(Y_in[k]);
+				delta_out[k] = (Y_target[k] - Y_calculated[k])*temp_OutputDerivative[k];	
 			}
 
 			if (DEBUG_backProp || DEBUG) {
 				LOG[lineCount++] = String.format("delta_out[%d]:%.3f (%s)", k, delta_out[k], (activationMethod==binaryMethod)?"bin":"bip");
-				LOG[lineCount++] = String.format("Y_target[%d]:%.3f Y_calculated[%d]:%.3f Y_in[%d]:%.3f Y_in_der[%d]:%.3f", k, Y_target[k], k, Y_calculated[k], k, Y_in[k], k, temp[k]);
+				LOG[lineCount++] = String.format("Y_target[%d]:%.3f Y_calculated[%d]:%.3f Y_in[%d]:%.3f Y_in_der[%d]:%.3f", k, Y_target[k], k, Y_calculated[k], k, Y_in[k], k, temp_OutputDerivative[k]);
 				
 			}
 			for (int j = 0; j < numHiddensTotal; j++){
@@ -1678,7 +1680,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    		if (DEBUG_export || DEBUG) {
 	    			LOG[lineCount++] = "IOException trying to write: ";
 	    		}
-	            e.printStackTrace(out); //Joey: lol no idea what this means
+	            e.printStackTrace(out);
 	            return ERROR_7_export_IOException;
 	        } 
 	        finally {
