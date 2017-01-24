@@ -1,3 +1,5 @@
+//Joey: Write a general introduction, to here as well as to local readmes, and the markdown readme in the beginning.
+
 package MyRobots;
 
 import static robocode.util.Utils.normalRelativeAngleDegrees;
@@ -24,23 +26,16 @@ import robocode.ScannedRobotEvent;
 import robocode.WinEvent;
 
 public class NN2_LUTMimic extends AdvancedRobot{
-	//joey: gotta track Q_val somehow, maybe tally up differences and write it in at the end
-	/*
-	 * SAV Change Rules:
-	 * 1. update STATEACTION VARIABLES
-	 * 2. update roboLUT initialization
-	 * 3. update roboLUTDimensions
-	 * 4. If adding or deleting states: Change for loops in import and export functions 
-	 *    (twice in import including zeroLUT loop, once in export)
-	 * 5. Update the corresponding dimension in generateCurrentStateVector()
-	 * 6. if adding or deleting states: In getMax(), update the roboLUT access in the maxQ for loop.
-	 * 7. if adding or deleting states: In qFunction(), update the roboLUT access.
-	 * 8. if adding or deleting states: In updateLUT(), update roboLUT access as well as DEBUG
-	 * 9. if adding or deleting actions: In doAction(), edit accordingly.
-	 */
+	//Joey: gotta track Q_val somehow, maybe tally up differences and write it in at the end
 	
 	/*
-	 * SAV Change Rules: //Joey: finish this
+	 * RULES FOR CHANGING STATE ACTION VECTOR(SAV):
+	 * 1. State/Action related finals must be changed accordingly.
+	 * 2. NN input dimension related finals must be changed accordingly.
+	 * 3. If states changed, change the state accordingly in generateCurrentStateVector()
+	 * 4. If actions changed, change the actions in doAction_Q()
+	 * 5. In NN2, no states or actions are expected to change. But for future related bots, changing the dimensions of the weights will likely cause error during input.
+	 *      Note that error and use that as prompt to input a randomized weight selection.
 	 */
 	
 	/**
@@ -54,9 +49,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //epsilon describes the degree of exploration
     private static final double epsilon = 0.01; 				 
     
-    //policy:either greedy or exploratory or SARSA 
+    //policy:either greedy or exploratory (both are Q-learning, perhaps possibility of implementing SARSA in the future?)
     private static final int greedy = 0;
     private static final int exploratory = 1;
+    //Joey: SARSA is unusable - currently incomplete.
+    //SARSA uses the reward gained by performing action 2 to update reward in action 1.
     private static final int SARSA = 2;
     
     
@@ -66,7 +63,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 			  - functions will use AND conditions to evaluate if the settings in the file match the mask. 
      */
     // _ _ _ _  _ _ _ _  _ _ _ _  _ _ _ _ 
-    //   MSnib		filename		LSnib
+    //   MSnib	filename(2 nibs)   LSnib
     // MSnib is the first nibble baby (4 bits)
     // the 2nd and 3rd nibbles are used for recognizing specific files
     // LSnib is used for file-specific settings.
@@ -122,8 +119,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int input_action0_moveReferringToEnemy_possibilities = 4; //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
     private static final int input_action1_fire_possibilities = 2;    //1, 3
     private static final int input_action2_fireDirection_possibilities = 3;    //-10deg, 0, 10deg
-    private static final int numActionContainers = 3;
-    
+    private static final int numActionContainers = 3;   
     private static final int numActions = input_action0_moveReferringToEnemy_possibilities 
     									  * input_action1_fire_possibilities
     									  * input_action2_fireDirection_possibilities;
@@ -144,8 +140,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int numInputsTotal = ( numInputBias + numActionContainers + numStateContainers ); 
     private static final int numHiddensTotal = ( numHiddenBias+ numHiddenNeuron );
     private static final int numOutputsTotal = 1;
-    
-    
     
     //NN activation function choices
     private static final boolean binaryMethod = true;
@@ -169,9 +163,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     //DEBUG flags. Each allows printouts written for specific functions. DEBUG will print out all.
     private final static boolean DEBUG = false;
-//	private final static boolean DEBUG_run = false;
+	private final static boolean DEBUG_run = false;
 	private final static boolean DEBUG_onScannedRobot = true;
 	private final static boolean DEBUG_analysis = false;
+	private final static boolean DEBUG_onBattleEnded = false;
+	private final static boolean DEBUG_onDeath = false;
+	private final static boolean DEBUG_onWin = false;
 //	private final static boolean DEBUG_learnThisRound = false;
 	private final static boolean DEBUG_obtainReward = false;
 //	private final static boolean DEBUG_copyCurrentQValueIntoPrev = false;
@@ -196,13 +193,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
     // 		1. prevents overwrite, and protects against wrong file entries
     //		2. data for a particular file must be exported before importing for the same file occurs again.
     // 		false == only imports can access; true == only exports can access.
-    //		Always initialize these as false.
+    //		ALWAYS initialize these as false.
     private boolean flag_stringTestImported = false;
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
-    private boolean flag_alreadyExported = false;    
-    private static boolean flag_useOfflineTraining = true; //Joey: check usage 
+    private boolean flag_alreadyExported = false;
+    
+    //flag that prompts user to use offline training data from LUT.
+    private static boolean flag_useOfflineTraining = true;
 
     // printout error flag - used to check function return statuses.
     // initialized to 0, which is no error.
@@ -212,7 +211,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
     /**
      *  OTHER VARIABLES USABLE BY THIS ROBOT'S CLASS FUNCTIONS ==============================================================================
      */
-    
     
     // weights connecting between input and hidden layers. calculated using definitions defined above.
     private static double[][] arr_wIH 
@@ -228,7 +226,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	[numOutputsTotal]
     	;
     
-
     // temp vars for importing/exporting files: config settings for the external files, stored in the first line of .dat
     private short fileSettings_temp = 0;
     private short fileSettings_stringTest = 0;
@@ -237,14 +234,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private short fileSettings_weights = 0;
     private short fileSettings_log = 0;
     
-
     // reward and reward calculation vars.
     private double reward = 0.0;
     private double reward_normalized = 0.0;
     private double energyDiffCurr = 0.0;
     private double energyDiffPrev = 0.0;
     
-
     //vars that store current and previous stateAction vectors
     private double currentStateActionVector[] = new double [numInputsTotal];
     private double prevStateActionVector[]    = new double [numInputsTotal]; //might not be used 
@@ -263,14 +258,17 @@ public class NN2_LUTMimic extends AdvancedRobot{
     		[input_action1_fire_possibilities]
     		[input_action2_fireDirection_possibilities];
 
+    //activation method used for binary and bipolar methods.
+    private boolean activationMethod = bipolarMethod; 
+    
     //variables used for getMax.
     private int [] action_QMax_all = new int [numActions]; //array for storing all actions with maxqval
     private int action_QMax_chosen = 0; 				//stores the chosen currSAV with maxqval before policy							
     private int randomVal_actions = numActions;
 
     //chosen policy. greedy or exploratory or SARSA 
-    private static int policy = exploratory; //SARSA 
-    private static int learningRate = 4; //learningAlgo is run every 4 ticks. //Joey: consider allowing robot to self-optimize for this.
+    private static int policy = exploratory; //SAR
+    private static int learningRate = 4; //learningAlgo is run every 4 ticks. 
 
     //enemy bot information
     private double enemyDistance = 0.0;
@@ -296,13 +294,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
+    //used for debugging purposes
+    private static String[] LOG = new String [520000];
+    private static int lineCount = 0;
     //used for debugging purposes (deprecated)
     private static double[] QErrors = new double [520000];
     private static int currentRoundOfError = 0;
 
     /**  
-     * Neural net stuff
-     * 
+     * Neural net stuff (usable as locals for specific functions but currently implemented as globals) 
      */
 
     private double [] Z_in = new double[numHiddensTotal]; 		// Array to store Z[j] before being activate
@@ -312,7 +312,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	
     // analysis rate //Joey: ask Andrea about use of this.
 	private double lRate = 0.05; 			
-	//value of momentum //Joey: consider adding some momentum lel
+	//value of momentum //Joey: research the used of momentum for optimal values. 
 	private double momentum = 0.1;  		
 	
 	// arrays used for momentum
@@ -322,21 +322,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	private double [][] wNext  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights.
 	//arrays in BP
 	private double [][] vDelta = new double[numInputsTotal] [numHiddensTotal];	// Change in Input to Hidden weights
-	private double [][] wDelta = new double[numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights
-	  
+	private double [][] wDelta = new double[numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights	  
 	private double [] delta_out    = new double[numOutputsTotal];
 	private double [] delta_hidden = new double[numHiddensTotal];
 	
-	private boolean activationMethod = bipolarMethod; 
+	
 	
 	//bias for hidden initialized as value 1
     private int valHiddenBias = 1;
-    
-    /*
-     * other misc vars
-     */
-    private static String[] LOG = new String [520000];
-    private static int lineCount = 0;
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
@@ -356,8 +349,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
         // Sets Robot Colors.
         setColors();
         
-        if (DEBUG) {
-        	out.println("@I have been a dodger duck (robot entered run)"); 
+        out.println("@I have been a dodger duck (robot entered run)"); 
+        if (DEBUG_run || DEBUG) {
+        	LOG[lineCount++] = "@I have been a dodger duck (robot entered run)";
         }
         
         // Import data. ->Change imported filename here<-
@@ -367,17 +361,26 @@ public class NN2_LUTMimic extends AdvancedRobot{
         flag_error = exportData(strLog);
         if(flag_error != SUCCESS_importData) {
         	out.println("ERROR @run blankingWeights: " + flag_error);
+        	if (DEBUG_run || DEBUG) {
+            	LOG[lineCount++] = "ERROR @run blankingWeights: " + flag_error;
+            }
         }
         fileSettings_log -= CONFIGMASK_ZEROINGFILE;
         
         flag_error = importDataWeights();
         if(flag_error != SUCCESS_importDataWeights) {
         	out.println("ERROR @run weights: " + flag_error);
+        	if (DEBUG_run || DEBUG) {
+            	LOG[lineCount++] = "ERROR @run weights: " + flag_error;
+            }
         }
         
         flag_error = importData(strWL);
         if( flag_error != SUCCESS_importData) {
         	out.println("ERROR @run WL: " + flag_error);
+        	if (DEBUG_run || DEBUG) {
+            	LOG[lineCount++] = "ERROR @run WL: " + flag_error;
+            }
         }
 
             
@@ -396,7 +399,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     /**
      * @name: 		onBattleEnded
-     * @purpose: 	1. 	Exports LUT data from memory to .dat file, which stores Qvalues 
+     * @purpose: 	1. 	Export
+     * 				2.	Exports weights from memory to .txt file, which stores weights 
      * 				   	linearly. Exporting will occur only once per fight, either during 
      * 				   	death or fight end.
      * @param:		1.	BattleEndedEvent class from Robot
@@ -407,19 +411,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	
     	flag_error = exportDataWeights();	
         if(flag_error != SUCCESS_exportDataWeights) {
-        	out.println("ERROR @onBattleEnded weights: " + flag_error); //only one to export due to no learningloop(), but fileSettings_
-        	//LUT is 0'd, causing error 9 (export_dump)
-        }
-        
-        
-        flag_error = exportData(strError);					//"strError" = saveError.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded Error: " + flag_error);
+        	out.println("ERROR @onBattleEnded weights: " + flag_error);
+        	if (DEBUG_onBattleEnded || DEBUG) {
+        		LOG[lineCount++] = "ERROR @onBattleEnded weights: " + flag_error;
+        	}
         }
         
     	flag_error = exportData(strLog); //export log first					
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded Log: " + flag_error);
+        	if (DEBUG_onBattleEnded || DEBUG) {
+        		LOG[lineCount++] = "ERROR @onBattleEnded Log: " + flag_error;
+        	}
         }
         
     }
@@ -438,18 +441,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
         flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportDataWeights) {
         	out.println("ERROR @onDeath weights: " + flag_error);
+        	if (DEBUG_onDeath || DEBUG) {
+        		LOG[lineCount++] = "ERROR @onDeath weights: " + flag_error;
+        	}
         }
         
         flag_error = exportData(strWL);					//"strWL" = winLose.dat
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onDeath WL: " + flag_error);
+        	if (DEBUG_onDeath || DEBUG) {
+        		LOG[lineCount++] = "ERROR @onDeath WL: " + flag_error;
+        	}
         }
-        
-        flag_error = exportData(strError);					//"strError" = saveError.dat
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath WL: " + flag_error);
-        }        
-
     }
     
     /**
@@ -468,18 +471,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
         flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportDataWeights) {
         	out.println("ERROR @onWin weights: " + flag_error);
+        	if (DEBUG_onWin || DEBUG) {
+        		LOG[lineCount++] = "ERROR @onWin weights: " + flag_error;
+        	}
         }
         
         flag_error = exportData(strWL);
         if( flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onWin WL: " + flag_error);
+        	if (DEBUG_onWin || DEBUG) {
+        		LOG[lineCount++] = "ERROR @onWin WL: " + flag_error;
+        	}
         }
-        
-        flag_error = exportData(strError);
-        if( flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onWin WL: " + flag_error);
-        }
-
 	}
 
 	/**
@@ -909,6 +912,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         //exploratory uses this line to perform if-false actions.
         action_QMax_chosen = action_QMax_all[randMaxAction]; //if numMaxActions <= 1, randMaxAction = 0;
         
+        //note: sarsa is currently not used. explained slightly further in comments in global final section above.
         if (policy == SARSA || policy == exploratory) {
 	    	randomVal_actions = (int)(Math.random()*(numActions));
 	        if (policy == SARSA) {
@@ -1195,6 +1199,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            try {
 	            	if (flag_useOfflineTraining) {reader2 = new BufferedReader(new FileReader(getDataFile("hiddenToOutWeights_OfflineTraining.txt")));}
 	            	else                         {reader2 = new BufferedReader(new FileReader(getDataFile("finalOuterWeights.txt")));}
+	            	
 	            	for (int i = 0; i < numHiddensTotal; i++) {
 	            		for (int j = 0; j < numOutputsTotal; j++) {
 	            			arr_wHO[i][j] = Double.parseDouble(reader2.readLine());
