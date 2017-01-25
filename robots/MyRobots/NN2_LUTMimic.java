@@ -38,6 +38,19 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 *      Note that error and use that as prompt to input a randomized weight selection.
 	 */
 	
+	/*
+	 * STEPS FOR IMPORTING/EXPORTING A NEW FILE
+	 * 1. Create the txt/dat file in the robotname.data directory (or try to export and the game will create directory and file for u)
+	 * 2. Add a configmask code for the file. ie. CONFIGMASK_FILETYPE_FILESHORTNAMEHERE = 0x0..0, and make the addition in the comment paragraph above.
+	 * 3. Create a string that refers to the filename in the "STRINGS used for importing or extracting files" section.
+	 * 4. Add flag_imported for the specific file.
+	 * 5. Add fileSettings_fileshortname for the specific file.
+	 * 6. If file requires import, write an import fxn call by following the correct format in the function run().
+	 * 7. If the file requires export, write an export in the proper locations, in fxns onBattleEnded() or/and onWin() + onDeath().
+	 * 8. In importData():
+	 * 9. 
+	 */
+	
 	/**
 	 * ===================================FINALS (defines)====================================================================================
 	 */
@@ -64,7 +77,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     // _ _ _ _  _ _ _ _  _ _ _ _  _ _ _ _ 
     //   MSnib	filename(2 nibs)   LSnib
-    // MSnib is the first nibble baby (4 bits)
+    // MSnib is the first nibble (4 bits) - currently used to verify the config setting is present in the file.
     // the 2nd and 3rd nibbles are used for recognizing specific files
     // LSnib is used for file-specific settings.
     //
@@ -73,12 +86,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
     // 					strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
     //     				WL:			16448 (0x4040), zero WL = 16449 (0x4041)
     //					NN weights: 16512 (0x4080), zeroing = 16513 (0x4081)
+    //					QVals:		16640 (0x4100), zeroing = 16641 (0x4101)
     private static final short CONFIGMASK_ZEROINGFILE  =				0x0001;
     private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 		0x4000;
     private static final short CONFIGMASK_FILETYPE_stringTest =			0x0010;
     private static final short CONFIGMASK_FILETYPE_LUTTrackfire =		0x0020;
     private static final short CONFIGMASK_FILETYPE_winLose = 			0x0040;
     private static final short CONFIGMASK_FILETYPE_weights =			0x0080;
+    private static final short CONFIGMASK_FILETYPE_QVals =				0x0100;
     
     //IMPORT/EXPORT status returns.
     
@@ -103,7 +118,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
     private static final int ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput = 15;
     private static final int ERROR_16_exportWeights_IOException = 		16;
-    private static final int ERROR_17 = 								17;
+    private static final int ERROR_17 = 								17; //Joey: finish descriptions for these
     private static final int ERROR_18 = 								18;
     private static final int ERROR_19_import_wrongFileName_weights =	19;
     private static final int ERROR_20_import_weights_wrongNetSize =		20;
@@ -157,6 +172,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     String strError = "saveErrorForActions.dat" ;
     String strWeights = "weights.dat";
     String strLog = "templog.txt";
+    String strQVals = "qVals.txt";
     
     /**
      * FLAGS AND COUNTS ===========================================================================
@@ -188,6 +204,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private final static boolean DEBUG_import = false;
     private final static boolean DEBUG_export = false;
     
+    //flag used for recording QVals
+    private final static boolean flag_recordQVals = true;
+    
     // Flags used in data imp/exp fxns.
     //		Purposes:
     // 		1. prevents overwrite, and protects against wrong file entries
@@ -198,7 +217,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private boolean flag_LUTImported = false;
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
-    private boolean flag_alreadyExported = false;
+    private boolean flag_QValsImported = false;
     
     //flag that prompts user to use offline training data from LUT.
     private static boolean flag_useOfflineTraining = true;
@@ -233,6 +252,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private short fileSettings_WL = 0;
     private short fileSettings_weights = 0;
     private short fileSettings_log = 0;
+    private short fileSettings_QVals = 0;
     
     // reward and reward calculation vars.
     private double reward = 0.0;
@@ -297,6 +317,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //used for debugging purposes
     private static String[] LOG = new String [520000];
     private static int lineCount = 0;
+    private static double[] arr_QVals = new double [520000];
+    private static int totalQValRecords = 0;
     //used for debugging purposes (deprecated)
     private static double[] QErrors = new double [520000];
     private static int currentRoundOfError = 0;
@@ -354,7 +376,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         	LOG[lineCount++] = "@I have been a dodger duck (robot entered run)";
         }
         
-        // Import data. ->Change imported filename here<-
+        // Import data. Change imported filename below
         
         //clears log from previous session in case it used up all allowed harddrive. (robocode allows for 200kB of external data per robot)
         fileSettings_log += CONFIGMASK_ZEROINGFILE;
@@ -366,6 +388,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
             }
         }
         fileSettings_log -= CONFIGMASK_ZEROINGFILE;
+        
+        if (flag_recordQVals) {
+	        flag_error = importData(strQVals);
+	        if(flag_error != SUCCESS_importData) {
+	        	out.println("ERROR @run QVals: " + flag_error);
+	        	if (DEBUG_run || DEBUG) {
+	        		LOG[lineCount++] = "Error @run Qvals: " + flag_error;
+	        	}
+	        }
+        }
         
         flag_error = importDataWeights();
         if(flag_error != SUCCESS_importDataWeights) {
@@ -438,6 +470,17 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     public void onDeath(DeathEvent event){
     	currentBattleResult = 0;    					//global variable. 
+    	
+    	if (flag_recordQVals) {
+	    	flag_error = exportData(strQVals);
+	        if( flag_error != SUCCESS_exportData) {
+	        	out.println("ERROR @onDeath QVals: " + flag_error);
+	        	if (DEBUG_onDeath || DEBUG) {
+	        		LOG[lineCount++] = "ERROR @onDeath QVals: " + flag_error;
+	        	}
+	        }
+    	}
+        
         flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportDataWeights) {
         	out.println("ERROR @onDeath weights: " + flag_error);
@@ -468,7 +511,17 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	public void onWin(WinEvent e) {
     	currentBattleResult = 1;
     	
-        flag_error = exportDataWeights();
+    	if (flag_recordQVals) {
+	    	flag_error = exportData(strQVals);
+	        if( flag_error != SUCCESS_exportData) {
+	        	out.println("ERROR @onWin QVals: " + flag_error);
+	        	if (DEBUG_onDeath || DEBUG) {
+	        		LOG[lineCount++] = "ERROR @onWin QVals: " + flag_error;
+	        	}
+	        }
+    	}
+    	
+    	flag_error = exportDataWeights();
         if( flag_error != SUCCESS_exportDataWeights) {
         	out.println("ERROR @onWin weights: " + flag_error);
         	if (DEBUG_onWin || DEBUG) {
@@ -1092,7 +1145,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		}
         
 //		
-//		//Step 9 - Calculate local error. 
+//		//Step 9 - Calculate local error. For debugging purposes; an additional way to measure if QVals is converging. //Joey: add flag to decide whether this is used.
 //		double error = 0.0;
 //		for (int k = 0; k < numOutputsTotal; k++){ 
 //			error = 0.5*(java.lang.Math.pow((Y_target[k] - Y_calculated[k]), 2)); 
@@ -1323,11 +1376,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				extracted to obtain the file settings, which includes the contents the file
      * 				expects. A set of slightly varying extraction sequences are performed 
      * 				based on file.
-     * 
-     * 				Config settings:
-     * 				stringTest: 16400 (0x4010)
-     * 				strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
-     * 				WL:			16448 (0x4040)
+     * 				
+     * 				Most available config settings:
+     * 				    stringTest: 16400 (0x4010)
+     * 					strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
+     *    				WL:			16448 (0x4040), zero WL = 16449 (0x4041)
+     *					NN weights: 16512 (0x4080), zeroing = 16513 (0x4081)
+     *					QVals:		16640 (0x4100), zeroing = 16641 (0x4101)
      * 				
      * @param: 		1. stringname of file desired to be written. The fxn currently accepts 3(three) 
      * 				files: LUTTrackfire.dat, winlose.dat, and stringTest.dat. Any other string 
@@ -1345,6 +1400,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //    		LOG[lineCount++] = "fileSettings_LUT: " + fileSettings_LUT;
     		LOG[lineCount++] = "fileSettings_WL: "+ fileSettings_WL;
     		LOG[lineCount++] = "fileSettings_weights: " + fileSettings_weights;
+    		LOG[lineCount++] = "fileSettings_QVals: " + fileSettings_QVals;
     	}
     	
         try {
@@ -1476,6 +1532,44 @@ public class NN2_LUTMimic extends AdvancedRobot{
                     	flag_WLImported = true;
                 	} // end of WinLose
                 	
+                	else if( ((fileSettings_temp & CONFIGMASK_FILETYPE_QVals) == CONFIGMASK_FILETYPE_QVals) && (flag_QValsImported == false) ) {
+                		if (strName != "QVals.dat") {
+                			return ERROR_22_import_wrongFileName_QVals; //error 22 - coder mislabel during coding
+                		}
+                		if ( (fileSettings_temp & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE ) {
+            				if (DEBUG_import || DEBUG) {
+            					LOG[lineCount++] = "- blanking QVal records:";
+                    		}
+            				totalQValRecords = 0; //these honestly should not be necessary; initialized as 0 and object(robot) is made new every fight.
+            				for (int i = 0; i < arr_QVals.length; i++){
+	                    			arr_QVals[i] = 0;
+	                    	}
+            				fileSettings_temp -= CONFIGMASK_ZEROINGFILE;
+            				
+            				if (DEBUG_import || DEBUG) {
+            					LOG[lineCount++] = "Imported blank records.";
+                    		}
+                		}
+                		else {
+            				if (DEBUG_import || DEBUG) {
+            					LOG[lineCount++] = "- importing saved QVals:";
+                    		}
+	                		totalQValRecords = Integer.parseInt(reader.readLine());
+	                    	for (int i = 0; i < arr_QVals.length; i++){
+	                    		if (i < totalQValRecords) {
+	                    			arr_QVals[i] = Integer.parseInt(reader.readLine());
+	                    		}
+	                    		else {
+	                    			arr_QVals[i] = 0;
+	                    		}
+	                    	}
+	                    	if (DEBUG_import || DEBUG) {
+	                    		LOG[lineCount++] = "Imported saved QVals.";
+                    		}
+                		}
+                    	fileSettings_QVals = fileSettings_temp;
+                    	flag_QValsImported = true;
+                	}
                 	//write code for new file uses here. 
                 	//also change the string being called 
                 	//ctr+f: Import data. ->Change imported filename here<- 
@@ -1489,6 +1583,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //                    		LOG[lineCount++] = "fileSettings_LUT: " + fileSettings_LUT;
                     		LOG[lineCount++] = "fileSettings_WL: "+ fileSettings_WL;
                     		LOG[lineCount++] = "fileSettings_weights: " + fileSettings_weights;
+                    		LOG[lineCount++] = "fileSettings_QVals" + fileSettings_QVals;
 //                    		LOG[lineCount++] = "CONFIGMASK_FILETYPE_LUTTrackfire|verification: " + (CONFIGMASK_FILETYPE_LUTTrackfire | CONFIGMASK_VERIFYSETTINGSAVAIL);
                     		LOG[lineCount++] = "CONFIGMASK_FILETYPE_winLose|verification: " + (CONFIGMASK_FILETYPE_winLose | CONFIGMASK_VERIFYSETTINGSAVAIL);
                     		LOG[lineCount++] = "CONFIGMASK_FILETYPE_weights|verification: " + (CONFIGMASK_FILETYPE_weights | CONFIGMASK_VERIFYSETTINGSAVAIL);
@@ -1496,6 +1591,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
                     		LOG[lineCount++] = "flag_weightsImported: " + flag_weightsImported;
                     		LOG[lineCount++] = "fileSettings_temp & CONFIGMASK_ZEROINGFILE: " + (fileSettings_temp & CONFIGMASK_ZEROINGFILE);
                     		LOG[lineCount++] = "CONFIGMASK_FILETYPE_weights: " + CONFIGMASK_FILETYPE_weights;
+                    		
                     	}
                 		return ERROR_8_import_dump; //error 8 - missed settings/file dump.
                 	}
@@ -1525,6 +1621,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //    		LOG[lineCount++] = "fileSettings_LUT: " + fileSettings_LUT;
     		LOG[lineCount++] = "fileSettings_WL: "+ fileSettings_WL;
     		LOG[lineCount++] = "fileSettings_weights: " + fileSettings_weights;
+    		LOG[lineCount++] = "fileSettings_QVals" + fileSettings_QVals;
     	}
         return SUCCESS_importData;
     }
@@ -1544,10 +1641,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
      *              	b. write data
      *              3. flip flag_preventMultipleFile
      *              
-     *              Config settings:
-     * 				stringTest: 16400 (0x4010)
-     * 				strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
-     * 				WL:			16448 (0x4040)
+     * 				Most available config settings:
+     * 				    stringTest: 16400 (0x4010)
+     * 					strLUT:		16416 (0x4020), zeroLUT = 16417 (0x4021)
+     *    				WL:			16448 (0x4040), zero WL = 16449 (0x4041)
+     *					NN weights: 16512 (0x4080), zeroing = 16513 (0x4081)
+     *					QVals:		16640 (0x4100), zeroing = 16641 (0x4101)
      * 
      * @param: 		1. string of file name
      * 				and uses:
@@ -1563,6 +1662,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     		LOG[lineCount++] = "fileSettings_stringTest: " + fileSettings_stringTest;
     		LOG[lineCount++] = "fileSettings_WL: "+ fileSettings_WL;
     		LOG[lineCount++] = "fileSettings_weights: " + fileSettings_weights;
+    		LOG[lineCount++] = "fileSettings_QVals" + fileSettings_QVals;
     		
     	}
     	
@@ -1571,6 +1671,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	if(  ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) 
     	  || ( (strName == strWL)         && (fileSettings_WL > 0)         && (flag_WLImported == true) )
     	  || ( (strName == strWeights)    && (fileSettings_weights > 0)    && (flag_weightsImported == true) )
+    	  || ( (strName == strQVals)      && (fileSettings_QVals > 0)	   && (flag_QValsImported == true) )	
     	  || ( (strName == strLog) ) 
     					){ 
 	    	
@@ -1632,6 +1733,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	if (DEBUG_export || DEBUG) {
 	            		LOG[lineCount++] = "- writing into winLose:";
 	            	}
+	            	
 	            	w.println(fileSettings_WL);
 	            	w.println(totalFights+1);
 	            	for (int i = 0; i < totalFights; i++){
@@ -1645,6 +1747,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	
 	            	flag_WLImported = false;
 	            }// end winLose
+	            
+	            else if ( (strName == strQVals) && (fileSettings_QVals > 0) && (flag_QValsImported == true) ){
+	            	if (DEBUG_export || DEBUG) {
+	            		LOG[lineCount++] = "- writing into QVals:";
+	            	}
+	            	
+	            	if (DEBUG_export || DEBUG) {
+	            		LOG[lineCount++] = "Successfully written into QVals.";
+	            	}
+	            	
+	            	flag_QValsImported = false;
+	            }// end QVals
 	            
 //	            //strError
 //	            else if((strName == strError)){
@@ -1693,8 +1807,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	                w.close();
 	            }
 	        }
-	        
-	        flag_alreadyExported = true;
 	        
 	        if (DEBUG_export || DEBUG) {
 	        	LOG[lineCount++] = "(succeeded export)";
