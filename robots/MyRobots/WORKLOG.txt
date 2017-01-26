@@ -1,5 +1,7 @@
 	2017-01-26
-		- removed normalization of rewards
+		- edited normalization of rewards to be linear
+		- wrote procedure for adding new external files to be used for code.
+		- wrote working draft of QVal recording function, currently examining why the QVals look spiky. Check robocode\misc data\qval plots.xlsx
 	2017-01-24
 		- writing new QVal recording function
 		- writing instructions for adding new files to be imported/exported by the code.
@@ -9,8 +11,8 @@
 		- fixed bug where all currSAVs are 0'd for action selection.
 	2017-01-14
 		- fixed several critical fxnality bugs past weeks (using development branch), including, but not exclusively, in reverse chronological order:
-			1. doing double-related calculations for NN purposes with int parameters, resulting in critical loss in resolution and a general feeling of ridiculousness at apparent congruity in inputs.
-			2. fixed bug in FP where the actions feeding in were NOT being cycled per feed (ie, same action being fed through all FP possibilities LOL GOOD GOD)
+			1. doing double-related calculations for NN purposes with int parameters, resulting in critical loss in resolution.
+			2. fixed bug in FP where the actions feeding in were NOT being cycled per feed (ie, same action being fed through all FP possibilities)
 			3. Correction in Qfxn; now a Q_prev_target is being generated using Q_prev (unsure what was previously, but correct method should generally be same to the LUT bots.)
 		- added fxn comments explaining how FP and BP works, and the tiny tweaks our rendition has.
 		- currently putting in a detailed logging fxnality.
@@ -21,7 +23,7 @@
 	2017-01-03
 		- fix bug in backprop with SAV[0] treated as only action vector, but other previous fxns treating it as 3.
 		- fix bug in numMaxAction
-	2016-30-30
+	2016-12-30
 		- [done] Import NN framework from NN2.
 		- added/corrected some comments
 		- fixed a few import export settings for weights.
