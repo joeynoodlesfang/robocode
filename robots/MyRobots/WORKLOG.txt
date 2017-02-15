@@ -1,23 +1,7 @@
-in importData():
-update available config section in fxn's @brief comments
-add fileSettings log line in beginning of function, dump, and end of function.
-add section in else if ( ((fileSettings_temp & CONFIGMASK_FILETYPE_blah) == CONFIGMASK_FILETYPE_blah) && (flag_blahImported == false) ) {, which includes:
-	1. a section on if wrong file name
-	2. section for if zeroconfig
-	3. section for if not zeroconfig
-	4. fileSettings_fileShortName = fileSettings_temp
-	5. file_--imported = true
-	
-in exportData():
-update available config section in fxn's @brief comments
-add fileSettings log line in beginning of function
-add if condition for file.
-add section in else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ), which includes
-	1. LOG indications that the code has arrived in/leaving this section.
-	2. streamname.println(fileSettings_fileShortName
-	2. codes for export
-	3. flag_--imported = false
-
+	2017-01-26
+		- edited normalization of rewards to be linear
+		- wrote procedure for adding new external files to be used for code.
+		- wrote working draft of QVal recording function, currently examining why the QVals look spiky. Check robocode\misc data\qval plots.xlsx
 	2017-01-24
 		- writing new QVal recording function
 		- writing instructions for adding new files to be imported/exported by the code.
@@ -28,8 +12,8 @@ add section in else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WL
 		- fixed bug where all currSAVs are 0'd for action selection.
 	2017-01-14
 		- fixed several critical fxnality bugs past weeks (using development branch), including, but not exclusively, in reverse chronological order:
-			1. doing double-related calculations for NN purposes with int parameters.
-			2. fixed bug in FP where the actions feeding in were NOT being cycled per feed (ie, same action being fed through all FP possibilities wow)
+			1. doing double-related calculations for NN purposes with int parameters, resulting in critical loss in resolution.
+			2. fixed bug in FP where the actions feeding in were NOT being cycled per feed (ie, same action being fed through all FP possibilities)
 			3. Correction in Qfxn; now a Q_prev_target is being generated using Q_prev (unsure what was previously, but correct method should generally be same to the LUT bots.)
 		- added fxn comments explaining how FP and BP works, and the tiny tweaks our rendition has.
 		- currently putting in a detailed logging fxnality.
@@ -40,7 +24,7 @@ add section in else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WL
 	2017-01-03
 		- fix bug in backprop with SAV[0] treated as only action vector, but other previous fxns treating it as 3.
 		- fix bug in numMaxAction
-	2016-30-30
+	2016-12-30
 		- [done] Import NN framework from NN2.
 		- added/corrected some comments
 		- fixed a few import export settings for weights.
