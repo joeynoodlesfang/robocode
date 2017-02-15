@@ -22,13 +22,14 @@ add section in else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WL
 		- writing new QVal recording function
 		- writing instructions for adding new files to be imported/exported by the code.
 	2017-01-17
+	
 		- added in ability to clear log at beginning of every run. (should be sufficient memory at the beginning to perform run at every time. It is not necessary to do so but easier this way).
 		- commented a bit more in run() and globs.
 		- fixed bug where all currSAVs are 0'd for action selection.
 	2017-01-14
 		- fixed several critical fxnality bugs past weeks (using development branch), including, but not exclusively, in reverse chronological order:
-			1. doing double-related calculations for NN purposes with int parameters, resulting in critical loss in resolution and a general feeling of ridiculousness at apparent congruity in inputs.
-			2. fixed bug in FP where the actions feeding in were NOT being cycled per feed (ie, same action being fed through all FP possibilities LOL GOOD GOD)
+			1. doing double-related calculations for NN purposes with int parameters.
+			2. fixed bug in FP where the actions feeding in were NOT being cycled per feed (ie, same action being fed through all FP possibilities wow)
 			3. Correction in Qfxn; now a Q_prev_target is being generated using Q_prev (unsure what was previously, but correct method should generally be same to the LUT bots.)
 		- added fxn comments explaining how FP and BP works, and the tiny tweaks our rendition has.
 		- currently putting in a detailed logging fxnality.

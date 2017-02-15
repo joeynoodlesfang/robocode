@@ -1,3 +1,5 @@
+1-24 
+- Set up local error recording
 1-19 thur
 - Set up Qval recording
 - implement NN2 changes into NN1
