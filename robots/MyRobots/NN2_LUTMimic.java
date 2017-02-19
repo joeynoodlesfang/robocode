@@ -1,5 +1,62 @@
-//Joey: Write a general introduction, to here as well as to local readmes, and the markdown readme in the beginning.
-
+/* -> INTRODUCTION <-
+ * NN2_LUTMimic is our first bot that applies neural network (NN or net) techniques to 
+ * reinforcement learning(RL). Like its name suggests, NN2_LUTMimic mimicks the logic and the 
+ * various parameters of a LUT-based robot (LUTTrackfire). This is done to limit the effect of the 
+ * NN technique on robot performance - ie. we wanted the code foundation to build future bots that 
+ * will have parameters which exploit NN.  
+ * 
+ * Robocode is a program designed for learning the basics of java. The goal is to code a bot that 
+ * compete with others in an arena. The coder will have no direct influence on how the fighting is 
+ * done - instead, all the fight mechanics and strategies employed by the robot are coded before 
+ * the fight ever took place. So the robot is free to employ any tactics it wants to win - as long 
+ * as the bot adheres to the rules of the game. 
+ * 
+ * Reinforcement learning, RL, refers to a method by which a machine decides on which action to 
+ * take, in order to maximize a conceptualized reward. The bot learns by performing an action 
+ * within a measurable environment, and rewarding itself based upon the results of said action. 
+ * The reward alters the likelihood of performing the same action again in the same environment: 
+ * winning moves can be recreated, and poor moves can be avoided. 
+ * 
+ * Neural network (NN) is a computation network that solves problems by using complexity, 
+ * approximation, and trial and error. It imitates biological neurons by setting both inputs and 
+ * outputs as neuronal nodes, and connecting them through a network, which oftentimes includes 
+ * other nodes called hidden nodes. Nodes of similar functionalities are oftentimes - at least for 
+ * our bots - placed in a layer, and layers talk to other layers. Simple nets may contain a layer 
+ * of input nodes connected to a layer of hidden nodes, which are connected to a layer of output 
+ * nodes. The effect of the connections are changeable - each has a coefficient to it, called a 
+ * weight, that affects how the nodes it is connected to perceive each other. 
+ * 
+ * Neural net is used here for RL, just like LUT, with one main distinction being that NN can only 
+ * estimate the value of actions. In exchange, NN allows much more inputs to be used. This exchange
+ * comes particularly into play for robocode. LUT requires a list of QVals to be stored in a file 
+ * in between executions. Robocode limits all files to a size of 200kBs. NN on the other hand 
+ * estimates the QVals through calculations, and stores a much smaller set of coefficients called 
+ * 'weights'. Weights describe the strength of the connections between nodes in a neural net, and 
+ * it can be any real value. NN allows a much greater selection of inputs to be used. Even 
+ * continuous input ranges can be used, which is impossible for LUT.  
+ * 
+ * -> SUMMARY OF NN2 <-
+ * Each turn of battle, an event is triggered. The event does the following:
+ *  1. Obtain information about the environment.
+ *  2. Every 4 turns, RL will take place. Other 3 turns, no learning will take place.
+ *  	in RL: 	A) Convert information into inputs suitable for net.
+ *  			B) Forward propagate to choose best action
+ *  			C) Perform Q value function.
+ *  			D) Back propagate to correct weights
+ *  			E) Perform RL-selected action (once every 4 turns). It takes multiple turns to complete an action.
+ *  3. Perform actions mandatory per turn, such as maintaining scanner lock on enemy.
+ * 
+ * NN2 consists of several data analyzing tools:
+ *  1. Logging of important sections in templog.txt
+ *  2. Logging of Qvals per cycle of RL in qVals.txt
+ *  3. Logging of errors calculated during Q function in saveErrorForActions.dat.
+ *     Errors are calculated to determine if Qvalue is converging.
+ *  4. Errors during import/export are printouts in o.stream in addition to being logged.
+ * 
+ * Check worklog.txt and planning.txt in MyRobots dir for bot's past, present and future.
+ * 
+ * Anyways here's wonderwall.
+ */
 package MyRobots;
 
 import static robocode.util.Utils.normalRelativeAngleDegrees;
@@ -26,7 +83,6 @@ import robocode.ScannedRobotEvent;
 import robocode.WinEvent;
 
 public class NN2_LUTMimic extends AdvancedRobot{
-	//Joey: gotta track Q_val somehow, maybe tally up differences and write it in at the end
 	
 	/*
 	 * RULES FOR CHANGING STATE ACTION VECTOR(SAV):
@@ -70,8 +126,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	/**
 	 * ===================================FINALS (defines)====================================================================================
 	 */
-	 //variables for the q-function. Robot will NOT change analysis pattern mid-fight.
-	//alpha describes to which extent the newly acquired information will override the old information.
+	//variables for the q-function. Robot will currently NOT change critical q-function coefficients (alpha, gamma, epsilon) mid-fight.
+	//alpha describes the extent to which the newly acquired information will override the old information.
     private static final double alpha = 0.1;
     //gamma describes the importance of future rewards
     private static final double gamma = 0.8;                
@@ -87,7 +143,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     
     /* 
-     * CONFIGMASK - used as settings written in data files to be read by functions. 
+     * CONFIGMASK: a list of numbers that describe what's in the file, and provide some limited instructions to the reader (which is the import fxn).  
      * 			  - contains 2 bytes (4 hex digits)
      * 			  - functions will use AND conditions to evaluate if the settings in the file match the mask. 
      */
@@ -144,8 +200,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 * NN STATEACTION VARIABLES for stateAction ceilings (for array designs and other modular function interactions).
 	 * 
 	 */
-    //Action related finals.
-    //- One concern with the complexity of the action design for the robot is the amount of calculation time spent in forward propagation. 
+    //Action-related finals.
+    //- One concern with the complexity of the actions a robot can perform is the amount of calculation time spent in forward propagation.
+    //- Each possible action requires one forward propagation.
     //- As of now, the No. times NN needs to forward propagate per round = 4 * 2 * 3 = 24
     private static final int input_action0_moveReferringToEnemy_possibilities = 4; //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
     private static final int input_action1_fire_possibilities = 2;    //1, 3
@@ -166,10 +223,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //NN neuron parameters.
     private static final int numInputBias = 0;
     private static final int numHiddenBias = 1;
-    private static final int numOutputBias = 0; //Actual code disregards possibility of output bias by starting loops relating to output at 0 for first output.
+    private static final int numOutputBias = 0; //Actual code disregards possibility of output bias by starting loops relating to output at 0 referring to first output instead of bias.
     private static final int numHiddenNeuron = 4;
     private static final int numInputsTotal = ( numInputBias + numActionContainers + numStateContainers ); 
-    private static final int numHiddensTotal = ( numHiddenBias+ numHiddenNeuron );
+    private static final int numHiddensTotal = ( numHiddenBias + numHiddenNeuron );
     private static final int numOutputsTotal = 1;
     
     //NN activation function choices
@@ -177,9 +234,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final boolean bipolarMethod = false;
  
     
-    
     /**
-     * STRINGS used for importing or extracting files =========================================== 
+     * STRINGS used for importing or exporting files =========================================== 
      */
     String strStringTest = "stringTest.dat";    
     String strLUT = "LUTTrackfire.dat";
@@ -195,7 +251,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     //DEBUG_ALL flags. Each allows printouts written for specific functions. DEBUG_ALL will print out all.
     private final static boolean DEBUG_ALL = false;
-    private final static boolean DEBUG_MULTI_file = true;
 	private final static boolean DEBUG_run = false;
 	private final static boolean DEBUG_onScannedRobot = false;
 	private final static boolean DEBUG_analysis = false;
@@ -207,7 +262,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //	private final static boolean DEBUG_copyCurrentQValueIntoPrev = false;
 	private final static boolean DEBUG_generateCurrentStateVector = false;
 //	private final static boolean DEBUG_RL_and_NN = false;
-	private final static boolean DEBUG_MULTI_forwardProp = false; //can be used to DEBUG_ALL for the multiple fxns encompassed by FP.
+	private final static boolean DEBUG_MULTI_forwardProp = false; //can be used to debug the multiple fxns encompassed by FP.
 	private final static boolean DEBUG_getAllQsFromNet = false;
 	private final static boolean DEBUG_forwardProp = false;
 	private final static boolean DEBUG_getMax = false;
@@ -219,6 +274,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 //	private final static boolean DEBUG_doAction_mandatoryPerTurn = false;
 //	private final static boolean DEBUG_importDataWeights = false;
 //	private final static boolean DEBUG_exportDataWeights = false;
+    private final static boolean DEBUG_MULTI_file = true; //logs from all functions that contribute directly to moving/editing files, which include more than import/export fxns.
     private final static boolean DEBUG_import = false;
     private final static boolean DEBUG_export = false;
     
@@ -239,10 +295,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static boolean flag_useOfflineTraining = true;
     //flag used for recording QVals
     private static boolean flag_recordQVals = true;
-    // printout error flag - used to check function return statuses.
+    // printout error flag - used to record the return value of functions.
     // initialized to 0, which is no error.
     private int flag_error = 0;
-
 
     /**
      *  OTHER VARIABLES USABLE BY THIS ROBOT'S CLASS FUNCTIONS ==============================================================================
@@ -263,6 +318,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	;
     
     // temp vars for importing/exporting files: config settings for the external files, stored in the first line of .dat
+    // PART OF THE CONFIGMASK SERIES.
     private short fileSettings_temp = 0;
     private short fileSettings_stringTest = 0;
     private short fileSettings_LUT = 0; 
@@ -364,11 +420,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	private double [][] wDelta = new double[numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights	  
 	private double [] delta_out    = new double[numOutputsTotal];
 	private double [] delta_hidden = new double[numHiddensTotal];
-	
-	
-	
 	//bias for hidden initialized as value 1
+	private int valInputBias = 0;
     private int valHiddenBias = 1;
+    private int valOutputBias = 0;
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
@@ -389,26 +444,26 @@ public class NN2_LUTMimic extends AdvancedRobot{
         setColors();
         
         out.println("@I have been a dodger duck (robot entered run)"); 
-        if (DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
+        if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
         	LOG[lineCount++] = "@I have been a dodger duck (robot entered run)";
         }
         
         // Import data. Change imported filename below
         
         //clears log from previous session in case it used up all allowed harddrive. (robocode allows for 200kB of external data per robot)
-        if (DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
+        if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
         	LOG[lineCount++] = "Clearing log file with blank export:";
         }
         fileSettings_log += CONFIGMASK_ZEROINGFILE;
         flag_error = exportData(strLog);
-        if(flag_error != SUCCESS_importData) {
+        if (flag_error != SUCCESS_importData) {
         	out.println("ERROR @run blankingWeights: " + flag_error);
-        	if (DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
+        	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
             	LOG[lineCount++] = "ERROR @run blankingWeights: " + flag_error;
             }
         }
         else {
-            if (DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
+            if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
             	LOG[lineCount++] = "Clearing log file successful.";
             }
         }
@@ -418,24 +473,24 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	        flag_error = importData(strQVals);
 	        if(flag_error != SUCCESS_importData) {
 	        	out.println("ERROR @run QVals: " + flag_error);
-	        	if (DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
+	        	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
 	        		LOG[lineCount++] = "Error @run Qvals: " + flag_error;
 	        	}
 	        }
         }
         
         flag_error = importDataWeights();
-        if(flag_error != SUCCESS_importDataWeights) {
+        if (flag_error != SUCCESS_importDataWeights) {
         	out.println("ERROR @run weights: " + flag_error);
-        	if (DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
+        	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
             	LOG[lineCount++] = "ERROR @run weights: " + flag_error;
             }
         }
         
         flag_error = importData(strWL);
-        if( flag_error != SUCCESS_importData) {
+        if (flag_error != SUCCESS_importData) {
         	out.println("ERROR @run WL: " + flag_error);
-        	if (DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
+        	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
             	LOG[lineCount++] = "ERROR @run WL: " + flag_error;
             }
         }
@@ -467,17 +522,17 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
     	
     	flag_error = exportDataWeights();	
-        if(flag_error != SUCCESS_exportDataWeights) {
+        if (flag_error != SUCCESS_exportDataWeights) {
         	out.println("ERROR @onBattleEnded weights: " + flag_error);
-        	if (DEBUG_MULTI_file|| DEBUG_onBattleEnded || DEBUG_ALL) {
+        	if(DEBUG_MULTI_file|| DEBUG_onBattleEnded || DEBUG_ALL) {
         		LOG[lineCount++] = "ERROR @onBattleEnded weights: " + flag_error;
         	}
         }
         
     	flag_error = exportData(strLog); //export log first					
-        if( flag_error != SUCCESS_exportData) {
+        if (flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onBattleEnded Log: " + flag_error);
-        	if (DEBUG_MULTI_file || DEBUG_onBattleEnded || DEBUG_ALL) {
+        	if(DEBUG_MULTI_file || DEBUG_onBattleEnded || DEBUG_ALL) {
         		LOG[lineCount++] = "ERROR @onBattleEnded Log: " + flag_error;
         	}
         }
@@ -500,24 +555,24 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    	flag_error = exportData(strQVals);
 	        if( flag_error != SUCCESS_exportData) {
 	        	out.println("ERROR @onDeath QVals: " + flag_error);
-	        	if (DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
+	        	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
 	        		LOG[lineCount++] = "ERROR @onDeath QVals: " + flag_error;
 	        	}
 	        }
     	}
         
         flag_error = exportDataWeights();
-        if( flag_error != SUCCESS_exportDataWeights) {
+        if (flag_error != SUCCESS_exportDataWeights) {
         	out.println("ERROR @onDeath weights: " + flag_error);
-        	if (DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
+        	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
         		LOG[lineCount++] = "ERROR @onDeath weights: " + flag_error;
         	}
         }
         
         flag_error = exportData(strWL);					//"strWL" = winLose.dat
-        if( flag_error != SUCCESS_exportData) {
+        if (flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onDeath WL: " + flag_error);
-        	if (DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
+        	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
         		LOG[lineCount++] = "ERROR @onDeath WL: " + flag_error;
         	}
         }
@@ -540,24 +595,24 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    	flag_error = exportData(strQVals);
 	        if( flag_error != SUCCESS_exportData) {
 	        	out.println("ERROR @onWin QVals: " + flag_error);
-	        	if (DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
+	        	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
 	        		LOG[lineCount++] = "ERROR @onWin QVals: " + flag_error;
 	        	}
 	        }
     	}
     	
     	flag_error = exportDataWeights();
-        if( flag_error != SUCCESS_exportDataWeights) {
+        if (flag_error != SUCCESS_exportDataWeights) {
         	out.println("ERROR @onWin weights: " + flag_error);
-        	if (DEBUG_MULTI_file || DEBUG_onWin || DEBUG_ALL) {
+        	if(DEBUG_MULTI_file || DEBUG_onWin || DEBUG_ALL) {
         		LOG[lineCount++] = "ERROR @onWin weights: " + flag_error;
         	}
         }
         
         flag_error = exportData(strWL);
-        if( flag_error != SUCCESS_exportData) {
+        if (flag_error != SUCCESS_exportData) {
         	out.println("ERROR @onWin WL: " + flag_error);
-        	if (DEBUG_MULTI_file || DEBUG_onWin || DEBUG_ALL) {
+        	if(DEBUG_MULTI_file || DEBUG_onWin || DEBUG_ALL) {
         		LOG[lineCount++] = "ERROR @onWin WL: " + flag_error;
         	}
         }
@@ -600,7 +655,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		enemyEnergy = (int)event.getEnergy();
 		turn = (int)getTime();
 		
-    	
     	analysis();
     }
 
@@ -705,7 +759,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	energyDiffPrev = energyDiffCurr;
     	energyDiffCurr = myEnergy - enemyEnergy;
     	reward += energyDiffCurr - energyDiffPrev; //using +=, not =, to allow for other events to affect reward if desired.
-    	reward_normalized = reward/600; //currently linear normalization
+    	reward_normalized = reward/600; //currently linear normalization. This fits the biggest possible enemy to around 0.05.
     	
     	if(DEBUG_obtainReward || DEBUG_ALL) {
     		LOG[lineCount++] = "- rewards";
@@ -790,7 +844,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			currentStateActionVector[7] = 2; //enemy moving right
 		}
     	
-    	if (DEBUG_generateCurrentStateVector || DEBUG_ALL){
+    	if(DEBUG_generateCurrentStateVector || DEBUG_ALL){
     		LOG[lineCount++] = "currentSAV:" + Arrays.toString(currentStateActionVector);
     	}
     	
@@ -825,12 +879,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @input: 		currentStateVector 
      * @purpose: 	1. For current state, cycle through all possible actions and obtain the action in current state with the highest q-value 
      * 					from the outputarray "Yout" of the neural net. 
-     * @param:		n //Joey: i think
+     * @param:		n 
      * @return: 	n
      */
 
 	public void getAllQsFromNet() {
-		if (DEBUG_getAllQsFromNet || DEBUG_MULTI_forwardProp || DEBUG_ALL){
+		if(DEBUG_getAllQsFromNet || DEBUG_MULTI_forwardProp || DEBUG_ALL){
 			LOG[lineCount++] = "- FP";
     	}
 
@@ -845,7 +899,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			}
 		}
 
-    	if (DEBUG_getAllQsFromNet || DEBUG_MULTI_forwardProp || DEBUG_ALL){
+    	if(DEBUG_getAllQsFromNet || DEBUG_MULTI_forwardProp || DEBUG_ALL){
     		LOG[lineCount++] = "Q_NNFP_all going into getMax:" + Arrays.deepToString(Q_NNFP_all);
     	}
     	
@@ -870,7 +924,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 * @return: an array of Y values for all the state pairs. 
 	 **/
     public double forwardProp() {
-    	if (DEBUG_MULTI_forwardProp || DEBUG_forwardProp || DEBUG_ALL){
+    	if(DEBUG_MULTI_forwardProp || DEBUG_forwardProp || DEBUG_ALL){
     		LOG[lineCount++] = "selectedSAV:" + Arrays.toString(currentStateActionVector);
     	}
     	
@@ -889,7 +943,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			else
 				Z[j] = bipolarActivation(Z_in[j]);
 			
-			if (DEBUG_MULTI_forwardProp || DEBUG_forwardProp || DEBUG_ALL){
+			if(DEBUG_MULTI_forwardProp || DEBUG_forwardProp || DEBUG_ALL){
 				LOG[lineCount++] = String.format("Z[%d]:%.3f Z_in[%d]:%.3f sumIn%.3f", j, Z[j], j, Z_in[j], sumIn);
 			}
 			
@@ -907,7 +961,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			else
 				Y[k] = bipolarActivation(Y_in[k]);
 			
-			if (DEBUG_MULTI_forwardProp || DEBUG_forwardProp || DEBUG_ALL){
+			if(DEBUG_MULTI_forwardProp || DEBUG_forwardProp || DEBUG_ALL){
 				LOG[lineCount++] = String.format("Y[%d]:%.3f Y_in[%d]:%.3f sumOut%.3f", k, Y[k], k, Y_in[k], sumOut);
 			}
 			
@@ -957,7 +1011,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         //resets the array that stores all of Qmax, although randMaxAction should random between 0 and numMaxActions.
         Arrays.fill(action_QMax_all, 0);
         
-    	if (DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
+    	if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
         	LOG[lineCount++] = "Q_NNFP_all:" + Arrays.deepToString(Q_NNFP_all);
         }
     	
@@ -976,7 +1030,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     		}
     	}
     	
-    	if (DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
+    	if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
         	LOG[lineCount++] = "action_QMax_all:" + Arrays.toString(action_QMax_all);
         }
         Q_curr = currMax;
@@ -984,7 +1038,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         if (numMaxActions > 1) {
         	randMaxAction = (int)(Math.random()*(numMaxActions)); //math.random randoms btwn 0.0 and 0.999. Allows selection array position from 0 to num-1 through int truncation. 
         	
-        	if (DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
+        	if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
             	LOG[lineCount++] = ">1 max vals, randomly chosen action " + randMaxAction;
             }
         }
@@ -1004,7 +1058,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	        }
         }
 	        
-        if (DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
+        if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
         	LOG[lineCount++] = "enacting policy:" + policy + "(0=gre 1=exp 2=SAR)";
         	LOG[lineCount++] = String.format("Action Chosen (linear) %d, with QVal:%.3f", action_QMax_chosen, Q_curr);
         }
@@ -1017,7 +1071,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		    			currentStateActionVector[1] = i_A1;
 		    			currentStateActionVector[2] = i_A2;
 		    			
-		    			if (DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
+		    			if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
 		    	        	LOG[lineCount++] = "chosen actions(in containers):" + (int)currentStateActionVector[0] + " " + (int)currentStateActionVector[1] + " " + (int)currentStateActionVector[2];
 		    	        }
 		    			
@@ -1039,13 +1093,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void qFunction(){
     	
     	//Joey: ask andrea about papers for good gamma terms. (close to 1?)
-    	Q_target = Q_prev + alpha*(reward_normalized + (gamma*Q_curr) - Q_prev); //Joey: mby bipolar activate the reward
+    	Q_target = Q_prev + alpha*(reward_normalized + (gamma*Q_curr) - Q_prev);
     	
     	//for debugging purposes: file recording Qval fluctuation
     	if (flag_recordQVals) {
     		arr_QVals[totalQValRecords++] = Q_curr;
     	}
-    	if (DEBUG_qFunction || DEBUG_ALL) {
+    	if(DEBUG_qFunction || DEBUG_ALL) {
     		LOG[lineCount++] = "- Q function";
     		LOG[lineCount++] = String.format("Q_target%.3f  Q_prev:%.3f  Q_curr:%.3f", Q_target, Q_prev, Q_curr);
     		LOG[lineCount++] = String.format("alpha:%.2f reward_N:%.3f gamma:%.2f", alpha, reward_normalized, gamma);
@@ -1080,7 +1134,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      *				Each hidden unit (Z[j], j = 1, ..., p) updates its bias and weights (i = 0, ..., n):
      *					v[i][j](new) = v[i][j](old) + delta_weights_v[i][j].
      *
-     *				To assist with rate of convergence, we have also included the ability for the net to use momentum. Momentum requires data one or more previous
+     *				To assist with rate of convergence, we have also included the ability for the net to use momentum. Momentum requires data from one or more previous
      *				training patterns. In the simplest form, the weights at t+1 are based on the weights at t and t-1:
      *					w[j][k](t+1) = w[j][k](t) + alpha*delta_out[k]*Z[j] + mu[w[j][k](t) - w[j][k](t-1)],
      *				and
@@ -1092,7 +1146,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	//local var used to store activation derivative of Y.
     	double[] temp_OutputDerivative = new double [numOutputsTotal];
     	
-    	if (DEBUG_backProp || DEBUG_ALL) {
+    	if(DEBUG_backProp || DEBUG_ALL) {
 			LOG[lineCount++] = "- BP";
 			LOG[lineCount++] = "momentum:" + momentum;
 		}
@@ -1102,8 +1156,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         Y_target[0] = Q_target; 
         
     	//step 6-8 for hidden-to-output weights
-        
-        if (DEBUG_backProp || DEBUG_ALL) {
+        if(DEBUG_backProp || DEBUG_ALL) {
 			LOG[lineCount++] = "@output cycle:";
 			LOG[lineCount++] = "arr_wHO(pre):" + Arrays.deepToString(arr_wHO);
 		}
@@ -1118,15 +1171,15 @@ public class NN2_LUTMimic extends AdvancedRobot{
 				delta_out[k] = (Y_target[k] - Y_calculated[k])*temp_OutputDerivative[k];	
 			}
 
-			if (DEBUG_backProp || DEBUG_ALL) {
+			if(DEBUG_backProp || DEBUG_ALL) {
 				LOG[lineCount++] = String.format("delta_out[%d]:%.3f (%s)", k, delta_out[k], (activationMethod==binaryMethod)?"bin":"bip");
 				LOG[lineCount++] = String.format("Y_target[%d]:%.3f Y_calculated[%d]:%.3f Y_in[%d]:%.3f Y_in_der[%d]:%.3f", k, Y_target[k], k, Y_calculated[k], k, Y_in[k], k, temp_OutputDerivative[k]);
-				
 			}
+			
 			for (int j = 0; j < numHiddensTotal; j++){
 				wDelta[j][k] = alpha*delta_out[k]*Z[j];
 				
-				if (DEBUG_backProp || DEBUG_ALL) {
+				if(DEBUG_backProp || DEBUG_ALL) {
 					LOG[lineCount++] = String.format("wDelta[%d][%d]:%.3f wNext[%d][%d]:%.3f wPast[%d][%d]:%.3f", j, k, wDelta[j][k], j, k, wNext[j][k], j, k, wPast[j][k]);
 				}
 				
@@ -1137,20 +1190,20 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			}
 		}
 		
-		if (DEBUG_backProp || DEBUG_ALL) {
+		if(DEBUG_backProp || DEBUG_ALL) {
 			LOG[lineCount++] = "arr_wHO(post):" + Arrays.deepToString(arr_wHO);
 		}
 		
 		//for input-to-hidden layer
 		
-        if (DEBUG_backProp || DEBUG_ALL) { 
+        if(DEBUG_backProp || DEBUG_ALL) { 
         	LOG[lineCount++] = "@i-to-h cycle:";
 			LOG[lineCount++] = "arr_wIH(pre):" + Arrays.deepToString(arr_wIH);
 		}
 		
 		for (int j = 0; j < numHiddensTotal; j++){
 			double sumDeltaInputs = 0.0;
-			for (int k = 0;  k < numOutputsTotal; k++){ //pretending output bias doesn't exist so our output vector starts at 0
+			for (int k = 0;  k < numOutputsTotal; k++){ //pretending output bias doesn't exist so our output vector starts at 0, when it should start at 1 if a slot is reserved for bias
 				sumDeltaInputs += delta_out[k]*arr_wHO[j][k];
 				if (activationMethod == binaryMethod){
 					delta_hidden[j] = sumDeltaInputs*binaryDerivative(Z_in[j]); 
@@ -1162,7 +1215,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			for (int i = 0; i< numInputsTotal; i++){ //because no input bias, i = 0 will be a wasted cycle (ah wellz)
 				vDelta[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i];
 				
-				if (DEBUG_backProp || DEBUG_ALL) {
+				if(DEBUG_backProp || DEBUG_ALL) {
 					LOG[lineCount++] = String.format("vDelta[%d][%d]:%.3f vNext[%d][%d]:%.3f vPast[%d][%d]:%.3f", i, j, vDelta[i][j], i, j, vNext[i][j], i, j, vPast[i][j]);
 				}
 				
@@ -1172,7 +1225,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			}
 		}
 		
-        if (DEBUG_backProp || DEBUG_ALL) {
+        if(DEBUG_backProp || DEBUG_ALL) {
 			LOG[lineCount++] = "arr_wIH(post):" + Arrays.deepToString(arr_wIH);
 		}
         
@@ -1206,8 +1259,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	
     public void doAction_Q(){
     	//maneuver behaviour (chase-offensive/defensive)
-    	if      ( currentStateActionVector[0] == 0 ) {setTurnRight(enemyBearingFromHeading); 										setAhead(50); }
-    	else if ( currentStateActionVector[0] == 1 ) {setTurnRight(enemyBearingFromHeading); 										setAhead(-50);}
+    	if      ( currentStateActionVector[0] == 0 ) {setTurnRight(enemyBearingFromHeading); 									setAhead(50); }
+    	else if ( currentStateActionVector[0] == 1 ) {setTurnRight(enemyBearingFromHeading); 									setAhead(-50);}
     	else if ( currentStateActionVector[0] == 2 ) {setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading - 90)); 	setAhead(50); }
     	else if ( currentStateActionVector[0] == 3 ) {setTurnRight(normalRelativeAngleDegrees(enemyBearingFromHeading + 90)); 	setAhead(50); }
     	
@@ -1218,9 +1271,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	if      ( currentStateActionVector[2] == 0 ) {setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun));}
     	else if ( currentStateActionVector[2] == 1 ) {setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun + 10));}
     	else if ( currentStateActionVector[2] == 2 ) {setTurnGunRight(normalRelativeAngleDegrees(enemyBearingFromGun - 10));}   	
-
-//    	LOG[lineCount++] = "currentStateActionVector" + Arrays.toString(currentStateActionVector));     
-    	if (DEBUG_doAction_Q || DEBUG_ALL) {
+    	
+    	if(DEBUG_doAction_Q || DEBUG_ALL) {
     		LOG[lineCount++] = "- doAction(Q)";
     		LOG[lineCount++] = "currSAV (chosen actions):" + Arrays.toString(currentStateActionVector);
     	}
@@ -1250,7 +1302,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     /**
      * @name:		importDataWeights
-     * @author:		partly written in sittingduckbot
+     * @author:		Andrea; partly written in sittingduckbot
      * @purpose:	to extract neural net weights stored in finalHiddenWeights.txt 
      * 				and finalOuterWeights.txt into arrays NNWeights_inputToHidden[][]
      * 				and NNWeights_hiddenToOutput[][], respectively.
@@ -1320,7 +1372,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     /**
      * @name: 		exportDataWeight
-     * @author: 	mostly sittingduckbot
+     * @author: 	Andrea; mostly sittingduckbot
      * @purpose: 	1. stores the weights back into finalHiddenWeights.txt, 
      * 				finalOuterWeights.txt from data NNWeights_inputToHidden[][]
      * 				and NNWeights_hiddenToOutput[][], respectively.
@@ -1332,7 +1384,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    	try {
 	    		w1 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalHiddenWeights.txt")));
 	    		if (w1.checkError()) {
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "Something done messed up (Error 14 cannot write)";
 	            	}
 	            	return ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden;
@@ -1345,10 +1397,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	         	} 
 	    	}
 	    	catch (IOException e) {
-	    		if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	    		if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	    			LOG[lineCount++] = "IOException trying to write: ";
 	    		}
-	            e.printStackTrace(out); //Joey: lol no idea what this means
+	            e.printStackTrace(out); 
 	            return ERROR_16_exportWeights_IOException;
 	        } 
 	        finally {
@@ -1362,7 +1414,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	    		w2 = new PrintStream(new RobocodeFileOutputStream(getDataFile("finalOuterWeights.txt")));
 	    		if (w2.checkError()) {
 	                //Error 0x03: cannot write
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "Something done messed up (Error 15 cannot write)";
 	            	}
 	            	return ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput;
@@ -1375,10 +1427,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	         	}
 	    	}
 	    	catch (IOException e) {
-	    		if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	    		if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	    			LOG[lineCount++] = "IOException trying to write: ";
 	    		}
-	            e.printStackTrace(out); //Joey: lol no idea what this means
+	            e.printStackTrace(out);
 	            return ERROR_16_exportWeights_IOException;
 	        } 
 	        finally {
@@ -1397,7 +1449,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     }
     
     
-    //TODO
+    //TODO marker for import/export
     /**
      * @name:		importData
      * @author:		partly written in sittingduckbot
@@ -1424,7 +1476,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		1. int importLUTDATA success/error;
      */
     public int importData(String strName){
-    	if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+    	if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
     		LOG[lineCount++] = "- importData: at beginning of fxn";
     		LOG[lineCount++] = "printing fileSettings: ";
     		LOG[lineCount++] = "fileSettings_temp: " + fileSettings_temp;
@@ -1442,7 +1494,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
                 //reads first line of code to obtain what is in "fileSettings_temp"
                 fileSettings_temp = (short)Integer.parseInt(reader.readLine());			
                 
-                if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+                if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
                 	LOG[lineCount++] = "extracted fileSettings into default: ";
                 	LOG[lineCount++] = "fileSettings_temp: " + fileSettings_temp;
             	}
@@ -1473,7 +1525,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
                 			return ERROR_19_import_wrongFileName_weights;
                 		}
             			if ( (fileSettings_temp & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE ) {
-            				if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             					LOG[lineCount++] = "- writing blank weights into local weights array: ";
                     		}
             				for (int i = 0; i < numInputsTotal; i++) {
@@ -1489,13 +1541,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
             				//Subtracts zeroingfile setting from fileSettings, so that the weights are zeroed only once.
             				fileSettings_temp -= CONFIGMASK_ZEROINGFILE;
             				
-            				if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             					LOG[lineCount++] = "Imported blank weights.";
                     		}
             				
             			}
             			else {
-            				if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             					LOG[lineCount++] = "- writing recorded weights into local weights array: ";
                     		}
             				
@@ -1515,7 +1567,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
             	            	return ERROR_20_import_weights_wrongNetSize;
             	            }
             	            
-            	            if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            	            if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             	            	LOG[lineCount++] = "Imported recorded weights.";
                     		}
             			}
@@ -1530,7 +1582,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
                 			return ERROR_5_import_wrongFileName_WL; //error 5 - coder mislabel during coding
                 		}
                 		if ( (fileSettings_temp & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE ) {
-            				if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             					LOG[lineCount++] = "- blanking fight records (winLose):";
                     		}
             				totalFights = 0; //these honestly should not be necessary; initialized as 0 and object(robot) is made new every fight.
@@ -1539,12 +1591,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	                    	}
             				fileSettings_temp -= CONFIGMASK_ZEROINGFILE;
             				
-            				if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             					LOG[lineCount++] = "Imported blank records.";
                     		}
                 		}
                 		else {
-            				if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             					LOG[lineCount++] = "- importing saved fight records (winLose):";
                     		}
 	                		totalFights = Integer.parseInt(reader.readLine());
@@ -1556,7 +1608,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	                    			battleResults[i] = 0;
 	                    		}
 	                    	}
-	                    	if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+	                    	if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
 	                    		LOG[lineCount++] = "Imported saved fight records.";
                     		}
                 		}
@@ -1569,7 +1621,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
                 			return ERROR_21_import_wrongFileName_QVals; //error 22 - coder mislabel during coding
                 		}
                 		if ( (fileSettings_temp & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE ) {                			
-            				if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             					LOG[lineCount++] = "- blanking QVal records:";
                     		}
             				
@@ -1582,12 +1634,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
             				
             				fileSettings_temp -= CONFIGMASK_ZEROINGFILE;
             				
-            				if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             					LOG[lineCount++] = "Imported blank records.";
                     		}
                 		}
                 		else {
-            				if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
             					LOG[lineCount++] = "- importing saved QVals:";
                     		}
 	                		
@@ -1600,7 +1652,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	                    			arr_QVals[i] = 0;
 	                    		}
 	                    	}
-	                    	if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+	                    	if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
 	                    		LOG[lineCount++] = "Imported saved QVals.";
                     		}
                 		}
@@ -1613,7 +1665,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
                 	
                 	//file is undefined - so returns error 8
                 	else {
-                		if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+                		if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
                     		LOG[lineCount++] = "error 8:";
                     		LOG[lineCount++] = "fileSettings_temp: " + fileSettings_temp;
                     		LOG[lineCount++] = "fileSettings_stringTest: " + fileSettings_stringTest;
@@ -1651,7 +1703,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
             return ERROR_2_import_typeConversionOrBlank;
         }
        
-    	if (DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+    	if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
     		LOG[lineCount++] = "end of fxn fileSettings check (succeeded):";
     		LOG[lineCount++] = "fileSettings_temp: " + fileSettings_temp;
     		LOG[lineCount++] = "fileSettings_stringTest: " + fileSettings_stringTest;
@@ -1692,7 +1744,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
 
     public int exportData(String strName) {
-    	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+    	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
     		LOG[lineCount++] = "@exportData: beginning";
     		LOG[lineCount++] = "printing fileSettings: ";
     		LOG[lineCount++] = "fileSettings_temp: " + fileSettings_temp;
@@ -1719,7 +1771,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            // different commands between files
 	            if (w.checkError()) {
 	                //Error 0x03: cannot write
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "Something done messed up (Error 6 cannot write)";
 	            	}
 	            	return ERROR_6_export_cannotWrite;
@@ -1728,13 +1780,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            //if scope for exporting files to stringTest
 	            if ( (strName == strStringTest) && (fileSettings_stringTest > 0) && (flag_stringTestImported == true) ) {
 	            	
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "- writing into strStringTest:";
 	            	}
 	            	
 	            	w.println(fileSettings_stringTest);
 	            	
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "Successfully written into strStringTest.";
 	            	}
 	            	
@@ -1743,7 +1795,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
 	            // weights
 	            else if ( (strName == strWeights) && (fileSettings_weights > 0) && (flag_weightsImported == true) ) {
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "- writing into weights.dat:";
 	            	}
 	            	for (int i = 0; i < numInputsTotal; i++) {
@@ -1758,7 +1810,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		         		w.println("999");
 		         	}
 	            	
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "Successfully written into weights.";
 	            	}
 	            	
@@ -1767,7 +1819,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            
 //	            winlose
 	            else if ( (strName == strWL) && (fileSettings_WL > 0) && (flag_WLImported == true) ){
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "- writing into winLose:";
 	            	}
 	            	
@@ -1778,15 +1830,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            	}
 	        		w.println(currentBattleResult);
 	            	
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "Successfully written into winLose.";
 	            	}
 	            	
 	            	flag_WLImported = false;
 	            }// end winLose
 	            
+	            //ARR_QVals
 	            else if ( (strName == strQVals) && (fileSettings_QVals > 0) && (flag_QValsImported == true) ){
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "- writing into QVals:";
 	            	}
 	            	
@@ -1796,7 +1849,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	        			w.println(arr_QVals[i]);
 	            	}
 	            	
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "Successfully written into QVals.";
 	            	}
 	            	
@@ -1811,7 +1864,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 ////	            		w.println(Arrays.toString(QErrorSAV[i]));
 //	            	}
 //	            }
-//	           
+	            //end strError
+	            
+	            //STRLOG
 	            else if (strName == strLog) {
 	            	//zeroes the log file in case it was filled from previous log session.
 	            	if ((fileSettings_log & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE){
@@ -1823,13 +1878,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		            	}
 	            	}
 	            }
+	            //end strLog
 	            /* 
 	             * add new files here - remember to add config settings and add to the beginning ifs
 	             */
 	                        
 	            
 	            else {
-	            	if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	            		LOG[lineCount++] = "error 9";
 	            		
 	            	}
@@ -1839,7 +1895,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	        
 	        //OC: PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
 	        catch (IOException e) {
-	    		if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	    		if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	    			LOG[lineCount++] = "IOException trying to write: ";
 	    		}
 	            e.printStackTrace(out);
@@ -1851,7 +1907,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	            }
 	        }
 	        
-	        if (DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
+	        if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
 	        	LOG[lineCount++] = "(succeeded export)";
 	        }
 	        return SUCCESS_exportData;
@@ -1903,6 +1959,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
  		return bipDeriv;
  	}
 }
+
+/*
+ *  Abandon all hope, ye who read below. Herein lies the graves of code obselete.
+ */
 
 	/* 
 	 * If want to emphasize a certain event, then call the event and add external reward. 

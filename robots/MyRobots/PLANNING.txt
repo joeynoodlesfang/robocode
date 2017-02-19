@@ -1,3 +1,10 @@
+Feb 2017
+- A1 Add proper documention for NN2, LUTTrackfire, Dodger, MyRobots dir and main robocode dir.
+- B1 Set up local error recording
+- B2 Review spiking QVal situation
+- C1 Implement setFire after turning gun as instructed by robowiki.
+- D1 Improve performance by using less globals and more locals.
+- D2 Import NN2 into NN1.
 1-24 
 - Set up local error recording
 1-19 thur
@@ -7,7 +14,7 @@
 	- improve reward system
 	- consider states that build for a smoother net.
 	- consider discrete actions, and possibility of combining actions into states. Note the goal of the net to converge into a Q value.
-- if time allows, implement seFire changes (described in 1-18wed)
+- if time allows, implement setFire changes (described in 1-18wed)
 1-18 wed
 - implement NN2 changes into NN1
 - NN1 adjustments to include rewards.
@@ -16,7 +23,7 @@
 	- investigate if it is true.
 1-16 mon
 - add in ability to clear log first: mby send blank log first at end of battle before sending others?
-- review getmax and fp for action selection (log indicates all currSAV seems 0'd for action.
+- review getmax and fp for action selection (log indicates all currSAV seems 0'd for action.)
 1-14 sat
 - add sheet for monitoring Q (per turn? any indication for after fight?)
 - review log data.
