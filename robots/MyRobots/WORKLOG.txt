@@ -1,3 +1,5 @@
+	2017-03-15
+		- updated readme in NN2: provides better explanation in intro.
 	2017-02-18
 		- included introductory comments to NN2.
 		- updated readme.txt in main folder.

@@ -1,62 +1,88 @@
-/* -> INTRODUCTION <-
- * NN2_LUTMimic is our first bot that applies neural network (NN or net) techniques to 
- * reinforcement learning(RL). Like its name suggests, NN2_LUTMimic mimicks the logic and the 
- * various parameters of a LUT-based robot (LUTTrackfire). This is done to limit the effect of the 
- * NN technique on robot performance - ie. we wanted the code foundation to build future bots that 
- * will have parameters which exploit NN.  
- * 
- * Robocode is a program designed for learning the basics of java. The goal is to code a bot that 
- * compete with others in an arena. The coder will have no direct influence on how the fighting is 
- * done - instead, all the fight mechanics and strategies employed by the robot are coded before 
- * the fight ever took place. So the robot is free to employ any tactics it wants to win - as long 
- * as the bot adheres to the rules of the game. 
- * 
- * Reinforcement learning, RL, refers to a method by which a machine decides on which action to 
- * take, in order to maximize a conceptualized reward. The bot learns by performing an action 
- * within a measurable environment, and rewarding itself based upon the results of said action. 
- * The reward alters the likelihood of performing the same action again in the same environment: 
- * winning moves can be recreated, and poor moves can be avoided. 
- * 
- * Neural network (NN) is a computation network that solves problems by using complexity, 
- * approximation, and trial and error. It imitates biological neurons by setting both inputs and 
- * outputs as neuronal nodes, and connecting them through a network, which oftentimes includes 
- * other nodes called hidden nodes. Nodes of similar functionalities are oftentimes - at least for 
- * our bots - placed in a layer, and layers talk to other layers. Simple nets may contain a layer 
- * of input nodes connected to a layer of hidden nodes, which are connected to a layer of output 
- * nodes. The effect of the connections are changeable - each has a coefficient to it, called a 
- * weight, that affects how the nodes it is connected to perceive each other. 
- * 
- * Neural net is used here for RL, just like LUT, with one main distinction being that NN can only 
- * estimate the value of actions. In exchange, NN allows much more inputs to be used. This exchange
- * comes particularly into play for robocode. LUT requires a list of QVals to be stored in a file 
- * in between executions. Robocode limits all files to a size of 200kBs. NN on the other hand 
- * estimates the QVals through calculations, and stores a much smaller set of coefficients called 
- * 'weights'. Weights describe the strength of the connections between nodes in a neural net, and 
- * it can be any real value. NN allows a much greater selection of inputs to be used. Even 
- * continuous input ranges can be used, which is impossible for LUT.  
- * 
- * -> SUMMARY OF NN2 <-
- * Each turn of battle, an event is triggered. The event does the following:
- *  1. Obtain information about the environment.
- *  2. Every 4 turns, RL will take place. Other 3 turns, no learning will take place.
- *  	in RL: 	A) Convert information into inputs suitable for net.
- *  			B) Forward propagate to choose best action
- *  			C) Perform Q value function.
- *  			D) Back propagate to correct weights
- *  			E) Perform RL-selected action (once every 4 turns). It takes multiple turns to complete an action.
- *  3. Perform actions mandatory per turn, such as maintaining scanner lock on enemy.
- * 
- * NN2 consists of several data analyzing tools:
- *  1. Logging of important sections in templog.txt
- *  2. Logging of Qvals per cycle of RL in qVals.txt
- *  3. Logging of errors calculated during Q function in saveErrorForActions.dat.
- *     Errors are calculated to determine if Qvalue is converging.
- *  4. Errors during import/export are printouts in o.stream in addition to being logged.
- * 
- * Check worklog.txt and planning.txt in MyRobots dir for bot's past, present and future.
- * 
- * Anyways here's wonderwall.
- */
+/*-> INTRO TO THIS BOT AND OVERALL PROJECT <-
+NN2_LUTMimic is our first bot that applies neural network (NN or net) techniques to reinforcement 
+learning(RL). Like its name suggests, NN2_LUTMimic mimicks a LUT-based robot (mainly LUTTrackfire) 
+by replicating its many parameters, such as state and action parameters, instead of designing 
+parameters that employ neural net advantages. The purpose of coding NN2 is to code a structure for 
+future bots to develop NN-specific behaviours and other parameters, and we can make sure that the 
+code works by comparing behaviour between LUTTrackfire and NN2.
+  
+ROBOCODE is a program designed for learning the basics of java. The goal is to code a bot that 
+competes with others in an arena. The coder has no direct influence during the fight - instead, 
+all the strategies and fight mechanics employed by the robot are coded before the fight takes 
+place. The coder is free to employ any tactics he/she wants to win - as long as the bot adheres to 
+the rules of the game. (Robocode ReadMe: http://robocode.sourceforge.net/docs/ReadMe.html	
+Robocode wiki: http://robowiki.net)
+
+The premise for this project is that reinforcement learning can be used to improve robot 
+combatibility against all types of enemy robot behaviours, by learning counters to their behaviour 
+in real time. 
+
+REINFORCEMENT LEARNING, RL, refers to the method by which a machine decides on the action to take. 
+The decision is made by choosing the action that maximizes a conceptualized reward: the bot 
+performs an action within a measurable environment, and rewards itself based upon the results of 
+said action. The reward alters the likelihood of re-performing the same action again in the same 
+environment: winning moves can be recreated, and poor moves can be avoided. This ability to learn 
+during the actual battle gives the robot combat adaptibility.
+
+Neural network (NN) is a computation network that solves problems by employing complexity, 
+approximation, and trial and error. It imitates biological neurons in design through making both 
+inputs and outputs to the system to be neuronal nodes, which, like a biological neuron network, 
+connects to other neurons and forms a network with the connections. The net has the ability to 
+solve problems by acting sort of like an equation - a very complex equation with changeable 
+coefficients, and through trial and error of repeatedly trying to achieve correct outputs with 
+various given inputs, the network can create a relatively accurate model of the system. Complexity 
+is often a benefit for correct modeling (much like a linear line is a less efficient model of a 
+higher order equation, whereas higher order equations can model lower ones relatively easily). The 
+network often includes other nodes designed by the coder called 'hidden nodes' to add complexity. 
+It can also be structured in a complex manner (such as multidimensional nodal connections). The 
+simplest structure of a NN - which is used for our bots - is a 2-dimensional net consisting of 3 
+1-D layers: a 1D layer of input nodes connected to a layer of hidden nodes, which connects to both 
+the input layer as well as a layer of output nodes. These connections have changeable values 
+associated to them (aka 'weights'), and is the engine behind the net's ability to adjust its 
+approximation.
+
+Neural net is used here for RL, just like LUT, with one main distinction being that NN can only 
+estimate the value of actions. In exchange for that, however, NN allows more inputs, and inputs of 
+greater variety to be used. In a LUT, each selection of inputs has a corresponding value: for a 
+system with two inputs, each with 3 possible values, the total number of values to be stored is 
+3x3 = 9. For the robot to remember behaviours after wars, the LUT method requires a list of QVals 
+to be stored in a file in between executions. Robocode limits all files to a size of 200kBs, and 
+it doesn't take long before a robot with multiple inputs to reach 200kBs. NN on the other hand 
+estimates the QVals through calculations, and stores only the values associated with the neural 
+net connections, or 'weights'. This is a much smaller set of values. Weights describe the strength 
+of the connections between nodes in a neural net, and it can be any real value. By requiring only 
+weights to be stored, NN allows a much greater selection of inputs to be used. Even continuous 
+input ranges can be used, which is impossible for LUT.  
+  
+-> SUMMARY OF HOW NN2 WORKS <-
+Each turn of battle, an event is triggered. The event does the following:
+	1. Obtain information about the environment.
+	2. Every 4 turns, RL will take place. Other 3 turns, no learning will take place. (The 
+
+robot can scan the environment at every turn, but it may take several turns for an action to fully 
+
+complete, as the robot can accelerate/deccelerate).
+	in RL: 	A) Convert information into inputs suitable for net.
+ 		B) Forward propagate to choose best action
+   		C) Perform Q value function.
+   		D) Back propagate to correct weights
+   		E) Perform RL-selected action (once every 4 turns). It takes multiple turns to 
+
+complete an action.
+	3. Perform actions mandatory per turn, such as maintaining scanner lock on enemy.
+  
+NN2 consists of several data analyzing tools:
+	1. Logging of important sections in templog.txt
+	2. Logging of Qvals per cycle of RL in qVals.txt
+	3. Logging of errors calculated during Q function in saveErrorForActions.dat. These errors 
+
+are used to determine if Qvalue is converging.
+	4. Errors during import/export are printouts in o.stream in addition to being logged.
+  
+Check worklog.txt and planning.txt in MyRobots dir for bot's past, present and future.
+  
+Anyways here's wonderwall.
+*/
 package MyRobots;
 
 import static robocode.util.Utils.normalRelativeAngleDegrees;
@@ -82,6 +108,14 @@ import robocode.RobocodeFileOutputStream;
 import robocode.ScannedRobotEvent;
 import robocode.WinEvent;
 
+/**
+ * @author Lag-V
+ *
+ */
+/**
+ * @author Lag-V
+ *
+ */
 public class NN2_LUTMimic extends AdvancedRobot{
 	
 	/*

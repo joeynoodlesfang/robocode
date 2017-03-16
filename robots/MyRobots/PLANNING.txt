@@ -1,4 +1,4 @@
-Feb 2017
+Feb-Mar 2017
 - A1 Add proper documention for NN2, LUTTrackfire, Dodger, MyRobots dir and main robocode dir.
 - B1 Set up local error recording
 - B2 Review spiking QVal situation
