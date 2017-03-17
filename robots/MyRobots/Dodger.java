@@ -1,4 +1,11 @@
-//Committing to gitHub.
+/* 
+
+-> INTRO TO THE BOT <-
+Very first bot we built (god bless). Tests the feasibility of coding look-up table-based robot. The goal of the robot
+is to avoid the walls. Its state parameters are the discretized x and y coordinates of the Robocode 800x600 arena.
+
+ */
+
 package MyRobots;
 import java.awt.Color;
 import java.io.BufferedReader;
@@ -13,13 +20,6 @@ import robocode.HitRobotEvent;
 import robocode.HitWallEvent;
 import robocode.RobocodeFileOutputStream;
 public class Dodger extends AdvancedRobot{
-    
-    /**
-     * TDL -
-     * Learningloop.
-     * List of things to do everytime SAV parameters change.
-     * 
-     */
     
 	/*
 	 * SAV Change Rules:

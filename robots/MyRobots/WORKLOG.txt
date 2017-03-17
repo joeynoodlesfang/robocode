@@ -1,3 +1,5 @@
+	2017-03-16
+		- updated readmes in LUTTrackfire, Dodger, and folder files.
 	2017-03-15
 		- updated readme in NN2: provides better explanation in intro.
 	2017-02-18

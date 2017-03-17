@@ -1,41 +1,83 @@
+Introduction
+============
 This is a robocode project that is using reinforcement learning (Q LUT) and neural net.
+The premise for this project is that reinforcement learning can be used to improve robot combatibility against all types of enemy robot behaviours, by learning counters to their behaviour in real time.
 
-Copyright? Take what u want
+1. What is Robocode?
+====================
+(from http://robocode.sourceforge.net/docs/ReadMe.html)
+Learn from community at [RoboWiki] (http://robowiki.net/)
 
-To access the robots that we are working on, or older robots, follow the directories given below. The MyRobots directory also contains a README that explains the robots in a little more detail.
+Robocode is a programming game where the goal is to code a robot battle tank to compete against other robots in a battle arena. So the name Robocode is a short for "Robot code". The player is the programmer of the robot, who will have no direct influence on the game. Instead, the player must write the AI of the robot telling it how to behave and react on events occurring in the battle arena. Battles are running in real-time and on-screen.
 
-Reinforcement learning (LUT) robot:
------------------------------------
-Directory: robots -> MyRobots -> LUTTrackfire.java
+The motto of Robocode is: Build the best, destroy the rest!
 
-Neural Net:
------------
+2. Useful Directories
+======================
+To access the robots that we are currently working on, or older robots, or key files, follow the directories given below.
+*** MOST UP-TO-DATE BOT IS NN2_LUTMimic ***
+(The robots each contains a relevant readme in the beginning of the code.)
+(Current branch worked on: origin/development)
+
+Bot that uses reinforcement learning with artificial neural network:
 NN2_LUTMimic is an introductory robot designed to mimic the LUT robot behaviour, with similar states and actions as parameters.
-Directory: robots -> MyRobots -> NN2_LUTMimic.java
+Directory: robots -> MyRobots -> NN2_LUTMimic.java (https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/NN2_LUTMimic.java)
 
-Introduction:
--------------
+---
 
-Robocode:
- * Robocode is a program designed for learning the basics of java. The goal is to code a bot that 
- * compete with others in an arena. The coder will have no direct influence on how the fighting is 
- * done - instead, all the fight mechanics and strategies employed by the robot are coded before 
- * the fight ever took place. So the robot is free to employ any tactics it wants to win - as long 
- * as the bot adheres to the rules of the game. 
+Reinforcement learning with LUT:
+Directory: robots -> MyRobots -> LUTTrackfire.java (https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/LUTTrackfire.java)
 
-Reinforcement Learning:
- * Reinforcement learning, RL, refers to a method by which a machine decides on which action to 
- * take, in order to maximize a conceptualized reward. The bot learns by performing an action 
- * within a measurable environment, and rewarding itself based upon the results of said action. 
- * The reward alters the likelihood of performing the same action again in the same environment: 
- * winning moves can be recreated, and poor moves can be avoided. 
+--- 
 
- Neural Network:
- * Neural network (NN) is a computation network that solves problems by using complexity, 
- * approximation, and trial and error. It imitates biological neurons by setting both inputs and 
- * outputs as neuronal nodes, and connecting them through a network, which oftentimes includes 
- * other nodes called hidden nodes. Nodes of similar functionalities are oftentimes - at least for 
- * our bots - placed in a layer, and layers talk to other layers. Simple nets may contain a layer 
- * of input nodes connected to a layer of hidden nodes, which are connected to a layer of output 
- * nodes. The effect of the connections are changeable - each has a coefficient to it, called a 
- * weight, that affects how the nodes it is connected to perceive each other. 
+Worklog: robots -> MyRobots -> WORKLOG.txt (https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/WORKLOG.txt)
+Future work plans: robots -> MyRobots -> PLANNING.txt (https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/PLANNING.txt)
+More detailed summary of all our robots: robots -> MyRobots -> README.txt (https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/README.txt)
+
+
+
+
+
+
+3. Intro to Reinforcement Learning
+==================================
+REINFORCEMENT LEARNING, RL, refers to the method by which a machine decides on the action to take. 
+The decision is made by choosing the action that maximizes a conceptualized reward: the bot performs 
+an action within a measurable environment, and rewards itself based upon the results of said action. 
+The reward alters the likelihood of re-performing the same action again in the same environment: 
+winning moves can be recreated, and poor moves can be avoided. This ability to learn during the 
+actual battle gives the robot combat adaptibility.
+
+
+4. Intro to Neural Network
+==========================
+
+Neural network (NN) is a computation network that solves problems by employing complexity, 
+approximation, and trial and error. It imitates biological neurons in design through making both 
+inputs and outputs to the system to be neuronal nodes, which, like a biological neuron network, 
+connects to other neurons and forms a network with the connections. The net has the ability to 
+solve problems by acting sort of like an equation - a very complex equation with changeable 
+coefficients, and through trial and error of repeatedly trying to achieve correct outputs with 
+various given inputs, the network can create a relatively accurate model of the system. Complexity 
+is often a benefit for correct modeling (much like a linear line is a less efficient model of a 
+higher order equation, whereas higher order equations can model lower ones relatively easily). The 
+network often includes other nodes designed by the coder called 'hidden nodes' to add complexity. 
+It can also be structured in a complex manner (such as multidimensional nodal connections). The 
+simplest structure of a NN - which is used for our bots - is a 2-dimensional net consisting of 3 
+1-D layers: a 1D layer of input nodes connected to a layer of hidden nodes, which connects to both 
+the input layer as well as a layer of output nodes. These connections have changeable values 
+associated to them (aka 'weights'), and is the engine behind the net's ability to adjust its 
+approximation.
+
+Neural net is used here for RL, just like LUT, with one main distinction being that NN can only 
+estimate the value of actions. In exchange for that, however, NN allows more inputs, and inputs of 
+greater variety to be used. In a LUT, each selection of inputs has a corresponding value: for a 
+system with two inputs, each with 3 possible values, the total number of values to be stored is 
+3x3 = 9. For the robot to remember behaviours after wars, the LUT method requires a list of QVals 
+to be stored in a file in between executions. Robocode limits all files to a size of 200kBs, and 
+it doesn't take long before a robot with multiple inputs to reach 200kBs. NN on the other hand 
+estimates the QVals through calculations, and stores only the values associated with the neural 
+net connections, or 'weights'. This is a much smaller set of values. Weights describe the strength 
+of the connections between nodes in a neural net, and it can be any real value. By requiring only 
+weights to be stored, NN allows a much greater selection of inputs to be used. Even continuous 
+input ranges can be used, which is impossible for LUT.

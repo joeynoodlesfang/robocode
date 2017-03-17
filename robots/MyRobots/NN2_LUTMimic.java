@@ -57,26 +57,23 @@ input ranges can be used, which is impossible for LUT.
 -> SUMMARY OF HOW NN2 WORKS <-
 Each turn of battle, an event is triggered. The event does the following:
 	1. Obtain information about the environment.
-	2. Every 4 turns, RL will take place. Other 3 turns, no learning will take place. (The 
-
-robot can scan the environment at every turn, but it may take several turns for an action to fully 
-
-complete, as the robot can accelerate/deccelerate).
-	in RL: 	A) Convert information into inputs suitable for net.
- 		B) Forward propagate to choose best action
-   		C) Perform Q value function.
-   		D) Back propagate to correct weights
-   		E) Perform RL-selected action (once every 4 turns). It takes multiple turns to 
-
-complete an action.
+	2. Every 4 turns, RL will take place. Other 3 turns, no learning will take place. (The robot 
+       can scan the environment at every turn, but it may take several turns for an action to fully 
+       complete, as the robot can accelerate/deccelerate, so we just gave everything 4 turns).
+	   
+	   in RL: 	A) Convert information into inputs suitable for net.
+ 		 		B) Forward propagate to choose best action
+   				C) Perform Q value function.
+   				D) Back propagate to correct weights
+   				E) Perform RL-selected action (once every 4 turns). It takes multiple turns to 
+               	   complete an action.
 	3. Perform actions mandatory per turn, such as maintaining scanner lock on enemy.
   
 NN2 consists of several data analyzing tools:
 	1. Logging of important sections in templog.txt
 	2. Logging of Qvals per cycle of RL in qVals.txt
 	3. Logging of errors calculated during Q function in saveErrorForActions.dat. These errors 
-
-are used to determine if Qvalue is converging.
+	   are used to determine if Qvalue is converging.
 	4. Errors during import/export are printouts in o.stream in addition to being logged.
   
 Check worklog.txt and planning.txt in MyRobots dir for bot's past, present and future.
@@ -108,14 +105,6 @@ import robocode.RobocodeFileOutputStream;
 import robocode.ScannedRobotEvent;
 import robocode.WinEvent;
 
-/**
- * @author Lag-V
- *
- */
-/**
- * @author Lag-V
- *
- */
 public class NN2_LUTMimic extends AdvancedRobot{
 	
 	/*

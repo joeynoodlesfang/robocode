@@ -1,4 +1,22 @@
+/*
+-> INTRO TO THE BOT <-
+LUTTrackfire is a robocode bot that implements reinforcement learning (RL) techniques to improve its combat 
+abilities. RL requires the bot to remember the results of certain moves (aka actions) in certain situations (aka 
+states). The results are converted by the coder into a reward, which can be positive or negative. The reward allows 
+the bot to make better future decisions for the exact same situation. LUTTrackfire stores these rewards in the form 
+of a look-up table. Each reward entry in the look-up table has a unique state and action parameter. Most of the combat
+abilities of LUTTrackfire were taken from the example robot Trackfire.
 
+Since memory is cleared when the Robocode program is terminated, LUT reward values are stored externally. Robocode
+limits the size of all external files for a particular robot to be 200kB.
+
+REINFORCEMENT LEARNING, RL, refers to the method by which a machine decides on the action to take. 
+The decision is made by choosing the action that maximizes a conceptualized reward: the bot 
+performs an action within a measurable environment, and rewards itself based upon the results of 
+said action. The reward alters the likelihood of re-performing the same action again in the same 
+environment: winning moves can be recreated, and poor moves can be avoided. This ability to learn 
+during the actual battle gives the robot combat adaptibility.
+*/
 
 /** Plan of attack - have multiple battle plans. 
  *	THIS IS THE ROBOT TO TRAIN. 

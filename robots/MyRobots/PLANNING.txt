@@ -1,7 +1,8 @@
-Feb-Mar 2017
-- A1 Add proper documention for NN2, LUTTrackfire, Dodger, MyRobots dir and main robocode dir.
+Feb-Mar 2017 Push on finishing development branch tasks so that it is ready for master.
+- A1 Add proper documention for NN2, LUTTrackfire, Dodger, MyRobots dir and main Robocode dir.
 - B1 Set up local error recording
 - B2 Review spiking QVal situation
+- B3 Provide Robocode installation instructions for testing robots.
 - C1 Implement setFire after turning gun as instructed by robowiki.
 - D1 Improve performance by using less globals and more locals.
 - D2 Import NN2 into NN1.
