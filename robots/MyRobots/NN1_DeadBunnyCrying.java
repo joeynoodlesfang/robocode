@@ -1,10 +1,14 @@
 /*
-	
-	december 12, 2016
-		- implement NN basic online training structure. 
 
- */
+<-> INTRO TO THE BOT <->
+NN1_DBC will be the first bot that fully employs the benefits of neural net in combat. It is currently (not being :P) 
+developed with the goal of improving performance against several host robots, in particular Trackfire (avoidance), 
+Walls (predictive targeting and avoidance), and Spinbot (improved predictive targeting and likely self-generated 
+movement patterns). To achieve this, we will at least employ several new parameters that best captures the 
+advantages of NN that could not be employed by LUT RL, such as continuous input ranges, and a lot more possible 
+states. Other possibilities include changing number of hidden nodes, and multiple nets.
 
+*/
 package MyRobots;
 
 import static robocode.util.Utils.normalRelativeAngleDegrees;

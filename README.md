@@ -19,13 +19,15 @@ To access the robots that we are currently working on, or older robots, or key f
 (The robots each contains a relevant readme in the beginning of the code.)
 (Current branch worked on: origin/development)
 
+<-> NN2_LUTMimic <->
 Bot that uses reinforcement learning with artificial neural network:
-NN2_LUTMimic is an introductory robot designed to mimic the LUT robot behaviour, with similar states and actions as parameters.
+is an introductory robot designed to mimic the LUT robot behaviour, with similar states and actions as parameters.
 Directory: robots -> MyRobots -> NN2_LUTMimic.java (https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/NN2_LUTMimic.java)
 
 ---
 
-Reinforcement learning with LUT:
+<-> LUTTrackfire <->
+Reinforcement learning bot with LUT:
 Directory: robots -> MyRobots -> LUTTrackfire.java (https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/LUTTrackfire.java)
 
 --- 

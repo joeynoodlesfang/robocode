@@ -152,7 +152,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	//variables for the q-function. Robot will currently NOT change critical q-function coefficients (alpha, gamma, epsilon) mid-fight.
 	//alpha describes the extent to which the newly acquired information will override the old information.
     private static final double alpha = 0.1;
-    //gamma describes the importance of future rewards
+    //gamma describes the importance of current rewards
     private static final double gamma = 0.8;                
     //epsilon describes the degree of exploration
     private static final double epsilon = 0.01; 				 
@@ -305,8 +305,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     // Flags used in data imp/exp fxns.
     //		Purposes:
-    // 		1. prevents overwrite, and protects against wrong file entries
-    //		2. data for a particular file must be exported before importing for the same file occurs again.
+    // 		 - prevents overwrite, and protects against wrong file entries
+    //		 - data for a particular file must be exported before importing for the same file occurs again.
     // 		false == only imports can access; true == only exports can access.
     //		ALWAYS initialize these as false.
     private boolean flag_stringTestImported = false;
@@ -576,7 +576,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	
     	if (flag_recordQVals) {
 	    	flag_error = exportData(strQVals);
-	        if( flag_error != SUCCESS_exportData) {
+	        if(flag_error != SUCCESS_exportData) {
 	        	out.println("ERROR @onDeath QVals: " + flag_error);
 	        	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
 	        		LOG[lineCount++] = "ERROR @onDeath QVals: " + flag_error;
@@ -747,7 +747,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     		obtainReward();
             copyCurrentQValueIntoPrev();
             generateCurrentStateVector();
-            RL_and_NN();
+            RL_NN();
             resetReward();
             doAction_Q();
     	}
@@ -766,10 +766,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
 
     public boolean learnThisRound() {
-    	if (turn%learningRate == 0)
-    		return true;
-    	else
-    		return false; 
+    	if (turn%learningRate == 0) {return true;}
+    	else						{return false;} 
     }
     
 	/**
@@ -815,18 +813,27 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	//INPUTS 0, 1 and 2 are ACTION
         
     	//Dimension 3 - private static final int input_state0_myPos_possibilities = 5;
-    	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					//left
+    	//left
+    	if (  (myPosX<=50)  &&  ( (myPosX <= myPosY) || (myPosX <= (600-myPosY)) )  ){					
     		currentStateActionVector[3] = 1;						
     	}
-    	else if (  (myPosX>=750)  &&  ( ((800-myPosX) <= myPosY) || ((800-myPosX) <= (600-myPosY)) )  ){		//right
+    	
+    	//right
+    	else if (  (myPosX>=750)  &&  ( ((800-myPosX) <= myPosY) || ((800-myPosX) <= (600-myPosY)) )  ){
     		currentStateActionVector[3] = 2;						
     	}
-    	else if (myPosY<=50) {		//top 
+    	
+    	//top
+    	else if (myPosY<=50) { 
     		currentStateActionVector[3] = 3;
     	}
-    	else if (myPosY>=550) {		//bottom				
+    	
+    	//bottom
+    	else if (myPosY>=550) {				
     		currentStateActionVector[3] = 4;
     	}
+    	
+    	//center
     	else {
     		currentStateActionVector[3] = 0; 
     	}
@@ -842,7 +849,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	else if (enemyEnergy >= 30){
     		currentStateActionVector[5] =((enemyEnergy-30)/70)+0.5;
     	}
-    	//Dimension 6:  //<150, <350, >=350(to1000)
+    	
+    	//Dimension 6: enemyDistance  
+    	//<150, <350, >=350(to1000)
     	currentStateActionVector[6] = enemyDistance;
     	if (enemyDistance < 150){
     		currentStateActionVector[6] = enemyDistance/100;
@@ -877,7 +886,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
 
     /**
-     * @name:		RL_and_NN
+     * @name:		RL_NN
      * @purpose: 	1. Obtain the action in current state with the highest q-value FROM the outputarray "Yout" of the neural net. 
      * 				2. The q value is the maximum "Y" from array
      * 				3. Q_curr is assigned prevQVal 
@@ -890,7 +899,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				4.	int [] currentStateActionVector. 
      * @return: 	n
      */
-    public void RL_and_NN(){
+    public void RL_NN(){
     	getAllQsFromNet();
         getMax(); 
         qFunction();
@@ -929,7 +938,6 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	return;
 	}
 	
-//Joey: check all fxn readme's to make sure they all make sense
 	/** 
 	 * @brief: forward propagation done in accordance to pg294 in Fundamentals of Neural Network, by Laurene Fausett.
 	 * 			Feedforward (step 3 to 5):
@@ -1027,7 +1035,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         int numMaxActions = 0;
         //used to generate a random number starting from 0 to numMaxActions.
         int randMaxAction = 0;
-        //actions are listed in one container instead of in containers.
+        //this var stores the multi-dimensional actions into one container instead of multiple containers. Downstream functions require a linear action dimension.
         int actionLinearized = 0;
         //reseting the global var that stores the chosen action with maximum Q.
         action_QMax_chosen = 0;
@@ -1070,7 +1078,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         //exploratory uses this line to perform if-false actions.
         action_QMax_chosen = action_QMax_all[randMaxAction]; //if numMaxActions <= 1, randMaxAction = 0;
         
-        //note: sarsa is currently not used. explained slightly further in comments in global final section above.
+        //note: sarsa is currently not used. explained slightly further in comments in global final section near top of file.
         if (policy == SARSA || policy == exploratory) {
 	    	randomVal_actions = (int)(Math.random()*(numActions));
 	        if (policy == SARSA) {
@@ -1109,9 +1117,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @name		qFunction
      * @purpose		1. Calculate the new prev q-value based on Qvalue function.
      * @param		n, but uses:
-     * 				1. Q_curr
+     * 				1. gamma, describes weight of current rewards in calculation.
+     * 				2. alpha, describes the extent to which the newly acquired information will override the old information.
+     * 				3. Q_prev
      * @return		prevQVal
-     	Q(s’,a’)-Q(s,a)
      */
     public void qFunction(){
     	
@@ -1175,7 +1184,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 		}
     	
     	Y_calculated[0] = Q_prev; 
-    	//Q_target is the variable calculated in QFunction, to depict NN's converging(hopefully) approximation of the RL LUT.
+    	//Q_target is the variable calculated in QFunction to depict NN's converging(hopefully) approximation of the RL LUT.
         Y_target[0] = Q_target; 
         
     	//step 6-8 for hidden-to-output weights
