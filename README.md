@@ -3,19 +3,19 @@ Introduction
 This is a robocode project that is using reinforcement learning (Q LUT) and neural net.
 The premise for this project is that reinforcement learning can be used to improve robot combatibility against all types of enemy robot behaviours, by learning counters to their behaviour in real time.
 
-1. What is Robocode?
+What is Robocode?
 ====================
-(from http://robocode.sourceforge.net/docs/ReadMe.html)
+This section is copied from the main robocode ReadMe http://robocode.sourceforge.net/docs/ReadMe.html
 Learn from community at [RoboWiki] (http://robowiki.net/)
 
 Robocode is a programming game where the goal is to code a robot battle tank to compete against other robots in a battle arena. So the name Robocode is a short for "Robot code". The player is the programmer of the robot, who will have no direct influence on the game. Instead, the player must write the AI of the robot telling it how to behave and react on events occurring in the battle arena. Battles are running in real-time and on-screen.
 
 The motto of Robocode is: Build the best, destroy the rest!
 
-2. Useful Directories
+Useful Directories
 ======================
 To access the robots that we are currently working on, or older robots, or key files, follow the directories given below.
-*** MOST UP-TO-DATE BOT IS NN2_LUTMimic ***
+*** MOST UP-TO-DATE BOT IS THE FIRST ONE DIRECTLY BELOW: NN2_LUTMimic - click link for code!***
 (The robots each contains a relevant readme in the beginning of the code.)
 (Current branch worked on: origin/development)
 
@@ -41,7 +41,7 @@ More detailed summary of all our robots: robots -> MyRobots -> README.txt (https
 
 
 
-3. Intro to Reinforcement Learning
+Intro to Reinforcement Learning
 ==================================
 REINFORCEMENT LEARNING, RL, refers to the method by which a machine decides on the action to take. 
 The decision is made by choosing the action that maximizes a conceptualized reward: the bot performs 
@@ -51,7 +51,7 @@ winning moves can be recreated, and poor moves can be avoided. This ability to l
 actual battle gives the robot combat adaptibility.
 
 
-4. Intro to Neural Network
+Intro to Neural Network
 ==========================
 
 Neural network (NN) is a computation network that solves problems by employing complexity, 
