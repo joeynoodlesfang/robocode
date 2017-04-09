@@ -1,5 +1,8 @@
+April 2017
+- A1 Investigate WaveSurfing, and other methods of neural net. Study other NN's codes.
+
 Feb-Mar 2017 Push on finishing development branch tasks so that it is ready for master.
-- A1 Add proper documention for NN2, LUTTrackfire, Dodger, MyRobots dir and main Robocode dir.
+- A1 Done. Add proper documention for NN2, LUTTrackfire, Dodger, MyRobots dir and main Robocode dir. 
 - B1 Set up local error recording
 - B2 Review spiking QVal situation
 - B3 Provide Robocode installation instructions for testing robots.

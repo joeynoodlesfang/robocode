@@ -123,10 +123,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 * 2. Add a configmask code for the file. ie. CONFIGMASK_FILETYPE_FILESHORTNAMEHERE = 0x0..0, and make the addition in the comment paragraph above.
 	 * 3. Create a string that refers to the filename in the "STRINGS used for importing or extracting files" section.
 	 * 4. Add flag_imported for the specific file.
-	 * 5. Add fileSettings_fileshortname for the specific file.
-	 * 6. If file requires import, write an import fxn call by following the correct format in the function run().
-	 * 7. If the file requires export, write an export in the proper locations, in fxns onBattleEnded() or/and onWin() + onDeath().
-	 * 8. In importData():
+	 * 5. Add permission flag for file if applicable.
+	 * 6. Add fileSettings_fileshortname for the specific file.
+	 * 7. Add data storage array and total lines of data if applicable.
+	 * 8. If file requires import, write an import fxn call by following the correct format in the function run().
+	 * 9. If the file requires export, write an export in the proper locations, in fxns onBattleEnded() or/and onWin() + onDeath().
+	 * 10. In importData():
 	 * 		update available config section in fxn's @brief comments
 	 * 		add fileSettings log line in beginning of function, dump, and end of function.
 	 * 		add section in else if ( ((fileSettings_temp & CONFIGMASK_FILETYPE_blah) == CONFIGMASK_FILETYPE_blah) && (flag_blahImported == false) ) {, which includes:
@@ -135,7 +137,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	 *				3. section for if not zeroconfig
 	 *				4. fileSettings_fileShortName = fileSettings_temp
 	 *				5. file_--imported = true
-	 * 9. in exportData():
+	 * 11. In exportData():
 	 * 		update available config section in fxn's @brief comments
 	 *		add fileSettings log line in beginning of function
 	 *		add if condition for file.
@@ -189,6 +191,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static final short CONFIGMASK_FILETYPE_winLose = 			0x0040;
     private static final short CONFIGMASK_FILETYPE_weights =			0x0080;
     private static final short CONFIGMASK_FILETYPE_QVals =				0x0100;
+    private static final short CONFIGMASK_FILETYPE_BPErrors = 			0x0200;
     
     //IMPORT/EXPORT status returns.
     
@@ -264,7 +267,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     String strLUT = "LUTTrackfire.dat";
     String strWL = "winlose.dat";
     String strSA = "stateAction.dat"; 
-    String strError = "saveErrorForActions.dat" ;
+    String strBPErrors = "BPErrors.txt" ;
     String strWeights = "weights.dat";
     String strLog = "templog.txt";
     String strQVals = "qVals.txt";
@@ -314,13 +317,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private boolean flag_WLImported = false;
     private boolean flag_weightsImported = false;
     private boolean flag_QValsImported = false;
-    //flag that prompts user to use offline training data from LUT.
+    private boolean flag_BPErrorsImported = false;
+    //flag that prompts user to use offline training data from LUT. (ONLY applicable for NN2)
     private static boolean flag_useOfflineTraining = true;
-    //flag used for recording QVals
+    //flag used to permit program to record QVals
     private static boolean flag_recordQVals = true;
+    //flag used to permit program to record BP round errors
+    private static boolean flag_recordBPErrors = true;
     // printout error flag - used to record the return value of functions.
     // initialized to 0, which is no error.
-    private int flag_error = 0;
+    private int flag_fileError = 0;
 
     /**
      *  OTHER VARIABLES USABLE BY THIS ROBOT'S CLASS FUNCTIONS ==============================================================================
@@ -349,6 +355,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private short fileSettings_weights = 0;
     private short fileSettings_log = 0;
     private short fileSettings_QVals = 0;
+    private short fileSettings_BPErrors = 0;
     
     // reward and reward calculation vars.
     private double reward = 0.0;
@@ -410,14 +417,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private int[] battleResults = new int [520000];
     private int currentBattleResult = 0;
 	
-    //used for debugging purposes
+    //vars and arrays used for debugging purposes - storage of data, total lines of data
     private static String[] LOG = new String [520000];
     private static int lineCount = 0;
     private static double[] arr_QVals = new double [520000];
     private static int totalQValRecords = 0;
-    //used for debugging purposes (deprecated)
-    private static double[] QErrors = new double [520000];
-    private static int currentRoundOfError = 0;
+    private static double[] BPErrors = new double [520000];
+    private static int totalBPErrorsRecords = 0;
 
     /**  
      * Neural net stuff (usable as locals for specific functions but currently implemented as globals) 
@@ -473,16 +479,16 @@ public class NN2_LUTMimic extends AdvancedRobot{
         
         // Import data. Change imported filename below
         
-        //clears log from previous session in case it used up all allowed harddrive. (robocode allows for 200kB of external data per robot)
+        //always clears log from previous session in case it used up all allowed harddrive. (robocode allows for 200kB of external data per robot)
         if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
         	LOG[lineCount++] = "Clearing log file with blank export:";
         }
         fileSettings_log += CONFIGMASK_ZEROINGFILE;
-        flag_error = exportData(strLog);
-        if (flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run blankingWeights: " + flag_error);
+        flag_fileError = exportData(strLog);
+        if (flag_fileError != SUCCESS_importData) {
+        	out.println("ERROR @run blankingWeights: " + flag_fileError);
         	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
-            	LOG[lineCount++] = "ERROR @run blankingWeights: " + flag_error;
+            	LOG[lineCount++] = "ERROR @run blankingWeights: " + flag_fileError;
             }
         }
         else {
@@ -493,28 +499,38 @@ public class NN2_LUTMimic extends AdvancedRobot{
         fileSettings_log -= CONFIGMASK_ZEROINGFILE;
         
         if (flag_recordQVals) {
-	        flag_error = importData(strQVals);
-	        if(flag_error != SUCCESS_importData) {
-	        	out.println("ERROR @run QVals: " + flag_error);
+	        flag_fileError = importData(strQVals);
+	        if(flag_fileError != SUCCESS_importData) {
+	        	out.println("ERROR @run QVals: " + flag_fileError);
 	        	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
-	        		LOG[lineCount++] = "Error @run Qvals: " + flag_error;
+	        		LOG[lineCount++] = "Error @run Qvals: " + flag_fileError;
 	        	}
 	        }
         }
         
-        flag_error = importDataWeights();
-        if (flag_error != SUCCESS_importDataWeights) {
-        	out.println("ERROR @run weights: " + flag_error);
+        if (flag_recordBPErrors) {
+	        flag_fileError = importData(strBPErrors);
+	        if(flag_fileError != SUCCESS_importData) {
+	        	out.println("ERROR @run BPErrors: " + flag_fileError);
+	        	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
+	        		LOG[lineCount++] = "Error @run BPErrors: " + flag_fileError;
+	        	}
+	        }
+        }
+        
+        flag_fileError = importDataWeights();
+        if (flag_fileError != SUCCESS_importDataWeights) {
+        	out.println("ERROR @run weights: " + flag_fileError);
         	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
-            	LOG[lineCount++] = "ERROR @run weights: " + flag_error;
+            	LOG[lineCount++] = "ERROR @run weights: " + flag_fileError;
             }
         }
         
-        flag_error = importData(strWL);
-        if (flag_error != SUCCESS_importData) {
-        	out.println("ERROR @run WL: " + flag_error);
+        flag_fileError = importData(strWL);
+        if (flag_fileError != SUCCESS_importData) {
+        	out.println("ERROR @run WL: " + flag_fileError);
         	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
-            	LOG[lineCount++] = "ERROR @run WL: " + flag_error;
+            	LOG[lineCount++] = "ERROR @run WL: " + flag_fileError;
             }
         }
 
@@ -544,19 +560,19 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void onBattleEnded(BattleEndedEvent event){
 
     	
-    	flag_error = exportDataWeights();	
-        if (flag_error != SUCCESS_exportDataWeights) {
-        	out.println("ERROR @onBattleEnded weights: " + flag_error);
+    	flag_fileError = exportDataWeights();	
+        if (flag_fileError != SUCCESS_exportDataWeights) {
+        	out.println("ERROR @onBattleEnded weights: " + flag_fileError);
         	if(DEBUG_MULTI_file|| DEBUG_onBattleEnded || DEBUG_ALL) {
-        		LOG[lineCount++] = "ERROR @onBattleEnded weights: " + flag_error;
+        		LOG[lineCount++] = "ERROR @onBattleEnded weights: " + flag_fileError;
         	}
         }
         
-    	flag_error = exportData(strLog); //export log first					
-        if (flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onBattleEnded Log: " + flag_error);
+    	flag_fileError = exportData(strLog); //export log first					
+        if (flag_fileError != SUCCESS_exportData) {
+        	out.println("ERROR @onBattleEnded Log: " + flag_fileError);
         	if(DEBUG_MULTI_file || DEBUG_onBattleEnded || DEBUG_ALL) {
-        		LOG[lineCount++] = "ERROR @onBattleEnded Log: " + flag_error;
+        		LOG[lineCount++] = "ERROR @onBattleEnded Log: " + flag_fileError;
         	}
         }
         
@@ -575,28 +591,28 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	currentBattleResult = 0;    					//global variable. 
     	
     	if (flag_recordQVals) {
-	    	flag_error = exportData(strQVals);
-	        if(flag_error != SUCCESS_exportData) {
-	        	out.println("ERROR @onDeath QVals: " + flag_error);
+	    	flag_fileError = exportData(strQVals);
+	        if(flag_fileError != SUCCESS_exportData) {
+	        	out.println("ERROR @onDeath QVals: " + flag_fileError);
 	        	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
-	        		LOG[lineCount++] = "ERROR @onDeath QVals: " + flag_error;
+	        		LOG[lineCount++] = "ERROR @onDeath QVals: " + flag_fileError;
 	        	}
 	        }
     	}
         
-        flag_error = exportDataWeights();
-        if (flag_error != SUCCESS_exportDataWeights) {
-        	out.println("ERROR @onDeath weights: " + flag_error);
+        flag_fileError = exportDataWeights();
+        if (flag_fileError != SUCCESS_exportDataWeights) {
+        	out.println("ERROR @onDeath weights: " + flag_fileError);
         	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
-        		LOG[lineCount++] = "ERROR @onDeath weights: " + flag_error;
+        		LOG[lineCount++] = "ERROR @onDeath weights: " + flag_fileError;
         	}
         }
         
-        flag_error = exportData(strWL);					//"strWL" = winLose.dat
-        if (flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onDeath WL: " + flag_error);
+        flag_fileError = exportData(strWL);					//"strWL" = winLose.dat
+        if (flag_fileError != SUCCESS_exportData) {
+        	out.println("ERROR @onDeath WL: " + flag_fileError);
         	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
-        		LOG[lineCount++] = "ERROR @onDeath WL: " + flag_error;
+        		LOG[lineCount++] = "ERROR @onDeath WL: " + flag_fileError;
         	}
         }
     }
@@ -615,28 +631,28 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	currentBattleResult = 1;
     	
     	if (flag_recordQVals) {
-	    	flag_error = exportData(strQVals);
-	        if( flag_error != SUCCESS_exportData) {
-	        	out.println("ERROR @onWin QVals: " + flag_error);
+	    	flag_fileError = exportData(strQVals);
+	        if( flag_fileError != SUCCESS_exportData) {
+	        	out.println("ERROR @onWin QVals: " + flag_fileError);
 	        	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
-	        		LOG[lineCount++] = "ERROR @onWin QVals: " + flag_error;
+	        		LOG[lineCount++] = "ERROR @onWin QVals: " + flag_fileError;
 	        	}
 	        }
     	}
     	
-    	flag_error = exportDataWeights();
-        if (flag_error != SUCCESS_exportDataWeights) {
-        	out.println("ERROR @onWin weights: " + flag_error);
+    	flag_fileError = exportDataWeights();
+        if (flag_fileError != SUCCESS_exportDataWeights) {
+        	out.println("ERROR @onWin weights: " + flag_fileError);
         	if(DEBUG_MULTI_file || DEBUG_onWin || DEBUG_ALL) {
-        		LOG[lineCount++] = "ERROR @onWin weights: " + flag_error;
+        		LOG[lineCount++] = "ERROR @onWin weights: " + flag_fileError;
         	}
         }
         
-        flag_error = exportData(strWL);
-        if (flag_error != SUCCESS_exportData) {
-        	out.println("ERROR @onWin WL: " + flag_error);
+        flag_fileError = exportData(strWL);
+        if (flag_fileError != SUCCESS_exportData) {
+        	out.println("ERROR @onWin WL: " + flag_fileError);
         	if(DEBUG_MULTI_file || DEBUG_onWin || DEBUG_ALL) {
-        		LOG[lineCount++] = "ERROR @onWin WL: " + flag_error;
+        		LOG[lineCount++] = "ERROR @onWin WL: " + flag_fileError;
         	}
         }
 	}
