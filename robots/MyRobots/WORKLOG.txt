@@ -1,5 +1,6 @@
-	2017-03-28
-		- 
+	2017-03-28 to 04-10
+		- added BPErrors recording functionality.
+		- updated new file procedure.
 	2017-03-16
 		- updated readmes in LUTTrackfire, Dodger, and folder files.
 	2017-03-15

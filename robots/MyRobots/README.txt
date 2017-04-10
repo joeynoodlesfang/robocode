@@ -6,7 +6,7 @@ Worklog.txt : file containing worklog. ya.
 
 Robots of interest include:
 
-NN2_LUTMimic.java *MOST DETAILED AND UP-TO-DATE*
+NN2_LUTMimic.java *MOST UP-TO-DATE*
 -----------------
 NN2_LUTMimic is our first bot that applies neural network (NN or net) techniques to reinforcement 
 learning(RL). Like its name suggests, NN2_LUTMimic mimicks a LUT-based robot (mainly LUTTrackfire) 
