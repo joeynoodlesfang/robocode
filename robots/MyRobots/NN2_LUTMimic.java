@@ -285,7 +285,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     
     //<<<<<< CRITICAL FLAGS >>>>>>
     //
-    //Flags that allow certain loops of code to run or data to be used!
+    //Flags that allow certain parts of code or data to be used!
     //
     //flag that prompts user to use offline training data from LUT. (ONLY applicable for NN2)
     private static boolean flag_useOfflineTraining = true;
@@ -294,7 +294,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //flag used to permit program to record QVals
     private static boolean flag_recordQVals = false;
     //flag used to permit program to record BP round errors
-    private static boolean flag_recordBPErrors = true;
+    private static boolean flag_recordBPErrors = false;
     
     
     

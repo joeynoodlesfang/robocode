@@ -1,3 +1,5 @@
+	2017-04-12
+		- investigated spiking qvals issue: spikes are small and frequent, likely to do with bullets hitting/getting hit; overall pattern is normal.
 	2017-03-28 to 04-10
 		- added BPErrors recording functionality.
 		- updated new file procedure.
