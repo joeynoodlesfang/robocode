@@ -15,7 +15,7 @@ The motto of Robocode is: Build the best, destroy the rest!
 Useful Directories
 ======================
 To access the robots that we are currently working on, or older robots, or key files, follow the directories given below.
-*** MOST UP-TO-DATE BOT IS THE FIRST ONE DIRECTLY BELOW: NN2_LUTMimic - click link for code!***
+*** MOST UP-TO-DATE BOT IS THE FIRST ONE DIRECTLY BELOW: NN2_LUTMimic - click link for code! ***
 (The robots each contains a relevant readme in the beginning of the code.)
 (Current branch worked on: origin/development)
 
@@ -36,8 +36,10 @@ Worklog: robots -> MyRobots -> WORKLOG.txt (https://github.com/joeynoodlesfang/r
 Future work plans: robots -> MyRobots -> PLANNING.txt (https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/PLANNING.txt)
 More detailed summary of all our robots: robots -> MyRobots -> README.txt (https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/README.txt)
 
-
-
+Bot Installation/Testing Instructions
+======================================
+As of now, the bots are not in their own packages, so to view the bots in action, they require the MyRobots directory/package to be installed.
+Robocode installation instructions can be found at:
 
 
 

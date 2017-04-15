@@ -390,9 +390,9 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
     //Q-var storages.
     //- "Y" and "Q" pretty much refers to the same thing, but to make it easier to understand when coding, we use "Y" for the BP calculations.
-    private double Q_curr = 0.0; // stores the maximum currSAV QMax
-    private double Q_prev = 0.0;
-    private double Q_target = 0.0;
+    private double[] Q_curr = new double [numOutputsTotal]; // stores the maximum currSAV QMax
+    private double[] Q_prev = new double [numOutputsTotal];
+    private double[] Q_target = new double [numOutputsTotal];
     private double[] Y_calculated = new double [numOutputsTotal]; 
     private double[] Y_target = new double [numOutputsTotal]; 
     
@@ -461,10 +461,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	private double momentum = 0.1;  		
 	
 	// arrays used for momentum
-	private double [][] vPast  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights for Past.
-	private double [][] vNext  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights.
-	private double [][] wPast  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights for Past.
-	private double [][] wNext  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights.
+	private double [][] wIH_past  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights for Past.
+	private double [][] wIH_next  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights.
+	private double [][] wHO_past  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights for Past.
+	private double [][] wHO_next  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights.
 	//arrays in BP
 	private double [][] vDelta = new double[numInputsTotal] [numHiddensTotal];	// Change in Input to Hidden weights
 	private double [][] wDelta = new double[numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights	  
@@ -972,7 +972,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	getAllQsFromNet();
         getMax(); 
         qFunction();
-        backProp(); 
+        //TODO bpcall
+        backProp(Q_prev, Q_target, Y_in, delta_out, wDelta, arr_wIH, arr_wHO,
+        		 	Z_in, delta_hidden,
+        		 activationMethod, 
+        		 wIH_past, wIH_next, wHO_past, wHO_next); 
     }
 
     /** 
@@ -1133,7 +1137,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
         	LOG[lineCount++] = "action_QMax_all:" + Arrays.toString(action_QMax_all);
         }
-        Q_curr = currMax;
+        Q_curr[0] = currMax;
         
         if (numMaxActions > 1) {
         	randMaxAction = (int)(Math.random()*(numMaxActions)); //math.random randoms btwn 0.0 and 0.999. Allows selection array position from 0 to num-1 through int truncation. 
@@ -1191,18 +1195,18 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * 				3. Q_prev
      * @return		prevQVal
      */
-    public void qFunction(){
+    public void qFunction(){ //Joey: consider changing Q_prev into entire array.
     	
     	//Joey: ask andrea about papers for good gamma terms. (close to 1?)
-    	Q_target = Q_prev + alpha*(reward_normalized + (gamma*Q_curr) - Q_prev);
+    	Q_target[0] = Q_prev[0] + alpha*(reward_normalized + (gamma*Q_curr[0]) - Q_prev[0]);
     	
     	//for debugging purposes: file recording Qval fluctuation
     	if (flag_recordQVals) {
-    		arr_QVals[totalQValRecords++] = Q_curr;
+    		arr_QVals[totalQValRecords++] = Q_curr[0];
     	}
     	if(DEBUG_qFunction || DEBUG_ALL) {
     		LOG[lineCount++] = "- Q function";
-    		LOG[lineCount++] = String.format("Q_target%.3f  Q_prev:%.3f  Q_curr:%.3f", Q_target, Q_prev, Q_curr);
+    		LOG[lineCount++] = String.format("Q_target%.3f  Q_prev:%.3f  Q_curr:%.3f", Q_target[0], Q_prev[0], Q_curr[0]);
     		LOG[lineCount++] = String.format("alpha:%.2f reward_N:%.3f gamma:%.2f", alpha, reward_normalized, gamma);
     	}
     }
@@ -1240,22 +1244,36 @@ public class NN2_LUTMimic extends AdvancedRobot{
      *					w[j][k](t+1) = w[j][k](t) + alpha*delta_out[k]*Z[j] + mu[w[j][k](t) - w[j][k](t-1)],
      *				and
      *					v[i][j](t+1) = v[i][j](t) + alpha*delta_in[j]*X[i] + mu[v[i][j](t) - v[j][k](t-1)].
-     * @param:		n, but uses many global NN parameters.
+     * @param:		BP variables:
+     * 					1. Y_calculated <- Q_prev: array of previous Q value from previous cycle.
+     * 					2. Y_target <- Q_calculated: array of current calculated Q value from Q function.
+     * 				Other general vars:
+     * 					1. activationMethod (not global to reserve possibility of changing its value)
+     * 				Momentum variables, which remembers past values:
+     * 					1. vPast <- wIH_past 
+     * 					2. vNext <- wIH_next
+     * 					3. wPast <- wHO_past
+     * 					4. wNext <- wHO_next
+     * 					
      * @return:		n
      */
-    public void backProp() {      
+    //TODO ok
+    public void backProp(double[] Y_calculated, double[] Y_target, double[] Y_in, double[] delta_out, double[][] wDelta, double[][] arr_wIH, double[][] arr_wHO,
+    						double[] Z_in, double[] delta_hidden,
+    					 boolean activationMethod, 
+    					 double [][] vPast, double [][] vNext, double [][] wPast, double [][] wNext) {      
+    	
     	//local var used to store activation derivative of Y.
     	double[] temp_outputDerivative = new double [numOutputsTotal];
+    	//local var stores raw output error - for debugging purposes.
     	double temp_outputErrorRaw = 0;
     	
     	if(DEBUG_backProp || DEBUG_ALL) {
 			LOG[lineCount++] = "- BP";
 			LOG[lineCount++] = "momentum:" + momentum;
 		}
-    	
-    	Y_calculated[0] = Q_prev; 
-    	//Q_target is the variable calculated in QFunction to depict NN's converging(hopefully) approximation of the RL LUT.
-        Y_target[0] = Q_target; 
+    	//Y_target is the variable calculated in QFunction to depict NN's converging(hopefully) approximation of the RL LUT.
+ 
         
     	//step 6-8 for hidden-to-output weights
         if(DEBUG_backProp || DEBUG_ALL) {
@@ -1287,7 +1305,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			}
 			
 			for (int j = 0; j < numHiddensTotal; j++){
-				wDelta[j][k] = alpha*delta_out[k]*Z[j];
+				wDelta[j][k] = alpha*delta_out[k]*Z[j]; //Joey: Z
 				
 				if(DEBUG_backProp || DEBUG_ALL) {
 					LOG[lineCount++] = String.format("wDelta[%d][%d]:%.3f wNext[%d][%d]:%.3f wPast[%d][%d]:%.3f", j, k, wDelta[j][k], j, k, wNext[j][k], j, k, wPast[j][k]);
@@ -1329,7 +1347,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 					LOG[lineCount++] = String.format("vDelta[%d][%d]:%.3f vNext[%d][%d]:%.3f vPast[%d][%d]:%.3f", i, j, vDelta[i][j], i, j, vNext[i][j], i, j, vPast[i][j]);
 				}
 				
-				vNext[i][j] = arr_wIH[i][j] + vDelta[i][j] + momentum*(arr_wIH[i][j] - vPast[i][j]); 
+				vNext[i][j] = arr_wIH[i][j] + vDelta[i][j] + momentum*(arr_wIH[i][j] - vPast[i][j]); //Joey: rest of this
 				vPast[i][j] = arr_wIH[i][j]; 
 				arr_wIH[i][j] = vNext[i][j]; 
 			}
