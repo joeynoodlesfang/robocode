@@ -1,6 +1,8 @@
 	2017-04-13 to present
 		- changing globals to local vars.
 		- (04-17 to 04-20) calculating backProp calltime using nanoTime. bp takes around 53ps. interestingly, with log on, takes approx. 26us, 500 times longer.
+		- (04-30) bp takes around 10% less time with local vars. Next is to rewrite FP loop since it gets called many times and is where the bottleneck likely is, if there is one close.
+		
 	2017-04-12
 		- investigated spiking qvals issue: spikes are small and frequent, likely to do with bullets hitting/getting hit; overall pattern is normal.
 	2017-03-28 to 04-10
