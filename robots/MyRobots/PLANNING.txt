@@ -1,5 +1,6 @@
 April 2017
 - A1 Investigate WaveSurfing, and other methods of neural net. Study other NN's codes.
+- A2 Have net for predicting enemy position (ie spinbot has predictable positioning. the net can self correct enemy position)
 
 Feb-Mar 2017 Push on finishing development branch tasks so that it is ready for master.
 - A1 Done. Add proper documention for NN2, LUTTrackfire, Dodger, MyRobots dir and main Robocode dir. 

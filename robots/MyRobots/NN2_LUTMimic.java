@@ -315,8 +315,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	private final static boolean DEBUG_getAllQsFromNet = false;
 	private final static boolean DEBUG_forwardProp = false;
 	private final static boolean DEBUG_getMax = false;
-	private final static boolean DEBUG_qFunction = false;
-	private final static boolean DEBUG_backProp = false;
+	private final static boolean DEBUG_qFunction = true;
+	private final static boolean DEBUG_backProp = true;
 //	private final static boolean DEBUG_resetReward = false;
     private final static boolean DEBUG_doAction_Q = false;
 //	private final static boolean DEBUG_doAction_notLearning = false;
@@ -446,6 +446,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
     private static double[] arr_BPErrors = new double [520000];
     private static int totalBPErrorsRecords = 0;
 
+    //class vars used to store function call time
+    private long aveDuration = 0;
+    private long totalDuration = 0;
+    private int durationCount = 0;
     /**  
      * Neural net stuff (usable as locals for specific functions but currently implemented as globals) 
      */
@@ -795,7 +799,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     	if (learnThisRound()){
     		
     		//this DEBUG_ALL fxn is related to onScannedRobot fxn, but placed here so that we can log it only when RL is firing.
-    		if(DEBUG_onScannedRobot || DEBUG_ALL || DEBUG_MULTI_file) {
+    		if(DEBUG_onScannedRobot || DEBUG_backProp || DEBUG_ALL || DEBUG_MULTI_file) {
     			LOG[lineCount++] = " ";
         		LOG[lineCount++] = "@@@ TURN " + turn + ":";
     		}
@@ -969,14 +973,22 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return: 	n
      */
     public void RL_NN(){
-    	getAllQsFromNet();
+    	getAllQsFromNet(currentStateActionVector, Q_NNFP_all);
         getMax(); 
         qFunction();
         //TODO bpcall
-        backProp(Q_prev, Q_target, Y_in, delta_out, wDelta, arr_wIH, arr_wHO,
-        		 	Z_in, delta_hidden,
+        long startTime = System.nanoTime();
+        backProp(currentStateActionVector, Z, Q_prev, Q_target, 
+        			Z_in, Y_in, 
+        			delta_out, vDelta, wDelta, 
+        			arr_wIH, arr_wHO, delta_hidden,
         		 activationMethod, 
-        		 wIH_past, wIH_next, wHO_past, wHO_next); 
+        		 wIH_past, wIH_next, wHO_past, wHO_next);
+        long endTime = System.nanoTime();
+        long duration = endTime - startTime;
+        totalDuration += duration;
+        aveDuration = (totalDuration / (long)(++durationCount));
+        out.println(aveDuration + " " + duration + " " + turn);
     }
 
     /** 
@@ -988,7 +1000,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return: 	n
      */
 
-	public void getAllQsFromNet() {
+	public void getAllQsFromNet(double[] currentStateActionVector, double[][][] Q_NNFP_all) {
 		if(DEBUG_getAllQsFromNet || DEBUG_MULTI_forwardProp || DEBUG_ALL){
 			LOG[lineCount++] = "- FP";
     	}
@@ -1119,6 +1131,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
         	LOG[lineCount++] = "Q_NNFP_all:" + Arrays.deepToString(Q_NNFP_all);
         }
     	
+    	//
     	for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
 		    for (int i_A1 = 0; i_A1 < Q_NNFP_all[0].length; i_A1++){
 		    	for (int i_A2 = 0; i_A2 < Q_NNFP_all[0][0].length; i_A2++, actionLinearized++){
@@ -1216,7 +1229,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @brief:		pg 295 in Fundamentals of Neural Networks by Lauren Fausett, Backpropagation of error: steps 6 to 8.
      * 				step 6:
      * 				Each output unit (Y[k], k = 1, ..., m) receives a target pattern corresponding to the input training pattern, computes its error information term,
-     * 					delta[k] = (t[k] - y[k])f'(y_in[k]),
+     * 					delta_out[k] = (t[k] - y[k])f'(y_in[k]),
      * 				calculates its weight correction term (used to update w[j][k] later),
      * 					delta_weight_w[j][k] = alpha * delta[k] * Z[j],
      * 				calculates its bias correction term (used to update w[0][k] later),
@@ -1245,8 +1258,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
      *				and
      *					v[i][j](t+1) = v[i][j](t) + alpha*delta_in[j]*X[i] + mu[v[i][j](t) - v[j][k](t-1)].
      * @param:		BP variables:
-     * 					1. Y_calculated <- Q_prev: array of previous Q value from previous cycle.
-     * 					2. Y_target <- Q_calculated: array of current calculated Q value from Q function.
+     * 					1. Y <- Q_prev: array of previous Q value from previous cycle.
+     * 					2. T <- Q_calculated: array of current calculated Q value from Q function.
      * 				Other general vars:
      * 					1. activationMethod (not global to reserve possibility of changing its value)
      * 				Momentum variables, which remembers past values:
@@ -1258,8 +1271,10 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     //TODO ok
-    public void backProp(double[] Y_calculated, double[] Y_target, double[] Y_in, double[] delta_out, double[][] wDelta, double[][] arr_wIH, double[][] arr_wHO,
-    						double[] Z_in, double[] delta_hidden,
+    public void backProp(double[] X, double[] Z, double[] Y, double[] T,
+    						double[] Z_in, double[] Y_in, 
+    						double[] delta_out, double[][] vDelta, double[][] wDelta, 
+    						double[][] arr_wIH, double[][] arr_wHO,  double[] delta_hidden,
     					 boolean activationMethod, 
     					 double [][] vPast, double [][] vNext, double [][] wPast, double [][] wNext) {      
     	
@@ -1280,10 +1295,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			LOG[lineCount++] = "@output cycle:";
 			LOG[lineCount++] = "arr_wHO(pre):" + Arrays.deepToString(arr_wHO);
 		}
-        
+        //step 6:
+        //delta_out[k] = (t[k] - y[k])f'(y_in[k])
 		for (int k = 0; k <numOutputsTotal; k++){ // m = numOutputsTotal. pretending output bias doesn't exist so our output vector starts at 0 (horrificallylazyXD)
 			
-			temp_outputErrorRaw = Y_target[k] - Y_calculated[k];
+			temp_outputErrorRaw = T[k] - Y[k];
 			
 			if (activationMethod == binaryMethod){
 				temp_outputDerivative[k] = binaryDerivative(Y_in[k]);
@@ -1301,11 +1317,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
 			
 			if(DEBUG_backProp || DEBUG_ALL) {
 				LOG[lineCount++] = String.format("delta_out[%d]:%.3f error_raw:%.8f (%s)", k, delta_out[k], temp_outputErrorRaw, (activationMethod==binaryMethod)?"bin":"bip");
-				LOG[lineCount++] = String.format("Y_target[%d]:%.3f Y_calculated[%d]:%.3f Y_in[%d]:%.3f Y_in_der[%d]:%.3f", k, Y_target[k], k, Y_calculated[k], k, Y_in[k], k, temp_outputDerivative[k]);
+				LOG[lineCount++] = String.format("T(target)[%d]:%.3f Y(calc'd)[%d]:%.3f Y_in[%d]:%.3f Y_in_der[%d]:%.3f", k, T[k], k, Y[k], k, Y_in[k], k, temp_outputDerivative[k]);
 			}
 			
+			
 			for (int j = 0; j < numHiddensTotal; j++){
-				wDelta[j][k] = alpha*delta_out[k]*Z[j]; //Joey: Z
+				wDelta[j][k] = alpha*delta_out[k]*Z[j]; //Joey: Z?? HOW DO U KNOW WHICH Z IS THE Z FROM MAX Q
 				
 				if(DEBUG_backProp || DEBUG_ALL) {
 					LOG[lineCount++] = String.format("wDelta[%d][%d]:%.3f wNext[%d][%d]:%.3f wPast[%d][%d]:%.3f", j, k, wDelta[j][k], j, k, wNext[j][k], j, k, wPast[j][k]);
@@ -1328,7 +1345,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
         	LOG[lineCount++] = "@i-to-h cycle:";
 			LOG[lineCount++] = "arr_wIH(pre):" + Arrays.deepToString(arr_wIH);
 		}
-		
+        
+		//delta_weight_w[j][k] = alpha * delta[k] * Z[j]
 		for (int j = 0; j < numHiddensTotal; j++){
 			double sumDeltaInputs = 0.0;
 			for (int k = 0;  k < numOutputsTotal; k++){ //pretending output bias doesn't exist so our output vector starts at 0, when it should start at 1 if a slot is reserved for bias
@@ -1341,7 +1359,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
 				}
 			}
 			for (int i = 0; i< numInputsTotal; i++){ //because no input bias, i = 0 will be a wasted cycle (ah wellz)
-				vDelta[i][j] = alpha*delta_hidden[j]*currentStateActionVector[i];
+				vDelta[i][j] = alpha*delta_hidden[j]*X[i];
 				
 				if(DEBUG_backProp || DEBUG_ALL) {
 					LOG[lineCount++] = String.format("vDelta[%d][%d]:%.3f vNext[%d][%d]:%.3f vPast[%d][%d]:%.3f", i, j, vDelta[i][j], i, j, vNext[i][j], i, j, vPast[i][j]);
