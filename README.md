@@ -1,3 +1,5 @@
+(to see code for latest robot: https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/NN2_LUTMimic.java)
+
 Introduction
 ============
 This is a robocode project that is using reinforcement learning (Q LUT) and neural net.
