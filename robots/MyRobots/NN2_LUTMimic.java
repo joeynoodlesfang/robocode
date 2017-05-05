@@ -315,8 +315,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
 	private final static boolean DEBUG_getAllQsFromNet = false;
 	private final static boolean DEBUG_forwardProp = false;
 	private final static boolean DEBUG_getMax = false;
-	private final static boolean DEBUG_qFunction = true;
-	private final static boolean DEBUG_backProp = true;
+	private final static boolean DEBUG_qFunction = false;
+	private final static boolean DEBUG_backProp = false;
 //	private final static boolean DEBUG_resetReward = false;
     private final static boolean DEBUG_doAction_Q = false;
 //	private final static boolean DEBUG_doAction_notLearning = false;
@@ -973,22 +973,22 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return: 	n
      */
     public void RL_NN(){
-    	getAllQsFromNet(currentStateActionVector, Q_NNFP_all);
+    	//TODO fp calltime
+    	long startTime = System.nanoTime();
+    	getAllQsFromNet();
         getMax(); 
         qFunction();
-        //TODO bpcall
-        long startTime = System.nanoTime();
+        long endTime = System.nanoTime();
+        long duration = endTime - startTime;
+        totalDuration += duration;
+        aveDuration = (totalDuration / (long)(++durationCount));
+        out.println(aveDuration + " " + duration + " " + durationCount);
         backProp(currentStateActionVector, Z, Q_prev, Q_target, 
         			Z_in, Y_in, 
         			delta_out, vDelta, wDelta, 
         			arr_wIH, arr_wHO, delta_hidden,
         		 activationMethod, 
         		 wIH_past, wIH_next, wHO_past, wHO_next);
-        long endTime = System.nanoTime();
-        long duration = endTime - startTime;
-        totalDuration += duration;
-        aveDuration = (totalDuration / (long)(++durationCount));
-        out.println(aveDuration + " " + duration + " " + turn);
     }
 
     /** 
@@ -1000,7 +1000,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return: 	n
      */
 
-	public void getAllQsFromNet(double[] currentStateActionVector, double[][][] Q_NNFP_all) {
+	public void getAllQsFromNet() {
 		if(DEBUG_getAllQsFromNet || DEBUG_MULTI_forwardProp || DEBUG_ALL){
 			LOG[lineCount++] = "- FP";
     	}
