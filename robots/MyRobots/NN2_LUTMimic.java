@@ -448,8 +448,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
 
     //class vars used to store function call time
     private long aveDuration = 0;
-    private long totalDuration = 0;
-    private int durationCount = 0;
+    private static long totalDuration = 0;
+    private static int durationCount = 0;
     /**  
      * Neural net stuff (usable as locals for specific functions but currently implemented as globals) 
      */
@@ -974,10 +974,11 @@ public class NN2_LUTMimic extends AdvancedRobot{
      */
     public void RL_NN(){
     	//TODO fp calltime
-    	long startTime = System.nanoTime();
     	getAllQsFromNet();
         getMax(); 
-        qFunction();
+        
+    	long startTime = System.nanoTime();
+    	qFunction();
         long endTime = System.nanoTime();
         long duration = endTime - startTime;
         totalDuration += duration;
@@ -1211,7 +1212,13 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void qFunction(){ //Joey: consider changing Q_prev into entire array.
     	
     	//Joey: ask andrea about papers for good gamma terms. (close to 1?)
-    	Q_target[0] = Q_prev[0] + alpha*(reward_normalized + (gamma*Q_curr[0]) - Q_prev[0]);
+    	Q_target[0] = 5;
+    	Q_prev[0] = 5;
+    	reward_normalized = 5;
+    	Q_curr[0] = 5;
+    	for (int i = 0; i < 1000; i++) {
+    		Q_target[0] = Q_prev[0] + alpha*(reward_normalized + (gamma*Q_curr[0]) - Q_prev[0]);
+    	}
     	
     	//for debugging purposes: file recording Qval fluctuation
     	if (flag_recordQVals) {
