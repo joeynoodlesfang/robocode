@@ -2,6 +2,11 @@
 		- changing globals to local vars.
 		- (04-17 to 04-20) calculating backProp calltime using nanoTime. bp takes around 53ps. interestingly, with log on, takes approx. 26us, 500 times longer.
 		- (04-30) bp takes around 10% less time with local vars. Next is to rewrite FP loop since it gets called many times and is where the bottleneck likely is, if there is one close.
+		- (05-29) for i = 1000 cycles with local var, first 70*4 rounds are around 150k, and then becomes 6k interestingly.
+		- 		  for i = 100 cycles with local var, first 100*4 rounds are around 18k, and then becomes 5k.
+		-		  for i = 100 cycles with globs, first 100*4 rounds are around 27k, and then becomes 3k.
+		-		  for i = 1000 cycles with globs, first 65*4 rounds are around 180k, and then becomes 6k.
+		- 		  I think an effort to use locals should be made.
 		
 	2017-04-12
 		- investigated spiking qvals issue: spikes are small and frequent, likely to do with bullets hitting/getting hit; overall pattern is normal.
