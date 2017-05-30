@@ -1212,13 +1212,8 @@ public class NN2_LUTMimic extends AdvancedRobot{
     public void qFunction(){ //Joey: consider changing Q_prev into entire array.
     	
     	//Joey: ask andrea about papers for good gamma terms. (close to 1?)
-    	Q_target[0] = 5;
-    	Q_prev[0] = 5;
-    	reward_normalized = 5;
-    	Q_curr[0] = 5;
-    	for (int i = 0; i < 1000; i++) {
-    		Q_target[0] = Q_prev[0] + alpha*(reward_normalized + (gamma*Q_curr[0]) - Q_prev[0]);
-    	}
+    	
+		Q_target[0] = Q_prev[0] + alpha*(reward_normalized + (gamma*Q_curr[0]) - Q_prev[0]);
     	
     	//for debugging purposes: file recording Qval fluctuation
     	if (flag_recordQVals) {
