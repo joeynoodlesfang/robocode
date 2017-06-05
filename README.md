@@ -1,4 +1,4 @@
-(to see code for latest robot: https://github.com/joeynoodlesfang/robocode/blob/development/robots/MyRobots/NN2_LUTMimic.java)
+(to see code for latest robot: https://github.com/joeynoodlesfang/robocode/blob/master/robots/MyRobots/NN2_LUTMimic.java)
 
 Introduction
 ============
