@@ -1,3 +1,11 @@
+June 2017
+- A1 Bring master up to speed by eow of May 31st.
+- A2 (Feb) Import NN2 into NN1. 
+- B1 (April) Investigate WaveSurfing, and other methods of neural net. Study other NN's codes. 
+- B2 (April) investigate predictive aiming. Have net for predicting enemy position (ie spinbot has predictable positioning. the net can self correct enemy position)
+- E1 Determine momentum.
+- E2 Record cycle time to determine room for improved complexity.
+
 April 2017
 - A1 Investigate WaveSurfing, and other methods of neural net. Study other NN's codes.
 - A2 Have net for predicting enemy position (ie spinbot has predictable positioning. the net can self correct enemy position)
@@ -6,12 +14,12 @@ Feb-Mar 2017 Push on finishing development branch tasks so that it is ready for 
 - A1 Done. Add proper documention for NN2, LUTTrackfire, Dodger, MyRobots dir and main Robocode dir. 
 - B1 Done. Set up local error recording
 - B2 Done. Review spiking QVal situation
-- B3 Provide Robocode installation instructions for testing robots.
-- C1 Implement setFire after turning gun as instructed by robowiki.
-- D1 Improve performance by using less globals and more locals.
+- B3 Done. Provide Robocode installation instructions for testing robots.
+- C1 Done* no need since we scanlock the gun. Implement setFire after turning gun as instructed by robowiki. Main site -> Game Physics -> Firing Pitfalls
+- D1 Done. Improve performance by using less globals and more locals.
 - D2 Import NN2 into NN1.
 - E1 Determine usefulness of momentum.
-- G1 consider only recording entries with vastly different values to limit data
+- G1 Done* no need. consider only recording entries with vastly different values to limit data
 1-24 
 - Set up local error recording
 1-19 thur

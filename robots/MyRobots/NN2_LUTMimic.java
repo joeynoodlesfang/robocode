@@ -1,7 +1,7 @@
 /*-> INTRO TO THIS BOT AND OVERALL PROJECT <-
 NN2_LUTMimic is our first bot that applies neural network (NN or net) techniques to reinforcement 
 learning(RL). The purpose of coding NN2 is to code a basic skeleton for future bots to develop 
-NN-specific behaviours and other parameters, and we can make sure that the code works by comparing 
+NN-specific behaviours and parameters, and we can make sure that the code works by comparing 
 behaviour between LUTTrackfire and NN2. Like its name suggests, NN2_LUTMimic mimicks a LUT-based 
 robot (mainly LUTTrackfire) by replicating its many parameters, such as state and action parameters, 
 instead of designing parameters that employ neural net advantages. 
@@ -13,11 +13,11 @@ place. The coder is free to employ any tactics he/she wants to win - as long as 
 the rules of the game. (Robocode ReadMe: http://robocode.sourceforge.net/docs/ReadMe.html	
 Robocode wiki: http://robowiki.net)
 
-The premise for this project is that reinforcement learning can be used to improve robot 
-combatibility against all types of enemy robot behaviours, by learning counters to their behaviour 
+The premise for this project is that reinforcement learning can be used to improve robot combat
+adaptibility against all types of enemy robot behaviours, by learning counters to their behaviour 
 in real time. 
 
-REINFORCEMENT LEARNING, RL, refers to the method by which a machine decides on the action to take. 
+REINFORCEMENT LEARNING, RL, refers to the method by which a machine selects an action. 
 The decision is made by choosing the action that maximizes a conceptualized reward: the bot 
 performs an action within a measurable environment, and rewards itself based upon the results of 
 said action. The reward alters the likelihood of re-performing the same action again in the same 
@@ -33,7 +33,7 @@ coefficients, and through trial and error of repeatedly trying to achieve correc
 various given inputs, the network can create a relatively accurate model of the system. Complexity 
 is often a benefit for correct modeling (much like a linear line is a less efficient model of a 
 higher order equation, whereas higher order equations can model lower ones relatively easily). The 
-network often includes other nodes designed by the coder called 'hidden nodes' to add complexity. 
+network often includes other nodes called 'hidden nodes' to add complexity. 
 It can also be structured in a complex manner (such as multidimensional nodal connections). The 
 simplest structure of a NN - which is used for our bots - is a 2-dimensional net consisting of 3 
 1-D layers: a 1D layer of input nodes connected to a layer of hidden nodes, which connects to both 
@@ -42,14 +42,14 @@ associated to them (aka 'weights'), and is the engine behind the net's ability t
 approximation.
 
 Neural net is used here for RL, just like LUT, with one main distinction being that NN can only 
-estimate the value of actions. In exchange for that, however, NN allows more inputs, and inputs of 
-greater variety to be used. In a LUT, each selection of inputs has a corresponding value: for a 
-system with two inputs, each with 3 possible values, the total number of values to be stored is 
-3x3 = 9. For the robot to remember behaviours after wars, the LUT method requires a list of QVals 
-to be stored in a file in between executions. Robocode limits all files to a size of 200kBs, and 
-it doesn't take long before a robot with multiple inputs to reach 200kBs. NN on the other hand 
-estimates the QVals through calculations, and stores only the values associated with the neural 
-net connections, or 'weights'. This is a much smaller set of values. Weights describe the strength 
+estimate the final value of actions. In exchange, NN allows more inputs, and promotes greater input
+variety. In a LUT, each selection of inputs has a corresponding value: for a system with 2 inputs, 
+with respectively 3 and 4 possible values, the total number of values to be stored is 
+3x4 = 12. This is a problem for robocode: For the robot to remember behaviours after combat, the LUT 
+method requires a list of QVals to be stored in a file in between executions. Robocode limits all files 
+to a size of 200kBs, and it doesn't take long before a robot with multiple inputs to reach 200kBs. NN on 
+the other hand estimates the QVals through calculations, and stores only the values associated with the 
+neural net connections, or 'weights'. This is a much smaller set of values. Weights describe the strength 
 of the connections between nodes in a neural net, and it can be any real value. By requiring only 
 weights to be stored, NN allows a much greater selection of inputs to be used. Even continuous 
 input ranges can be used, which is impossible for LUT.  
@@ -57,7 +57,7 @@ input ranges can be used, which is impossible for LUT.
 -> SUMMARY OF HOW NN2 WORKS <-
 Each turn of battle, an event is triggered. The event does the following:
 	1. Obtain information about the environment.
-	2. Once every few turns, RL will take place (allows robot to complete movement actions that takes a few turns).
+	2. Once every 4 turns, RL will take place (allows robot to complete movement actions that takes a few turns. After testing, 4 is best).
 	   
 	   in RL: 	1) Convert environmental information into inputs that are usable by net, including states and rewards.
 	   			2) Convert several key NN variables from 'current' tense into 'previous' tense.

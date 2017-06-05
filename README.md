@@ -9,7 +9,7 @@ What is Robocode?
 ====================
 This section is copied from the main robocode ReadMe http://robocode.sourceforge.net/docs/ReadMe.html
 Learn from community at [RoboWiki] (http://robowiki.net/)
-
+Installation instructions: http://robowiki.net/wiki/Robocode_Download_And_Install
 Robocode is a programming game where the goal is to code a robot battle tank to compete against other robots in a battle arena. So the name Robocode is a short for "Robot code". The player is the programmer of the robot, who will have no direct influence on the game. Instead, the player must write the AI of the robot telling it how to behave and react on events occurring in the battle arena. Battles are running in real-time and on-screen.
 
 The motto of Robocode is: Build the best, destroy the rest!
