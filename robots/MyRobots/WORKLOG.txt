@@ -1,4 +1,10 @@
-	2017-04-13 to present
+	2017-06-15
+		- Changed strLog refresh to default (instead of only when asked to store log) in both NN1 and 2
+		- Continuing import from NN2 to NN1
+			- currently fixing error 2 & 10 with winlose and 10 with weights
+	2017-06-10
+		- Brought master up to pace with development on NN2. 
+	2017-04-13 to 05-29
 		- changing globals to local vars.
 		- (04-17 to 04-20) calculating backProp calltime using nanoTime. bp takes around 53ps. interestingly, with log on, takes approx. 26us, 500 times longer.
 		- (04-30) bp takes around 10% less time with local vars. Next is to rewrite FP loop since it gets called many times and is where the bottleneck likely is, if there is one close.
