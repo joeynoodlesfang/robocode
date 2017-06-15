@@ -1,8 +1,8 @@
 June 2017
 - A1 Bring master up to speed by eow of May 31st.
-- A2 (Feb) Import NN2 into NN1. 
-- B1 (April) Investigate WaveSurfing, and other methods of neural net. Study other NN's codes. 
-- B2 (April) investigate predictive aiming. Have net for predicting enemy position (ie spinbot has predictable positioning. the net can self correct enemy position)
+- A2 (from Feb) Import NN2 into NN1. 
+- B1 (from April) Investigate WaveSurfing, and other methods of neural net. Study other NN's codes. 
+- B2 (from April) investigate predictive aiming. Have net for predicting enemy position (ie spinbot has predictable positioning. the net can self correct enemy position)
 - E1 Determine momentum.
 - E2 Record cycle time to determine room for improved complexity.
 

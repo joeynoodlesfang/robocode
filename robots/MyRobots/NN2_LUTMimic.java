@@ -486,14 +486,12 @@ public class NN2_LUTMimic extends AdvancedRobot{
         
         //always clears log from previous session in case it used up all allowed harddrive. (robocode allows for 200kB of external data per robot)
         
-        if (flag_recordLog) {// only record log in file when flagged.
-	        fileSettings_log += CONFIGMASK_ZEROINGFILE; //changes file setting to zeroing on next open. strLog is the next file to be opened, and it is typically so large that it is only once per run.	        
-	        flag_fileAccessReturn = exportData(strLog);
-	        if (flag_fileAccessReturn != SUCCESS_importData) {
-	        	out.println("ERROR @run blankingWeights: " + flag_fileAccessReturn);
-	        }
-	        fileSettings_log -= CONFIGMASK_ZEROINGFILE; //resets file setting to post-zeroing.
+        fileSettings_log += CONFIGMASK_ZEROINGFILE; //changes file setting to zeroing on next open. strLog is the next file to be opened, and it is typically so large that it is only once per run.	        
+        flag_fileAccessReturn = exportData(strLog);
+        if (flag_fileAccessReturn != SUCCESS_importData) {
+        	out.println("ERROR @run blankingWeights: " + flag_fileAccessReturn);
         }
+        fileSettings_log -= CONFIGMASK_ZEROINGFILE; //resets file setting to post-zeroing.
         
         if (flag_recordQVals) { //only recordQVals when flagged.
 	        flag_fileAccessReturn = importData(strQVals);
