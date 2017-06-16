@@ -1,7 +1,7 @@
 /*
 
 <-> INTRO TO THE BOT <->
-NN1_DBC will be the first bot that fully employs the benefits of neural net in combat. It is currently (not being :P) 
+NN1_DBC will be the first bot that fully employs the benefits of neural net in combat. It is currently being 
 developed with the goal of improving performance against several host robots, in particular Trackfire (avoidance), 
 Walls (predictive targeting and avoidance), and Spinbot (improved predictive targeting and likely self-generated 
 movement patterns). To achieve this, we will at least employ several new parameters that best captures the 
@@ -210,7 +210,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     private static final int ERROR_7_export_IOException =				7;
     private static final int ERROR_8_import_dump =						8;
     private static final int ERROR_9_export_dump =						9;
-    private static final int ERROR_10_export_mismatchedStringName =		10;
+    private static final int ERROR_10_export_dump =		10;
     private static final int ERROR_11_import_wrongFileName_LUT = 		11;
     private static final int ERROR_12_importWeights_IOException = 		12;
     private static final int ERROR_13_importWeights_typeConversionOrBlank = 13;
@@ -285,8 +285,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     //
     //flag that prompts user to use offline training data from LUT. (ONLY applicable for NN2)
     //private static boolean flag_useOfflineTraining = true;
-    //flag that prompts user to use blank data. (ONLY applicable for NN1 currently)
-    private static boolean flag_useBlankWeights = false;
+
     //flag to permit log file to be imported/exported.
     private static boolean flag_recordLog = false;
     //flag used to permit program to record QVals
@@ -297,7 +296,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     
     
     //DEBUG_ALL flags. Each allows printouts written for specific functions. DEBUG_ALL will print out all.
-    private final static boolean DEBUG_ALL = true; 
+    private final static boolean DEBUG_ALL = false; 
 	private final static boolean DEBUG_run = false;
 	private final static boolean DEBUG_onScannedRobot = false;
 	private final static boolean DEBUG_analysis = false;
@@ -314,7 +313,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	private final static boolean DEBUG_forwardProp = false;
 	private final static boolean DEBUG_getMax = false;
 	private final static boolean DEBUG_qFunction = false;
-	private final static boolean DEBUG_MULTI_backProp = true;
+	private final static boolean DEBUG_MULTI_backProp = false;
 	private final static boolean DEBUG_prepareBackProp = false;
 	private final static boolean DEBUG_backProp = false;
 //	private final static boolean DEBUG_resetReward = false;
@@ -323,7 +322,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 //	private final static boolean DEBUG_doAction_mandatoryPerTurn = false;
 //	private final static boolean DEBUG_importDataWeights = false;
 //	private final static boolean DEBUG_exportDataWeights = false;
-    private final static boolean DEBUG_MULTI_file = false; //logs from all functions that contribute directly to moving/editing files, which include more than import/export fxns.
+    private final static boolean DEBUG_MULTI_file = true; //logs from all functions that contribute directly to moving/editing files, which include more than import/export fxns.
     private final static boolean DEBUG_import = false;
     private final static boolean DEBUG_export = false;
     
@@ -512,19 +511,15 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	        }
         }
         
-        if (flag_useBlankWeights == true) {
-        	useBlankWeights();
-        	flag_useBlankWeights = false;
+        
+        flag_fileAccessStatus = importData(strWeights);
+        if (flag_fileAccessStatus != SUCCESS_importDataWeights) {
+        	out.println("ERROR @run weights: " + flag_fileAccessStatus);
+        	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
+            	LOG[lineCount++] = "ERROR @run weights: " + flag_fileAccessStatus;
+            }
         }
-        else {
-	        flag_fileAccessStatus = importData(strWeights);
-	        if (flag_fileAccessStatus != SUCCESS_importDataWeights) {
-	        	out.println("ERROR @run weights: " + flag_fileAccessStatus);
-	        	if(DEBUG_MULTI_file || DEBUG_run || DEBUG_ALL) {
-	            	LOG[lineCount++] = "ERROR @run weights: " + flag_fileAccessStatus;
-	            }
-	        }
-        }
+    
         
         flag_fileAccessStatus = importData(strWL); //Joey: consider not storing WL on default.
         if (flag_fileAccessStatus != SUCCESS_importData) {
@@ -558,15 +553,16 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-    	//exporting weights
-    	flag_fileAccessStatus = exportData(strWeights);	
-        if (flag_fileAccessStatus != SUCCESS_exportDataWeights) {
-        	out.println("ERROR @onBattleEnded weights: " + flag_fileAccessStatus);
-        	if(DEBUG_MULTI_file|| DEBUG_onBattleEnded || DEBUG_ALL) {
-        		LOG[lineCount++] = "ERROR @onBattleEnded weights: " + flag_fileAccessStatus;
-        	}
-        }
-        
+    	//pausing export weights here to prevent double weight export errors (should have no impact on data)
+//    	//exporting weights
+//    	flag_fileAccessStatus = exportData(strWeights);	
+//        if (flag_fileAccessStatus != SUCCESS_exportData) {
+//        	out.println("ERROR @onBattleEnded weights: " + flag_fileAccessStatus);
+//        	if(DEBUG_MULTI_file|| DEBUG_onBattleEnded || DEBUG_ALL) {
+//        		LOG[lineCount++] = "ERROR @onBattleEnded weights: " + flag_fileAccessStatus;
+//        	}
+//        }
+//        
         if (flag_recordLog) { // log is exported only in onBattleEnded because it is typically too large to .... //Joey: test if onBattleEnded and onDeath/onWin runs twice.
 	    	flag_fileAccessStatus = exportData(strLog); //export log LAST to prevent oversize for other critical files.					
 	        if (flag_fileAccessStatus != SUCCESS_exportData) {
@@ -620,7 +616,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
         }
         
         flag_fileAccessStatus = exportData(strWeights);
-        if (flag_fileAccessStatus != SUCCESS_exportDataWeights) {
+        if (flag_fileAccessStatus != SUCCESS_exportData) {
         	out.println("ERROR @onDeath weights: " + flag_fileAccessStatus);
         	if(DEBUG_MULTI_file || DEBUG_onDeath || DEBUG_ALL) {
         		LOG[lineCount++] = "ERROR @onDeath weights: " + flag_fileAccessStatus;
@@ -672,7 +668,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
         }
         
     	flag_fileAccessStatus = exportData(strWeights);
-        if (flag_fileAccessStatus != SUCCESS_exportDataWeights) {
+        if (flag_fileAccessStatus != SUCCESS_exportData) {
         	out.println("ERROR @onWin weights: " + flag_fileAccessStatus);
         	if(DEBUG_MULTI_file || DEBUG_onWin || DEBUG_ALL) {
         		LOG[lineCount++] = "ERROR @onWin weights: " + flag_fileAccessStatus;
@@ -1642,8 +1638,22 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
                 		}
                 		// the alternate way of zeroing the weights file
             			if ( (fileSettings_temp & CONFIGMASK_ZEROINGFILE) == CONFIGMASK_ZEROINGFILE ) {
-            			
-            				useBlankWeights();
+            		    	double randomCount = ((numInputsTotal*numHiddensTotal) + (numHiddensTotal*numOutputsTotal))/20;
+            				if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
+            					LOG[lineCount++] = "- writing blank weights into local weights array: ";
+            				}
+            				for (int i = 0; i < numInputsTotal; i++) {
+            		    		for (int j = 0; j < numHiddensTotal; j++) { 
+            		    			arr_wIH[i][j] = randomCount;
+            		    			randomCount -= 0.1;
+            		            }
+            		    	}
+            				for (int i = 0; i < numHiddensTotal; i++) {
+            		    		for (int j = 0; j < numOutputsTotal; j++) {
+            		    			arr_wHO[i][j] = randomCount;
+            		    			randomCount -= 0.1;
+            		            }
+            		    	}
             				
             				//Subtracts zeroingfile setting from fileSettings, so that the weights are zeroed only once.
             				fileSettings_temp -= CONFIGMASK_ZEROINGFILE;
@@ -1684,6 +1694,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
             	            	LOG[lineCount++] = "Imported recorded weights.";
                     		}
             			}
+            			
             			fileSettings_weights = fileSettings_temp;
             			flag_weightsImported = true;
             		}
@@ -1902,6 +1913,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
      * 				1. bool flag_LUTImported, static flag for preventing multiple imports
      * 				
      */
+
     public int exportData(String strName) {
     	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
     		LOG[lineCount++] = "@exportData: beginning";
@@ -1953,7 +1965,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	            	
 	            	flag_stringTestImported = false;
 	            } //end of testString
-
+	            //TODO export weights
 	            // weights
 	            else if ( (strName == strWeights) && (fileSettings_weights > 0) && (flag_weightsImported == true) ) {
 	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
@@ -2057,14 +2069,6 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	             * add new files here - remember to add config settings and add to the beginning ifs
 	             */
 	                        
-	            
-	            else {
-	            	if(DEBUG_MULTI_file || DEBUG_export || DEBUG_ALL) {
-	            		LOG[lineCount++] = "error 9";
-	            		
-	            	}
-	            	return ERROR_9_export_dump;
-	            }
 	        }
 	        
 	        //OC: PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
@@ -2090,29 +2094,11 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     	//this should prevent wipes by writing when data isn't ready or available. If import was successful, then fileSettings would already be set.
     	//goal is to prevent accidentally wiping irrelevant file.
     	else {
-    		return ERROR_10_export_mismatchedStringName;
+    		return ERROR_10_export_dump;
     	}
     }
  
-    /**
-     * @name: useBlankWeights
-     * @brief:blanks weights. Can be called by setting fileSettings directly in file, or using flag_useBlankWeights = true
-     */
-    public void useBlankWeights() {
-    	if(DEBUG_MULTI_file || DEBUG_import || DEBUG_ALL) {
-			LOG[lineCount++] = "- writing blank weights into local weights array: ";
-		}
-		for (int i = 0; i < numInputsTotal; i++) {
-    		for (int j = 0; j < numHiddensTotal; j++) { 
-    			arr_wIH[i][j] = 0;
-            }
-    	}
-		for (int i = 0; i < numHiddensTotal; i++) {
-    		for (int j = 0; j < numOutputsTotal; j++) {
-    			arr_wHO[i][j] = 0;
-            }
-    	}
-    }
+
     
     /**binaryActivation function
      * @param X

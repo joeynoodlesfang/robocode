@@ -1,7 +1,9 @@
 	2017-06-15
 		- Changed strLog refresh to default (instead of only when asked to store log) in both NN1 and 2
-		- Continuing import from NN2 to NN1
+		- DONE Continuing import from NN2 to NN1
 			- currently fixing error 2 & 10 with winlose and 10 with weights
+			- Problem is that weights adjust with similar magnitudes (perhaps initial weights are too large).
+				- Maybe there's a problem with the bp algo in that it adjusts the weights too evenly. Solution may be from adjusting weights.
 	2017-06-10
 		- Brought master up to pace with development on NN2. 
 	2017-04-13 to 05-29

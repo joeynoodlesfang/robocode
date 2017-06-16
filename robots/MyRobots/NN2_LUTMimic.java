@@ -289,7 +289,7 @@ public class NN2_LUTMimic extends AdvancedRobot{
     //flag that prompts user to use offline training data from LUT. (ONLY applicable for NN2)
     private static boolean flag_useOfflineTraining = true;
     //flag to permit log file to be imported/exported.
-    private static boolean flag_recordLog = true;
+    private static boolean flag_recordLog = false;
     //flag used to permit program to record QVals
     private static boolean flag_recordQVals = false;
     //flag used to permit program to record BP round errors
@@ -553,14 +553,14 @@ public class NN2_LUTMimic extends AdvancedRobot{
      * @return:		n
      */
     public void onBattleEnded(BattleEndedEvent event){
-
-    	flag_fileAccessReturn = exportDataWeights();	
-        if (flag_fileAccessReturn != SUCCESS_exportDataWeights) {
-        	out.println("ERROR @onBattleEnded weights: " + flag_fileAccessReturn);
-        	if(DEBUG_MULTI_file|| DEBUG_onBattleEnded || DEBUG_ALL) {
-        		LOG[lineCount++] = "ERROR @onBattleEnded weights: " + flag_fileAccessReturn;
-        	}
-        }
+    	//pausing weight export to prevent double weight export errors (which should have no impact on data)
+//    	flag_fileAccessReturn = exportDataWeights();	
+//        if (flag_fileAccessReturn != SUCCESS_exportDataWeights) {
+//        	out.println("ERROR @onBattleEnded weights: " + flag_fileAccessReturn);
+//        	if(DEBUG_MULTI_file|| DEBUG_onBattleEnded || DEBUG_ALL) {
+//        		LOG[lineCount++] = "ERROR @onBattleEnded weights: " + flag_fileAccessReturn;
+//        	}
+//        }
         
         if (flag_recordLog) { // log is exported only in onBattleEnded because it is typically too large to .... //Joey: test if onBattleEnded and onDeath/onWin runs twice.
 	    	flag_fileAccessReturn = exportData(strLog); //export log LAST to prevent oversize for other critical files.					
