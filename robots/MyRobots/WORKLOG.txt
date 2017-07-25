@@ -1,3 +1,9 @@
+	2017-07-05
+		- A1: (Investigate proper rewarding for NN1)
+			on investigating stevenpjg's QLearningNN blob, who had simple uses of change in energy, and hitwall,hitbullet things.
+			checked out another NN bot too (kkris(?)), who had complex reward system, couldn't learn anything useful from it.
+		- A2/B1: (wavesurfing, targeting)
+			surfing: check out basic surfing bot. Targeting: GF, GT (checkout the downloaded jar, alongside repo: http://robocode-archive.strangeautomata.com/robots/)
 	2017-06-15
 		- Changed strLog refresh to default (instead of only when asked to store log) in both NN1 and 2
 		- DONE Continuing import from NN2 to NN1

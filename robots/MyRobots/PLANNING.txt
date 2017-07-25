@@ -1,8 +1,22 @@
+July 2017
+- A1 Investigate proper rewarding for NN1.
+- A2 (from April) Investigate WaveSurfing, and other methods of neural net. Study other NN's codes. 
+- B1 (from April) investigate predictive aiming. Have net for predicting enemy position (ie spinbot has predictable positioning. the net can self correct enemy position)
+- C1 Divide NN1 into multiple pages, set up new package.
+- E1 Determine momentum.
+- E2 Record cycle time to determine room for improved complexity.
+- E3 Implement winLose flag.
+- E4 Investigate better logging (org.slf4j.Logger)
+- E5 Untrack a lot of the files that's not specific for bots.
+- Z  Achieve top50 in roborumble 1v1.
+
 June 2017
-- A1 Bring master up to speed by eow of May 31st.
-- A2 (from Feb) Import NN2 into NN1. 
-- B1 (from April) Investigate WaveSurfing, and other methods of neural net. Study other NN's codes. 
-- B2 (from April) investigate predictive aiming. Have net for predicting enemy position (ie spinbot has predictable positioning. the net can self correct enemy position)
+- A1 Done. Bring master up to speed by eow of May 31st.
+- A2 Done. (from Feb) Import NN2 into NN1. Remove need of offline training.
+	Without offline training, the first action would be entirely random since all weights are 0.
+- B2 (from April) Investigate WaveSurfing, and other methods of neural net. Study other NN's codes. 
+- C1 (from April) investigate predictive aiming. Have net for predicting enemy position (ie spinbot has predictable positioning. the net can self correct enemy position)
+- D1 Implement winLose flag.
 - E1 Determine momentum.
 - E2 Record cycle time to determine room for improved complexity.
 
