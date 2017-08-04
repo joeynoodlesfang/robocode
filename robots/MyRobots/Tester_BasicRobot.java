@@ -100,8 +100,9 @@ public class Tester_BasicRobot extends AdvancedRobot {
 			double enemyBearingFromRadar = (double)getHeading() + e.getBearing() - getRadarHeading();
 			setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
 		    double absBearing = e.getBearingRadians() + getHeadingRadians();
-		    
-		    out.println(absoluteBearing(_myLocation, _enemyLocation));
+		    double absssBearing = absoluteBearing(_myLocation, _enemyLocation);
+		    double factor = Utils.normalRelativeAngle(absBearing);
+		    out.println(e.getBearingRadians() + " " + getHeadingRadians() + " " + absBearing + " " + e.getHeadingRadians() + " " + (e.getHeadingRadians() - absBearing) + " " +Math.sin(e.getHeadingRadians() - absBearing));
 		    setTurnRadarRightRadians(Utils.normalRelativeAngle(absBearing - getRadarHeadingRadians()) * 2);
 		 
 		    scan();
