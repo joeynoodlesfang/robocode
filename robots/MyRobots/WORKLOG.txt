@@ -1,3 +1,12 @@
+	2017-08-03
+		- Continuing effort in bringing wave surfing 
+			- understood fxns updatewaves, getclosestsurfablewaves
+			- reviewed polar coordinates, and how absolutebearing works. (atan2 fxn)
+	2017-07-27
+		- Continuing to make efforts to understand surfing and GoTo.
+			- Rehashed what bearing meant and calculating sin'd radians version.
+			- Reading how to keep track of enemyEnergy
+				- Trying to understand LateralVelocity, which isn't working in TestBot.
 	2017-07-05
 		- A1: (Investigate proper rewarding for NN1)
 			on investigating stevenpjg's QLearningNN blob, who had simple uses of change in energy, and hitwall,hitbullet things.

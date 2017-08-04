@@ -21,6 +21,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import robocode.*;
+import robocode.util.Utils;
+import java.awt.geom.*;     // for Point2D's
+import java.lang.*;         // for Double and Integer objects
+import java.util.ArrayList; // for collection of waves
 
 /**
  * SpinBot - a sample robot by Mathew Nelson.
@@ -31,7 +36,8 @@ import java.io.PrintStream;
  * @author Flemming N. Larsen (contributor)
  */
 public class Tester_BasicRobot extends AdvancedRobot {
-
+    public Point2D.Double _myLocation;     // our bot's location
+    public Point2D.Double _enemyLocation;  // enemy bot's location
 	private int settings = 0;
 	String strSettings = null;
 	/**
@@ -53,61 +59,10 @@ public class Tester_BasicRobot extends AdvancedRobot {
 		setAdjustGunForRobotTurn(true);
 		setAdjustRadarForGunTurn(true);
 		setAdjustRadarForRobotTurn(true);
-	    int actionLinearized = 0;
-    	for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
-		    for (int i_A1 = 0; i_A1 < Q_NNFP_all[0].length; i_A1++){
-		    	for (int i_A2 = 0; i_A2 < Q_NNFP_all[0][0].length; i_A2++, actionLinearized++){
-		    		
-		    		out.println(actionLinearized);
-		    	}
-    		}
-    	}
-		try {
-			BufferedReader reader = null;
-			try {
-				// Read file "count.dat" which contains 2 lines, a round count, and a battle count
-				reader = new BufferedReader(new FileReader(getDataFile("test.dat")));
-
-				// Try to get the counts
-				settings = Integer.parseInt(reader.readLine());
-
-			} 
-			finally {
-				if (reader != null) {
-					reader.close();
-				}
-			}
-		} catch (IOException e) {
-			// Something went wrong reading the file, reset to 0.
-		} catch (NumberFormatException e) {
-			// Something went wrong converting to ints, reset to 0
-		}
-
-
-		// Increment the # of rounds
-		settings = 0x4000;
-
-		// If we haven't incremented # of battles already,
-		// Note: Because robots are only instantiated once per battle, member variables remain valid throughout it.
-
-		PrintStream w = null;
-		try {
-			w = new PrintStream(new RobocodeFileOutputStream(getDataFile("test.dat")));
-
-			w.println(settings);
-
-			// PrintStreams don't throw IOExceptions during prints, they simply set a flag.... so check it here.
-			if (w.checkError()) {
-				out.println("I could not write the count!");
-			}
-		} catch (IOException e) {
-			out.println("IOException trying to write: ");
-			e.printStackTrace(out);
-		} finally {
-			if (w != null) {
-				w.close();
-			}
-		}
+        for(;;){
+        	setTurnRadarRight(20);
+    		execute();					//from "AdvancedRobot" to allow parallel commands. 
+        }
 	}
 
 
@@ -116,7 +71,9 @@ public class Tester_BasicRobot extends AdvancedRobot {
 	 * onScannedRobot: Fire hard!
 	 */
 	public void onScannedRobot(ScannedRobotEvent e) {
-		
+		_myLocation = new Point2D.Double(getX(), getY());
+		double absBearing = e.getBearingRadians() + getHeadingRadians();
+		_enemyLocation = project(_myLocation, absBearing, e.getDistance());
 		learningLoop2(e);
 	}
 
@@ -138,21 +95,29 @@ public class Tester_BasicRobot extends AdvancedRobot {
 		while (true) {
 			double bearingFromRadar = getHeading() + e.getBearing() - getRadarHeading();
 			double bearingFromGun = getHeading() + e.getBearing() - getGunHeading();
-			setTurnRadarRight(normalRelativeAngleDegrees(bearingFromRadar));
-			setTurnGunRight(normalRelativeAngleDegrees(bearingFromGun+20));
-			setTurnRight(normalRelativeAngleDegrees(e.getBearing() - 90));
-    		setAhead(50);
-			
-			scan();
-//			
+			double lateralVelocity = getVelocity()*Math.sin(e.getBearingRadians());
+//			out.println(getVelocity() + " gbR:" + getHeadingRadians() + " gb:" + e.getHeadingRadians() + " s(gbR):" + Math.sin(e.getBearingRadians()));
+			double enemyBearingFromRadar = (double)getHeading() + e.getBearing() - getRadarHeading();
+			setTurnRadarRight(normalRelativeAngleDegrees(enemyBearingFromRadar));
+		    double absBearing = e.getBearingRadians() + getHeadingRadians();
+		    
+		    out.println(absoluteBearing(_myLocation, _enemyLocation));
+		    setTurnRadarRightRadians(Utils.normalRelativeAngle(absBearing - getRadarHeadingRadians()) * 2);
+		 
+		    scan();
+		    execute();
 
-			
-			execute();
 		}
 	}
 
 	public void learningLoop3(){
 		
 	}
-	
+    public static double absoluteBearing(Point2D.Double source, Point2D.Double target) {
+        return Math.atan2(target.x - source.x, target.y - source.y);
+    }
+	public static Point2D.Double project(Point2D.Double sourceLocation, double angle, double length) {
+        return new Point2D.Double(sourceLocation.x + Math.sin(angle) * length,
+            sourceLocation.y + Math.cos(angle) * length);
+    }
 }

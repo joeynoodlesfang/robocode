@@ -1,3 +1,7 @@
+Aug 2017
+- E6 Memory use(512MB), CPU use? how to measure these.
+- E7 Java debug bp
+
 July 2017
 - A1 Investigate proper rewarding for NN1.
 - A2 (from April) Investigate WaveSurfing, and other methods of neural net. Study other NN's codes. 
