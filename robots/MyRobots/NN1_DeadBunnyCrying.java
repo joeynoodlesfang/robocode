@@ -154,18 +154,18 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
 	 */
 	//variables for the q-function. Robot will currently NOT change critical q-function coefficients (alpha, gamma, epsilon) mid-fight.
 	//alpha describes the extent to which the newly acquired information will override the old information.
-    private static final double alpha = 0.1;
+     static final double alpha = 0.1;
     //gamma describes the importance of current rewards
-    private static final double gamma = 0.8;                
-    //epsilon describes the degree of exploration
-    private static final double epsilon = 0.05; 				 
+     static final double gamma = 0.8;                
+    //epsilon describes the degree of exploration, 1 = max randomness.
+     static final double epsilon = 0.05; 				 
     
     //policy:either greedy or exploratory (both are Q-learning, perhaps possibility of implementing SARSA in the future?)
-    private static final int greedy = 0;
-    private static final int exploratory = 1;
+     static final int greedy = 0;
+     static final int exploratory = 1;
     //Joey: SARSA is unusable - currently incomplete.
     //SARSA uses the reward gained by performing action 2 to update reward in action 1.
-    private static final int SARSA = 2;
+     static final int SARSA = 2;
     
     
     /* 
@@ -186,44 +186,44 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     //					NN weights: 16512 (0x4080), zeroing = 16513 (0x4081)
     //					QVals:		16640 (0x4100), zeroing = 16641 (0x4101)
     //					BPErrors:	16896 (0x4200), zeroing = 16897 (0x4201)
-    private static final short CONFIGMASK_ZEROINGFILE  =				0x0001;
-    private static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 		0x4000;
-    private static final short CONFIGMASK_FILETYPE_stringTest =			0x0010;
-    private static final short CONFIGMASK_FILETYPE_LUTTrackfire =		0x0020;
-    private static final short CONFIGMASK_FILETYPE_winLose = 			0x0040;
-    private static final short CONFIGMASK_FILETYPE_weights =			0x0080;
-    private static final short CONFIGMASK_FILETYPE_QVals =				0x0100;
-    private static final short CONFIGMASK_FILETYPE_BPErrors = 			0x0200;
+     static final short CONFIGMASK_ZEROINGFILE  =				0x0001;
+    static final short CONFIGMASK_VERIFYSETTINGSAVAIL = 		0x4000;
+    static final short CONFIGMASK_FILETYPE_stringTest =			0x0010;
+    static final short CONFIGMASK_FILETYPE_LUTTrackfire =		0x0020;
+    static final short CONFIGMASK_FILETYPE_winLose = 			0x0040;
+    static final short CONFIGMASK_FILETYPE_weights =			0x0080;
+    static final short CONFIGMASK_FILETYPE_QVals =				0x0100;
+    static final short CONFIGMASK_FILETYPE_BPErrors = 			0x0200;
     
-    //IMPORT/EXPORT status returns.
+    //ERROR PROMPTS: IMPORT/EXPORT status returns.
     
-    private static final int SUCCESS_importData = 						0x00;
-    private static final int SUCCESS_exportData = 						0x00;
-    private static final int SUCCESS_importDataWeights =				0x00;
-    private static final int SUCCESS_exportDataWeights =				0x00;
+    static final int SUCCESS_importData = 						0x00;
+    static final int SUCCESS_exportData = 						0x00;
+    static final int SUCCESS_importDataWeights =				0x00;
+    static final int SUCCESS_exportDataWeights =				0x00;
     
-    private static final int ERROR_1_import_IOException = 				1;
-    private static final int ERROR_2_import_typeConversionOrBlank = 	2;
-    private static final int ERROR_3_import_verification = 				3;
-    private static final int ERROR_4_import_wrongFileName_stringTest =	4;
-    private static final int ERROR_5_import_wrongFileName_WL =			5;
-    private static final int ERROR_6_export_cannotWrite =				6;
-    private static final int ERROR_7_export_IOException =				7;
-    private static final int ERROR_8_import_dump =						8;
-    private static final int ERROR_9_export_dump =						9;
-    private static final int ERROR_10_export_dump =		10;
-    private static final int ERROR_11_import_wrongFileName_LUT = 		11;
-    private static final int ERROR_12_importWeights_IOException = 		12;
-    private static final int ERROR_13_importWeights_typeConversionOrBlank = 13;
-    private static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
-    private static final int ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput = 15;
-    private static final int ERROR_16_exportWeights_IOException = 		16;
-    private static final int ERROR_17_importWeights_flagImportedFalse = 17;
-    private static final int ERROR_18_exportWeights_flagImportedTrue = 	18;
-    private static final int ERROR_19_import_wrongFileName_weights =	19;
-    private static final int ERROR_20_import_weights_wrongNetSize =		20;
-    private static final int ERROR_21_import_wrongFileName_QVals =		21;
-    private static final int ERROR_22_import_wrongFileName_BPErrors =	22;
+    static final int ERROR_1_import_IOException = 				1;
+    static final int ERROR_2_import_typeConversionOrBlank = 	2;
+    static final int ERROR_3_import_verification = 				3;
+    static final int ERROR_4_import_wrongFileName_stringTest =	4;
+    static final int ERROR_5_import_wrongFileName_WL =			5;
+    static final int ERROR_6_export_cannotWrite =				6;
+    static final int ERROR_7_export_IOException =				7;
+    static final int ERROR_8_import_dump =						8;
+    static final int ERROR_9_export_dump =						9;
+    static final int ERROR_10_export_dump =		10;
+    static final int ERROR_11_import_wrongFileName_LUT = 		11;
+    static final int ERROR_12_importWeights_IOException = 		12;
+    static final int ERROR_13_importWeights_typeConversionOrBlank = 13;
+    static final int ERROR_14_exportWeights_cannotWrite_NNWeights_inputToHidden = 14;
+    static final int ERROR_15_exportWeights_cannotWrite_NNWeights_hiddenToOutput = 15;
+    static final int ERROR_16_exportWeights_IOException = 		16;
+    static final int ERROR_17_importWeights_flagImportedFalse = 17;
+    static final int ERROR_18_exportWeights_flagImportedTrue = 	18;
+    static final int ERROR_19_import_wrongFileName_weights =	19;
+    static final int ERROR_20_import_weights_wrongNetSize =		20;
+    static final int ERROR_21_import_wrongFileName_QVals =		21;
+    static final int ERROR_22_import_wrongFileName_BPErrors =	22;
     
     /*
 	 * NN STATEACTION VARIABLES for stateAction ceilings (for array designs and other modular function interactions).
@@ -233,34 +233,34 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     //- One concern with the complexity of the actions a robot can perform is the amount of calculation time spent in forward propagation.
     //- Each possible action requires one forward propagation.
     //- As of now, the No. times NN needs to forward propagate per round = 4 * 2 * 3 = 24
-    private static final int input_action0_moveReferringToEnemy_possibilities = 4; //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
-    private static final int input_action1_fire_possibilities = 2;    //1, 3
-    private static final int input_action2_fireDirection_possibilities = 3;    //-10deg, 0, 10deg
-    private static final int numActionContainers = 3;   
-    private static final int numActions = input_action0_moveReferringToEnemy_possibilities 
+    static final int input_action0_moveReferringToEnemy_possibilities = 4; //0ahead50, 0ahead-50, -90ahead50, -90ahead-50
+    static final int input_action1_fire_possibilities = 2;    //1, 3
+    static final int input_action2_fireDirection_possibilities = 3;    //-10deg, 0, 10deg
+    static final int numActionContainers = 3;   
+    static final int numActions = input_action0_moveReferringToEnemy_possibilities 
     									  * input_action1_fire_possibilities
     									  * input_action2_fireDirection_possibilities;
     
     //State related finals.
-    private static final int input_state0_myPos_possibilities = 5;    //center, left, right, top, bottom (cannot be undiscretized) 
-    private static final int input_state1_myHeading_originalPossilibities = 4;    //0-89deg, 90-179, 180-269, 270-359
-    private static final int input_state2_enemyEnergy_originalPossibilities = 2;    //>30, <30
-    private static final int input_state3_enemyDistance_originalPossibilities = 3;    //<150, <350, >=350
-    private static final int input_state4_enemyDirection_originalPossibilities = 3;    //head-on (still (abs <30 || >150), left (<0 relative dir w/ positive velo || >0 with negative velo), right (<0 dir w/ negative velo || >0 with positive velo)
-    private static final int numStateContainers = 5;
+    static final int input_state0_myPos_possibilities = 5;    //center, left, right, top, bottom (cannot be undiscretized) 
+    static final int input_state1_myHeading_originalPossilibities = 4;    //0-89deg, 90-179, 180-269, 270-359
+    static final int input_state2_enemyEnergy_originalPossibilities = 2;    //>30, <30
+    static final int input_state3_enemyDistance_originalPossibilities = 3;    //<150, <350, >=350
+    static final int input_state4_enemyDirection_originalPossibilities = 3;    //head-on (still (abs <30 || >150), left (<0 relative dir w/ positive velo || >0 with negative velo), right (<0 dir w/ negative velo || >0 with positive velo)
+    static final int numStateContainers = 5;
     
     //NN neuron parameters.
-    private static final int numInputBias = 0;
-    private static final int numHiddenBias = 1;
-    private static final int numOutputBias = 0; //Actual code disregards possibility of output bias by starting loops relating to output at 0 referring to first output instead of bias.
-    private static final int numHiddenNeuron = 4;
-    private static final int numInputsTotal = ( numInputBias + numActionContainers + numStateContainers ); 
-    private static final int numHiddensTotal = ( numHiddenBias + numHiddenNeuron );
-    private static final int numOutputsTotal = 1;
+    static final int numInputBias = 0;
+    static final int numHiddenBias = 1;
+    static final int numOutputBias = 0; //Actual code disregards possibility of output bias by starting loops relating to output at 0 referring to first output instead of bias.
+    static final int numHiddenNeuron = 4;
+    static final int numInputsTotal = ( numInputBias + numActionContainers + numStateContainers ); 
+    static final int numHiddensTotal = ( numHiddenBias + numHiddenNeuron );
+    static final int numOutputsTotal = 1;
     
     //NN activation function choices
-    private static final boolean binaryMethod = true;
-    private static final boolean bipolarMethod = false;
+    static final boolean binaryMethod = true;
+    static final boolean bipolarMethod = false;
  
     
     /**
@@ -285,47 +285,47 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     //Flags that allow certain parts of code or data to be used!
     //
     //flag that prompts user to use offline training data from LUT. (ONLY applicable for NN2)
-    //private static boolean flag_useOfflineTraining = true;
+    //static boolean flag_useOfflineTraining = true;
 
     //flag to permit log file to be imported/exported.
-    private static boolean flag_recordLog = false;
+    static boolean flag_recordLog = false;
     //flag used to permit program to record QVals
-    private static boolean flag_recordQVals = false;
+    static boolean flag_recordQVals = false;
     //flag used to permit program to record BP round errors
-    private static boolean flag_recordBPErrors = false;
+    static boolean flag_recordBPErrors = false;
     
     
     
     //DEBUG_ALL flags. Each allows printouts written for specific functions. DEBUG_ALL will print out all.
-    private final static boolean DEBUG_ALL = false; 
-	private final static boolean DEBUG_run = false;
-	private final static boolean DEBUG_onScannedRobot = false;
-	private final static boolean DEBUG_analysis = false;
-	private final static boolean DEBUG_onBattleEnded = false;
-	private final static boolean DEBUG_onDeath = false;
-	private final static boolean DEBUG_onWin = false;
-//	private final static boolean DEBUG_learnThisRound = false;
-	private final static boolean DEBUG_obtainReward = false;
-	private final static boolean DEBUG_generatePrevs = false;
-	private final static boolean DEBUG_generateCurrentStateVector = false;
-//	private final static boolean DEBUG_RL_and_NN = false;
-	private final static boolean DEBUG_MULTI_forwardProp = false; //can be used to debug the multiple fxns encompassed by FP.
-	private final static boolean DEBUG_getAllQsFromNet = false;
-	private final static boolean DEBUG_forwardProp = false;
-	private final static boolean DEBUG_getMax = false;
-	private final static boolean DEBUG_qFunction = false;
-	private final static boolean DEBUG_MULTI_backProp = false;
-	private final static boolean DEBUG_prepareBackProp = false;
-	private final static boolean DEBUG_backProp = false;
-//	private final static boolean DEBUG_resetReward = false;
-    private final static boolean DEBUG_doAction_Q = false;
-//	private final static boolean DEBUG_doAction_notLearning = false;
-//	private final static boolean DEBUG_doAction_mandatoryPerTurn = false;
-//	private final static boolean DEBUG_importDataWeights = false;
-//	private final static boolean DEBUG_exportDataWeights = false;
-    private final static boolean DEBUG_MULTI_file = true; //logs from all functions that contribute directly to moving/editing files, which include more than import/export fxns.
-    private final static boolean DEBUG_import = false;
-    private final static boolean DEBUG_export = false;
+    final static boolean DEBUG_ALL = false; 
+	final static boolean DEBUG_run = false;
+	final static boolean DEBUG_onScannedRobot = false;
+	final static boolean DEBUG_analysis = false;
+	final static boolean DEBUG_onBattleEnded = false;
+	final static boolean DEBUG_onDeath = false;
+	final static boolean DEBUG_onWin = false;
+//	final static boolean DEBUG_learnThisRound = false;
+	final static boolean DEBUG_obtainReward = false;
+	final static boolean DEBUG_generatePrevs = false;
+	final static boolean DEBUG_generateCurrentStateVector = false;
+//	final static boolean DEBUG_RL_and_NN = false;
+	final static boolean DEBUG_MULTI_forwardProp = false; //can be used to debug the multiple fxns encompassed by FP.
+	final static boolean DEBUG_getAllQsFromNet = false;
+	final static boolean DEBUG_forwardProp = false;
+	final static boolean DEBUG_getMax = false;
+	final static boolean DEBUG_qFunction = false;
+	final static boolean DEBUG_MULTI_backProp = false;
+	final static boolean DEBUG_prepareBackProp = false;
+	final static boolean DEBUG_backProp = false;
+//	final static boolean DEBUG_resetReward = false;
+    final static boolean DEBUG_doAction_Q = false;
+//	final static boolean DEBUG_doAction_notLearning = false;
+//	final static boolean DEBUG_doAction_mandatoryPerTurn = false;
+//	final static boolean DEBUG_importDataWeights = false;
+//	final static boolean DEBUG_exportDataWeights = false;
+    final static boolean DEBUG_MULTI_file = true; //logs from all functions that contribute directly to moving/editing files, which include more than import/export fxns.
+    final static boolean DEBUG_import = false;
+    final static boolean DEBUG_export = false;
     
 
     
@@ -338,30 +338,30 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     //		 - data for a particular file must be exported before importing for the same file occurs again.
     // 		false == only imports can access; true == only exports can access.
     //		ALWAYS initialize these as false.
-    private static boolean flag_stringTestImported = false;
-    private static boolean flag_LUTImported = false;
-    private static boolean flag_WLImported = false;
-    private static boolean flag_weightsImported = false;
-    private static boolean flag_QValsImported = false;
-    private static boolean flag_BPErrorsImported = false;
+    static boolean flag_stringTestImported = false;
+    static boolean flag_LUTImported = false;
+    static boolean flag_WLImported = false;
+    static boolean flag_weightsImported = false;
+    static boolean flag_QValsImported = false;
+    static boolean flag_BPErrorsImported = false;
 
     // printout error flag - used to record the return value of functions.
     // initialized to 0, which is no error.
-    private int flag_fileAccessStatus = 0;
+    int flag_fileAccessStatus = 0;
 
     /**
      *  OTHER VARIABLES USABLE BY THIS ROBOT'S CLASS FUNCTIONS ==============================================================================
      */
     
     // weights connecting between input and hidden layers. calculated using definitions defined above.
-    private static double[][] arr_wIH 
+    static double[][] arr_wIH 
         = new double
         [numInputsTotal]
         [numHiddensTotal] 
         ;
     
     // weights connecting between hidden layer to output.
-    private static double[][] arr_wHO
+    static double[][] arr_wHO
     	= new double
     	[numHiddensTotal]
     	[numOutputsTotal]
@@ -369,94 +369,94 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     
     // temp vars for importing/exporting files: config settings for the external files, stored in the first line of .dat
     // PART OF THE CONFIGMASK SERIES.
-    private short fileSettings_temp = 0;
-    private short fileSettings_stringTest = 0;
-    private short fileSettings_LUT = 0; 
-    private short fileSettings_WL = 0;
-    private short fileSettings_weights = 0;
-    private short fileSettings_log = 0;
-    private short fileSettings_QVals = 0;
-    private short fileSettings_BPErrors = 0;
+    short fileSettings_temp = 0;
+    short fileSettings_stringTest = 0;
+    short fileSettings_LUT = 0; 
+    short fileSettings_WL = 0;
+    short fileSettings_weights = 0;
+    short fileSettings_log = 0;
+    short fileSettings_QVals = 0;
+    short fileSettings_BPErrors = 0;
     
     // reward and reward calculation vars.
-    private double reward_normalized = 0.0;
-    private double energyDiffCurr = 0.0;
-    private double energyDiffPrev = 0.0;
+    double reward_normalized = 0.0;
+    double energyDiffCurr = 0.0;
+    double energyDiffPrev = 0.0;
 
     //activation method used for binary and bipolar methods.
-    private boolean activationMethod = bipolarMethod; 
+    boolean activationMethod = bipolarMethod; 
 
     //chosen policy. greedy or exploratory or SARSA
     //possibility of allowing robot to change these patterns
-    private static int policy = greedy; //SAR
-    private static int learningRate = 4; //learningAlgo is run every 4 ticks. 
+    static int policy = greedy; //SAR
+    static int learningRate = 4; //learningAlgo is run every 4 ticks. 
 
     //enemy bot information
-    private double enemyDistance = 0.0;
-    private double enemyHeadingRelative = 0.0;
-    private double enemyHeadingRelativeAbs = 0.0;
-    private double enemyVelocity = 0.0;
-    private double enemyBearingFromRadar = 0.0;
-    private double enemyBearingFromGun = 0.0;
-    private double enemyBearingFromHeading = 0.0;
-    private double enemyEnergy = 0.0;
+    double enemyDistance = 0.0;
+    double enemyHeadingRelative = 0.0;
+    double enemyHeadingRelativeAbs = 0.0;
+    double enemyVelocity = 0.0;
+    double enemyBearingFromRadar = 0.0;
+    double enemyBearingFromGun = 0.0;
+    double enemyBearingFromHeading = 0.0;
+    double enemyEnergy = 0.0;
     
     //my bot information
-    private double myHeading = 0.0; 
-    private double myEnergy = 0.0;
-    private double myPosX = 0.0;
-    private double myPosY = 0.0;
+    double myHeading = 0.0; 
+    double myEnergy = 0.0;
+    double myPosX = 0.0;
+    double myPosY = 0.0;
     
     //misc battle information
-    private int turn = 0;
+    int turn = 0;
     
     //used to update WL export
-    private int totalFights = 0;
-    private int[] battleResults = new int [520000];
-    private int currentBattleResult = 0;
+    int totalFights = 0;
+    int[] battleResults = new int [520000];
+    int currentBattleResult = 0;
 	
     //vars and arrays used for debugging purposes - storage of data, total lines of data
-    private static String[] LOG = new String [520000];
-    private static int lineCount = 0;
-    private static double[] arr_QVals = new double [520000];
-    private static int totalQValRecords = 0;
-    private static double[] arr_BPErrors = new double [520000];
-    private static int totalBPErrorsRecords = 0;
+    static String[] LOG = new String [520000];
+    static int lineCount = 0;
+    static double[] arr_QVals = new double [520000];
+    static int totalQValRecords = 0;
+    static double[] arr_BPErrors = new double [520000];
+    static int totalBPErrorsRecords = 0;
 
     //class vars used to store function call time
-    // private long aveDuration = 0;
-    // private static long totalDuration = 0;
-    // private static int durationCount = 0;
+    // long aveDuration = 0;
+    // static long totalDuration = 0;
+    // static int durationCount = 0;
     
     //vars that store current and previous stateAction vectors
-    private double currentStateActionVector[] = new double [numInputsTotal];
-    private double prevStateActionVector[]    = new double [numInputsTotal]; //might not be used 
+    double currentStateActionVector[] = new double [numInputsTotal];
+    double prevStateActionVector[]    = new double [numInputsTotal]; //might not be used 
 
     //Q-var storages.
     //- "Y" and "Q" pretty much refers to the same thing, but to make it easier to understand when coding, we use "Y" for the BP calculations, and Q for Q fxn.
 
-    private double[] Q_prev_new = new double[numOutputsTotal];
+    double[] Q_prev_new = new double[numOutputsTotal];
     
     
     /**  
      * Neural net stuff  
      */
-	private double [] y	   = new double[numOutputsTotal];		// Array to store values of Y
+	double [] y	   = new double[numOutputsTotal];		// Array to store values of Y
     // analysis rate //Joey: ask Andrea about use of this.
-	// private double lRate = 0.05; 			
+	// double lRate = 0.05; 			
 	//value of momentum //Joey: research the used of momentum for optimal values. 
-	private static final double momentum = 0.1;  		
+	static final double momentum = 0.1;  		
 	
 	// arrays used for momentum
-	private double [][] wIH_past  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights for Past.
-	private double [][] wIH_next  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights.
-	private double [][] wHO_past  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights for Past.
-	private double [][] wHO_next  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights.
+	double [][] wIH_past  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights for Past.
+	double [][] wIH_next  = new double[numInputsTotal] [numHiddensTotal];	// Input to Hidden weights.
+	double [][] wHO_past  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights for Past.
+	double [][] wHO_next  = new double[numHiddensTotal][numOutputsTotal];  // Hidden to Output weights.
 
 	//bias for hidden initialized as value 1
-	// private static final int valInputBias = 0;
-    private static final int valHiddenBias = 1;
-    // private static final int valOutputBias = 0;
+	// static final int valInputBias = 0;
+    static final int valHiddenBias = 1;
+    // static final int valOutputBias = 0;
     
     //@@@@@@@@@@@@@@@ RUN & EVENT CLASS FUNCTIONS @@@@@@@@@@@@@@@@@    
     
@@ -952,548 +952,7 @@ public class NN1_DeadBunnyCrying extends AdvancedRobot{
     	
     }
 
-    /**
-     * @name:		RL_NN
-     * @purpose: 	1. Cycle through all the possible actions via forward propagation with the current states, and calculate all Q values.
-     * 				2. Find max Q value, determine action based on policy.
-     * 				3. Perform Q function using the recorded previous Q value, and the just calculated the current Q value. Result is Q_prev_new
-     * 				4. Readjust weights via backward propagation.
-     * @param: 		many
-     * @return: 	n
-     */
-    public void RL_NN(double[] currSAV, double[] prevSAV, double[] y, double[] Q_prev_new, //adjusted layer values
-    					double[][] arr_wIH, double[][] arr_wHO, //weights
-    					double[][] wIH_past, double[][] wIH_next, double[][] wHO_past, double[][] wHO_next, //backprop-momentum vars
-    					double reward, boolean activationMethod){
-    	
-        double [][][] Q_NNFP_all = new double 				// list of generated Q values from currSAV-based FP
-        		[input_action0_moveReferringToEnemy_possibilities]
-        		[input_action1_fire_possibilities]
-        		[input_action2_fireDirection_possibilities];
-        double[] Q_curr = new double[numOutputsTotal];		// current cycle Q value generated from getMax
-        double [] z_in = new double[numHiddensTotal]; 		// Array to store z[j] before being activate
-    	double [] z    = new double[numHiddensTotal];		// Array to store values of z 
-    	double [] y_in = new double[numOutputsTotal];		// Array to store Y[k] before being activated
-    	//arrays in BP
-    	double [][] vDelta = new double[numInputsTotal] [numHiddensTotal];	// Change in Input to Hidden weights
-    	double [][] wDelta = new double[numHiddensTotal][numOutputsTotal]; 	// Change in Hidden to Output weights	  
-    	double [] delta_out    = new double[numOutputsTotal];
-    	double [] delta_hidden = new double[numHiddensTotal];
-    	
-    	
-    	//TODO bookmark for main NN fxn.
-    	getAllQsFromNet (Q_NNFP_all, currSAV, arr_wIH, arr_wHO, activationMethod);
-        getMax			(Q_NNFP_all, currSAV, Q_curr, activationMethod); 
-        qFunction		(Q_prev_new, y, reward, Q_curr);
-        prepareBackProp	(prevSAV, z,
-        					z_in, y_in,
-        					arr_wIH, arr_wHO,
-        					activationMethod);
-        backProp		(prevSAV, z, y, Q_prev_new, 
-        					z_in, y_in, 
-        					delta_out, delta_hidden, vDelta, wDelta, 
-        					arr_wIH, arr_wHO, 
-        					activationMethod, 
-        					wIH_past, wIH_next, wHO_past, wHO_next);
-    }
 
-    /** 
-     * @name:		getAllQsFromNet
-     * @input: 		currentStateVector 
-     * @purpose: 	1. For current state, cycle through all possible actions and obtain all q-values (y), and stores in Q_NNFP_all.
-     * 					With exception of the inputs and outputs, all NN structure parameters used are temporary parameters.
-     * @param:		1. currSAV				aka currentStateActionVector or x, current state action vectors from environment.
-     * 				2. Q_NNFP_all 			the Q values calculated from neural net forward propagation (aka y or output)
-     * 				3. z					activated hidden layer
-	 * 				4. Y					activated output layer, CURRENT (as opposed to past from Q fxn)
-	 * 				5. z_in					pre-activation hidden layer
-	 * 				6. y_in					pre-activation final layer
-	 * 				7. arr_wIH				weights between input and hidden layer
-	 * 				8. arr_wHO				weights between hidden and output layer
-	 * 				9. activationMethod		binary (0 to 1) or bipolar (-1 to 1) activation function
-     * @return: 	n
-     */
-	public void getAllQsFromNet(double [][][] Q_NNFP_all, double[] currSAV, double[][] arr_wIH, double[][] arr_wHO, boolean activationMethod) {
-		
-		double[] currSAV_temp = new double[numInputsTotal];
-		double[] z_temp 	  = new double[numHiddensTotal];
-		double[] y_temp 	  = new double[numOutputsTotal];
-		double[] z_in_temp    = new double[numHiddensTotal];
-		double[] y_in_temp    = new double[numOutputsTotal];
-
-		if(DEBUG_getAllQsFromNet || DEBUG_MULTI_forwardProp || DEBUG_ALL){
-			LOG[lineCount++] = "- getAllQsFromNet:";
-			LOG[lineCount++] = "currSAV:" + Arrays.toString(currSAV);
-    	}
-		
-		System.arraycopy(currSAV, 3, currSAV_temp, 3, numStateContainers);
-		
-		if(DEBUG_getAllQsFromNet || DEBUG_MULTI_forwardProp || DEBUG_ALL){
-			LOG[lineCount++] = "currSAV_temp:" + Arrays.toString(currSAV_temp);
-    	}
-		
-		for (int i_A0 = 0; i_A0 < input_action0_moveReferringToEnemy_possibilities; i_A0++){
-			for (int i_A1 = 0; i_A1 < input_action1_fire_possibilities; i_A1++){
-				for(int i_A2 = 0; i_A2 < input_action2_fireDirection_possibilities; i_A2++){
-					currSAV_temp[0] = i_A0;
-					currSAV_temp[1] = i_A1;
-					currSAV_temp[2] = i_A2;
-					forwardProp(currSAV_temp, z_temp, y_temp,
-									z_in_temp, y_in_temp,
-									arr_wIH, arr_wHO, 
-									activationMethod);
-					Q_NNFP_all[i_A0][i_A1][i_A2] = y_temp[0];
-				}
-			}
-		}
-
-    	if(DEBUG_getAllQsFromNet || DEBUG_MULTI_forwardProp || DEBUG_ALL){
-    		LOG[lineCount++] = "Q_NNFP_all going into getMax:" + Arrays.deepToString(Q_NNFP_all);
-    		LOG[lineCount++] = "#eo getAllQsFromNet";
-    	}
-    	
-    	return;
-	}
-	
-	/** 
-	 * @name:		forwardProp
-	 * @brief: forward propagation done in accordance to pg294 in Fundamentals of Neural Network, by Laurene Fausett.
-	 * 			Feedforward (step 3 to 5):
-	 * 				step 3: Each input unit (x[i], i = 1, ..., n) receives input signal xi and broadcasts this signal to all units in the layer above (the hidden units).
-	 * 				step 4: Each hidden unit (z[j], j = 1, ..., p) sums its weighted input signals,
-	 * 								z_in[j] = v[0][j] + (sum of from i = 1 to n)x[i]v[i][j],                <- v = weights between input and hidden.
-	 * 						applies its activation fxn to compute its output signal,
-	 * 								z[j] = f(z_in[j]),
-	 * 						and sends this signal to all units in the layer above (output units).
-	 * 				step 5: Each output unit (Y[k], k = 1, ..., m) sums its weighted input signals, (treating k = 0 to start instead of 1 for now b/c no output)
-	 * 								y_in[k] = w[0][k] + (sum of from j = 1 to p)z[j]w[j][k]                 <- w = weights between hidden and output.
-	 * 						and applies its activation fxn to compute its output signal,
-	 * 								Y[k] = f(y_in[k])
-	 * @purpose: does forwardPropagation on the inputs from the robot. 
-	 * @param: 		can find the same(except Q_NNFP_all) from getAllQsFromNet(), which invokes this fxn.
-	 * @param:		1. x					input layer
-     * 				2. z					activated hidden layer
-	 * 				3. y					ALLactivated output layer, CURRENT (in contrast to PAST used for Qfxn)
-	 * 				4. z_in					pre-activation hidden layer, ie: sum of inputs*weights
-	 * 				5. y_in					pre-activation final layer, ie: sum of hidden*weights
-	 * 				6. arr_wIH				weights between input and hidden layer
-	 * 				7. arr_wHO				weights between hidden and output layer
-	 * 				8. activationMethod		binary (0 to 1) or bipolar (-1 to 1) activation function
-	 * @return: n. 
-	 **/
-    public void forwardProp(double[] x, double[] z, double[] y,
-    							double[] z_in, double[] y_in,
-    							double[][] arr_wIH, double[][] arr_wHO,
-    							boolean activationMethod) {
-    	if(DEBUG_MULTI_forwardProp || DEBUG_forwardProp || DEBUG_ALL){
-    		LOG[lineCount++] = "- FP:";
-    		LOG[lineCount++] = "x:" + Arrays.toString(x);
-    	}
-    	
-    	//step 3 and 4:    	
-		for (int j = 1; j < numHiddensTotal; j++){ 		//p = numHiddensTotal
-			double sumIn = 0.0;
-			for (int i = 0; i < numInputsTotal; i++){	   //n = numInputsTotal
-				sumIn += x[i]*arr_wIH[i][j]; //NO INPUT BIAS, that's why j = 1
-			}
-			z_in[j] = sumIn; 									//save z_in[0] for the bias hidden unit. 
-			z_in[0] = valHiddenBias; 									//set z_in[0] = bias. HIDDEN BIAS = 1
-			z[0] = z_in[0]; //can choose to optimize here by placing this outside of loop, since we know what valHiddenBias is.
-			
-			if (activationMethod == binaryMethod)
-				z[j] = binaryActivation(z_in[j]); 				
-			else
-				z[j] = bipolarActivation(z_in[j]);
-			
-			if(DEBUG_MULTI_forwardProp || DEBUG_forwardProp || DEBUG_ALL){
-				LOG[lineCount++] = String.format("z[%d]:%.16f z_in[%d]:%.3f sumIn%.3f", j, z[j], j, z_in[j], sumIn);
-			}
-			
-		}
-		//step 5:
-		for (int k = 0; k < numOutputsTotal; k++){
-			double sumOut = 0.0; 
-			for (int j= 0; j < numHiddensTotal; j++){
-				sumOut += z[j]*arr_wHO[j][k]; 
-			}
-			y_in[k] = sumOut; 	
-			
-			if (activationMethod == binaryMethod)
-				y[k] = binaryActivation(y_in[k]); 
-			else
-				y[k] = bipolarActivation(y_in[k]);
-			
-			if(DEBUG_MULTI_forwardProp || DEBUG_forwardProp || DEBUG_ALL){
-				LOG[lineCount++] = String.format("Y[%d]:%.16f y_in[%d]:%.3f sumOut%.3f", k, y[k], k, y_in[k], sumOut);
-			}
-			
-		}
-		return; 
-	}
-    
-    /**
-     * @name:		getMax()
-     * @purpose: 	1. Obtain the action in current state with the highest q-value, 
-     * 				   and its associated q-value. 
-	 *					a. Start current max Q value at lower than obtainable value.
-	 *					b. Cycle through all actions in current SAV, recording max q-values.
-	 *						i. if indexQVal > QMax:
-	 *							(1) Update QMax
-	 *							(2) Set maxAction_totalNum = 1.
-	 *							(3) Store the (now 3 dimension) action index into maxAction_all[maxAction_totalNum-1]
-	 *						ii. if indexQVal == QMax:
-	 *							(1) maxAction_totalNum++
-	 *							(2) Store the (now 3 dimension) action index into maxAction_all[maxAction_totalNum-1]
-	 *						iii. if indexQVal < QMax:
-	 *							ignore.
-	 *					c. record chosen action. If multiple actions with max q-values, randomize chosen action.
-	 *						i. if maxAction_totalNum > 1, 
-	 *						   randomly select between 0 and maxAction_totalNum - 1. The randomed 
-	 *						   number will correspond to the array location of the chosen
-	 *						   action in maxAction_all. 
-	 *						ii. maxAction_policyBasedSelection = maxAction_all[randomed number]
-	 *					d. record associated q-value.
-     * @param: 		1.	Q_NNFP_all		array of q values for the forward propagations
-     * 				2.	current SAV[]	current state action vectors
-     * 				3.  Q_curr[0]		stores the maximum Q value //Joey: assuming there's only one possible max, for now (one output)
-     * 				4.	activationMethod	binary/bipolar layer value normalization
-     * @return: 	n
-     */
-    public void getMax(double[][][] Q_NNFP_all, double[] currSAV, double[] Q_curr, boolean activationMethod) {
-    	//QMax stores the maximum Q found. starting at -100 allows the first one to be picked even if it's super negative. //Joey: apparently the reward system is so fucked that -1E99 can happen so, bug (May 31) don't we normalize Q val?
-    	double QMax = -100.0;  
-    	//total number of actions with the same value as the max Q.
-        int maxAction_totalNum = 0;
-        //used to generate a random number starting from 0 to maxAction_totalNum.
-        int maxAction_arrIndex = 0;
-        //this var stores the multi-dimensional actions into one container instead of multiple containers. Downstream functions require a linear action dimension.
-        int forLoopsLinearized = 0;
-        //stores the chosen action with maximum Q.
-        int maxAction_policyBasedSelection = 0;
-        //array for storing all actions with maxqval
-        int [] maxAction_all = new int [numActions];
-        //randomizes an action number. used for different policies.
-        int randomVal = 0;
-        
-        
-    	if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
-        	LOG[lineCount++] = "Q_NNFP_all:                  " + Arrays.deepToString(Q_NNFP_all);
-        }
-    	
-    	// calculates all max values and stores multiple (really rare)
-    	for (int i_A0 = 0; i_A0 < Q_NNFP_all.length; i_A0++){
-		    for (int i_A1 = 0; i_A1 < Q_NNFP_all[0].length; i_A1++){
-		    	for (int i_A2 = 0; i_A2 < Q_NNFP_all[0][0].length; i_A2++, forLoopsLinearized++){
-		    		if (Q_NNFP_all[i_A0][i_A1][i_A2] > QMax){
-		    			QMax = Q_NNFP_all[i_A0][i_A1][i_A2];
-		            	maxAction_totalNum = 1;
-		            	maxAction_all[maxAction_totalNum-1] = forLoopsLinearized;		
-		            }
-		            else if (Q_NNFP_all[i_A0][i_A1][i_A2] == QMax){
-		            	maxAction_all[maxAction_totalNum++] = forLoopsLinearized;
-		            }	            
-		    	}
-    		}
-    	}
-    	
-    	//max Q value found
-        Q_curr[0] = QMax;
-        
-    	if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
-        	LOG[lineCount++] = "maxAction_all:" + Arrays.toString(maxAction_all);
-        	LOG[lineCount++] = "maxAction_totalNum: " + maxAction_totalNum;
-        }
-        
-        if (maxAction_totalNum > 1) {
-        	maxAction_arrIndex = (int)(Math.random()*(maxAction_totalNum)); //math.random randoms btwn 0.0 and 0.999. Allows selection array position from 0 to num-1 through int truncation. 
-        	
-        	if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
-            	LOG[lineCount++] = ">1 max vals, randomly chosen action " + maxAction_arrIndex;
-            }
-        }
-        
-        //Choosing next action based on policy. Greedy is default
-        //exploratory uses this line to perform if-false actions.
-        maxAction_policyBasedSelection = maxAction_all[maxAction_arrIndex]; //if maxAction_totalNum <= 1, maxAction_arrIndex = 0;
-        
-        
-        //note: sarsa is currently not used. explained slightly further in comments in global final section near top of file.
-        if (policy == SARSA || policy == exploratory) {
-	    	randomVal = (int)(Math.random()*(numActions));
-	        if (policy == SARSA) {
-	        	maxAction_policyBasedSelection = randomVal;
-	        }
-	        else if(policy == exploratory) {
-	        	maxAction_policyBasedSelection = (Math.random() > epsilon ? maxAction_policyBasedSelection : randomVal);
-	        }
-        }
-	        
-        if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
-        	LOG[lineCount++] = "enacting policy:" + policy + "(0=gre 1=exp 2=SAR)";
-        	LOG[lineCount++] = String.format("Action Chosen (linear) %d", maxAction_policyBasedSelection);
-        	LOG[lineCount++] = "lengths:" + Q_NNFP_all.length + Q_NNFP_all[0].length + Q_NNFP_all[0][0].length;
-        }
-        
-        OUTERMOST: for (int i_A0 = 0; i_A0 < input_action0_moveReferringToEnemy_possibilities; i_A0++){
-			for (int i_A1 = 0; i_A1 < input_action1_fire_possibilities; i_A1++){
-				for(int i_A2 = 0; i_A2 < input_action2_fireDirection_possibilities; i_A2++){
-		    		if (maxAction_policyBasedSelection < 1) {
-		    			//currSAV glob var updated here
-		    			currSAV[0] = i_A0; 
-		    			currSAV[1] = i_A1;
-		    			currSAV[2] = i_A2;
-		    			
-		    			break OUTERMOST;
-		    		}
-		    		maxAction_policyBasedSelection--;
-		    	}
-		    }
-        }
-        
-		if(DEBUG_MULTI_forwardProp || DEBUG_getMax || DEBUG_ALL) {
-        	LOG[lineCount++] = "chosen actions(in containers):" + (int)currSAV[0] + " " + (int)currSAV[1] + " " + (int)currSAV[2];
-        	LOG[lineCount++] = "with output: " + Q_curr[0];
-        	LOG[lineCount++] = "#eo muxFP";
-        }
-
-        return;
-    }
-    
-    /**
-     * @name		qFunction
-     * @purpose		1. Calculate the new prev q-value based on Qvalue function.
-     * @param		1. Q_prev_new		aka Q_target, t. Records the corrected Qval.
-     * 				2. Q_prev			aka y. The old corrected Qval.
-     * 				3. reward			reward value - needs work. //joey: XD
-     * 				4. Q_curr			Q value calculated during FP for current round. Used to correct Qval depending on its weight (gamma).
-     * 				Utilizes following critical global vars directly:
-     * 				1. gamma			describes weight of current Q value in calculation.
-     * 				2. alpha			describes the extent to which the newly acquired information will override the old information.
-     * @return		prevQVal
-     */
-    public void qFunction(double[] Q_prev_new, double[] Q_prev, double reward, double[] Q_curr){ //Joey: consider changing Q_prev into entire array.
-    	
-    	//Joey: ask andrea about papers for good gamma terms. (close to 1?)
-    	
-		Q_prev_new[0] = Q_prev[0] + alpha*(reward + (gamma*Q_curr[0]) - Q_prev[0]);
-    	
-    	//for debugging purposes: file recording Qval fluctuation
-    	if (flag_recordQVals) {
-    		arr_QVals[totalQValRecords++] = Q_curr[0];
-    	}
-    	if(DEBUG_qFunction || DEBUG_ALL) {
-    		LOG[lineCount++] = "- qFunction:";
-    		LOG[lineCount++] = String.format("Q_prev_new(t)%.3f  Q_prev(y):%.3f  Q_curr:%.3f", Q_prev_new[0], Q_prev[0], Q_curr[0]);
-    		LOG[lineCount++] = String.format("alpha:%.2f reward:%.3f gamma:%.2f", alpha, reward, gamma);
-    		LOG[lineCount++] = "#eo qFunction";
-    	}
-    }
- 
-    /** 
-     * @name:		prepareBackProp
-     * @purpose:	Populate NN parameters using previous SAV, in order to perform back propagation.
-     * @param:		1. prevSAV		input to generate net - inputs
-     * 				2. z			refreshes prev hidden layer
-     * 				3. z_in			refreshes prev raw hidden layer
-     * 				4. y_in			refreshes prev raw output layer
-     * 				5. arr_wIH		input to generate net - IH weights
-     * 				6. arr_wHO		input to generate net - HO weights
-     * 				7. activationMethod 	binary/bipolar method of normalizing layers
-     */
-    public void prepareBackProp (double[] prevSAV, double[] z,
-    								double[] z_in, double[] y_in,
-    								double[][] arr_wIH, double[][] arr_wHO,
-    								boolean activationMethod) {
-    	
-    	double[] y_temp = new double [numOutputsTotal];
-    	
-    	if(DEBUG_MULTI_backProp || DEBUG_prepareBackProp || DEBUG_ALL) {
-    		LOG[lineCount++] = "- prepareBackProp:";
-    		LOG[lineCount++] = "start list";
-    		LOG[lineCount++] = "prevSAV: " + Arrays.toString(prevSAV);
-    		LOG[lineCount++] = "z: " + Arrays.toString(z);
-    		LOG[lineCount++] = "z_in: " + Arrays.toString(z_in);
-    		LOG[lineCount++] = "y_in:" + Arrays.toString(y_in);
-    	}
-    	
-    	forwardProp(prevSAV, z, y_temp,
-    				z_in, y_in,
-    				arr_wIH, arr_wHO,
-    				activationMethod);
-    	
-    	if(DEBUG_MULTI_backProp || DEBUG_prepareBackProp || DEBUG_ALL) {
-    		LOG[lineCount++] = "after list";
-    		LOG[lineCount++] = "prevSAV: " + Arrays.toString(prevSAV);
-    		LOG[lineCount++] = "z: " + Arrays.toString(z);
-    		LOG[lineCount++] = "z_in: " + Arrays.toString(z_in);
-    		LOG[lineCount++] = "y_in:" + Arrays.toString(y_in);
-    		LOG[lineCount++] = "y_temp:" + Arrays.toString(y_temp); 
-    		LOG[lineCount++] = "#eo prepareBackProp";
-    	}
-    }
-    
-    /**
-     * @name:		backProp
-     * @purpose:	Adjusts weights based on the difference between Q_prev_new and Q_prev.
-     * @methodology:pg 295 in Fundamentals of Neural Networks by Lauren Fausett, Backpropagation of error: steps 6 to 8.
-     * 				step 6:
-     * 				Each output unit (Y[k], k = 1, ..., m) receives a target pattern corresponding to the input training pattern, computes its error information term,
-     * 					delta_out[k] = (t[k] - y[k])f'(y_in[k]),
-     * 				calculates its weight correction term (used to update w[j][k] later),
-     * 					delta_weight_w[j][k] = alpha * delta[k] * z[j],
-     * 				calculates its bias correction term (used to update w[0][k] later),
-     * 					delta_weight_w[0][k] = alpha * delta[k],
-     * 				and continue to use delta[k] for lower levels.
-     *				
-     *				step 7: 
-     *				Each hidden unit (z[j], j = 1 ..., p) sums its delta inputs (from units in the layer above),
-     *					delta_in[j] = (sum of from k = 1 to m)(delta[k] * w[j][k]),
-     *				multiplies by the derivative of its activation fxn to calculate its error information term,
-     *					delta[j] = delta_in[j] * f'(z_in[j]),
-     *				calculates its weight correction term (used to update v[i][j] later),
-     *					delta_weight_v[i][j] = alpha * delta[j] * x[i],
-     *				and calculates its bias correction term (used to update v[0][j] later),
-     *					delta_weight_v[0][j] = alpha * delta[j].
-     *				
-     *				step 8: Update weights and biases
-     *				Each output unit (Y[k], k = 1, ..., m) updates its bias and weights (j = 0, ..., p):
-     *					w[j][k](new) = w[j][k](old) + delta_weights_w[j][k].
-     *				Each hidden unit (z[j], j = 1, ..., p) updates its bias and weights (i = 0, ..., n):
-     *					v[i][j](new) = v[i][j](old) + delta_weights_v[i][j].
-     *
-     *				To assist with rate of convergence, we have also included the ability for the net to use momentum. Momentum requires data from one or more previous
-     *				training patterns. In the simplest form, the weights at t+1 are based on the weights at t and t-1:
-     *					w[j][k](t+1) = w[j][k](t) + alpha*delta_out[k]*z[j] + mu[w[j][k](t) - w[j][k](t-1)],
-     *				and
-     *					v[i][j](t+1) = v[i][j](t) + alpha*delta_in[j]*x[i] + mu[v[i][j](t) - v[j][k](t-1)].
-     * @param:		BP variables:
-     * 					1. x <- prevSAV
-     * 					2. z <- previous cycle's hidden layer
-     * 					3. y <- Q_prev: array of previous Q value from previous cycle.
-     * 					4. t <- Q_prev_new: array of current calculated Q value from Q function.
-     * 				Other general vars:
-     * 					1. activationMethod (not global to reserve possibility of changing its value)
-     * 				Momentum variables, which remembers past values:
-     * 					1. vPast <- wIH_past 
-     * 					2. vNext <- wIH_next
-     * 					3. wPast <- wHO_past
-     * 					4. wNext <- wHO_next
-     * 					
-     * @return:		n
-     */
-    public void backProp(double[] x, double[] z, double[] y, double[] t,
-    						double[] z_in, double[] y_in, 
-    						double[] delta_out, double[] delta_hidden, double[][] vDelta, double[][] wDelta, 
-    						double[][] arr_wIH, double[][] arr_wHO, 
-    						boolean activationMethod, 
-    						double [][] vPast, double [][] vNext, double [][] wPast, double [][] wNext) {      
-    	
-    	//local var used to store activation derivative of y.
-    	double[] temp_outputDerivative = new double [numOutputsTotal];
-    	//local var stores raw output error - for debugging purposes.
-    	double temp_outputErrorRaw = 0;
-    	
-    	if(DEBUG_MULTI_backProp || DEBUG_backProp || DEBUG_ALL) {
-			LOG[lineCount++] = "- BP";
-			LOG[lineCount++] = "momentum:" + momentum;
-		}
-    	//Y_target is the variable calculated in QFunction to depict NN's converging(hopefully) approximation of the RL LUT.
- 
-        
-    	//step 6-8 for hidden-to-output weights
-        if(DEBUG_MULTI_backProp || DEBUG_backProp || DEBUG_ALL) {
-			LOG[lineCount++] = "@output cycle:";
-			LOG[lineCount++] = "arr_wHO(pre):" + Arrays.deepToString(arr_wHO);
-		}
-        //step 6:
-		for (int k = 0; k <numOutputsTotal; k++){ // m = numOutputsTotal. pretending output bias doesn't exist so our output vector starts at 0 (horrificallylazyXD)
-			
-			//delta_out[k] = (t[k] - y[k])f'(y_in[k])
-			temp_outputErrorRaw = t[k] - y[k];
-			
-			if (activationMethod == binaryMethod){
-				temp_outputDerivative[k] = binaryDerivative(y_in[k]);
-				delta_out[k] = temp_outputErrorRaw*temp_outputDerivative[k]; 
-			}
-			else{
-				temp_outputDerivative[k] = bipolarDerivative(y_in[k]);
-				delta_out[k] = temp_outputErrorRaw*temp_outputDerivative[k];	
-			}
-			
-			//misc data collections: calculating back propagation error for convergence calculation.
-			if(flag_recordBPErrors) {
-	        	arr_BPErrors[totalBPErrorsRecords++] = temp_outputErrorRaw; //thankfully, currently one output. Will need to correct code if more than error.
-	        }
-			
-			if(DEBUG_MULTI_backProp || DEBUG_backProp || DEBUG_ALL) {
-				LOG[lineCount++] = String.format("delta_out[%d]:%.3f error_raw:%.8f (%s)", k, delta_out[k], temp_outputErrorRaw, (activationMethod==binaryMethod)?"bin":"bip");
-				LOG[lineCount++] = String.format("t(target)[%d]:%.3f y(calc'd)[%d]:%.3f y_in[%d]:%.3f y_in_der[%d]:%.3f", k, t[k], k, y[k], k, y_in[k], k, temp_outputDerivative[k]);
-			}
-			
-			//delta_weight_w[j][k] = alpha * delta[k] * z[j]
-			for (int j = 0; j < numHiddensTotal; j++){
-				wDelta[j][k] = alpha*delta_out[k]*z[j];
-				
-				if(DEBUG_MULTI_backProp || DEBUG_backProp || DEBUG_ALL) {
-					LOG[lineCount++] = String.format("wDelta[%d][%d]:%.3f wNext[%d][%d]:%.3f wPast[%d][%d]:%.3f", j, k, wDelta[j][k], j, k, wNext[j][k], j, k, wPast[j][k]);
-				}
-				
-				//step 8: updating H-O weights using momentum
-				wNext[j][k] = arr_wHO[j][k] + wDelta[j][k] + momentum*(arr_wHO[j][k] - wPast[j][k]); 
-				wPast[j][k] = arr_wHO[j][k]; 
-				arr_wHO[j][k] = wNext[j][k]; 
-			}
-		}
-		
-		if(DEBUG_MULTI_backProp || DEBUG_backProp || DEBUG_ALL) {
-			LOG[lineCount++] = "arr_wHO(post):" + Arrays.deepToString(arr_wHO);
-		}
-		
-		//step 7:
-		//for input-to-hidden layer
-		
-        if(DEBUG_MULTI_backProp || DEBUG_backProp || DEBUG_ALL) { 
-        	LOG[lineCount++] = "@i-to-h cycle:";
-			LOG[lineCount++] = "arr_wIH(pre):" + Arrays.deepToString(arr_wIH);
-		}
-        
-		for (int j = 0; j < numHiddensTotal; j++){
-			double sumDeltaInputs = 0.0;
-			for (int k = 0;  k < numOutputsTotal; k++){ //pretending output bias doesn't exist so our output vector starts at 0, when it should start at 1 if a slot is reserved for bias
-				sumDeltaInputs += delta_out[k]*arr_wHO[j][k];
-				if (activationMethod == binaryMethod){
-					delta_hidden[j] = sumDeltaInputs*binaryDerivative(z_in[j]); 
-				}
-				else{
-					delta_hidden[j] = sumDeltaInputs*bipolarDerivative(z_in[j]);	
-				}
-			}
-			for (int i = 0; i< numInputsTotal; i++){ //because no input bias, i = 0 will be a wasted cycle (ah wellz)
-				vDelta[i][j] = alpha*delta_hidden[j]*x[i];
-				
-				if(DEBUG_MULTI_backProp || DEBUG_backProp || DEBUG_ALL) {
-					LOG[lineCount++] = String.format("vDelta[%d][%d]:%.3f vNext[%d][%d]:%.3f vPast[%d][%d]:%.3f", i, j, vDelta[i][j], i, j, vNext[i][j], i, j, vPast[i][j]);
-				}
-				
-				//step 8: updating I-H weights using momentum
-				vNext[i][j] = arr_wIH[i][j] + vDelta[i][j] + momentum*(arr_wIH[i][j] - vPast[i][j]); //Joey: rest of this
-				vPast[i][j] = arr_wIH[i][j]; 
-				arr_wIH[i][j] = vNext[i][j]; 
-			}
-		}
-		
-        if(DEBUG_MULTI_backProp || DEBUG_backProp || DEBUG_ALL) {
-			LOG[lineCount++] = "arr_wIH(post):" + Arrays.deepToString(arr_wIH);
-		}
-        
-//		
-//		//Step 9 - Calculate local error. For debugging purposes; an additional way to measure if QVals is converging. //Joey: add flag to decide whether this is used.
-//		double error = 0.0;
-//		for (int k = 0; k < numOutputsTotal; k++){ 
-//			error = 0.5*(java.lang.Math.pow((Y_target[k] - Y_calculated[k]), 2)); 
-//		}
-	}
-	
     /**
      * @name:		resetReward
      * @purpose: 	Resets reward to 0.

@@ -1,6 +1,16 @@
 Aug 2017
-- E6 Memory use(512MB), CPU use? how to measure these.
-- E7 Java debug bp
+- A1 (from Jul) Divide NN1 into multiple pages, set up new package.
+- C1 (from Jul) Investigate proper rewarding for NN1.
+- B1 (from April) Investigate WaveSurfing, and other methods of neural net. Study other NN's codes. 
+- B2 (from April) investigate predictive aiming. Have net for predicting enemy position (ie spinbot has predictable positioning. the net can self correct enemy position)
+- E1 (from Jul) Determine momentum.
+- E2 (from Jul) Record cycle time to determine room for improved complexity.
+- E3 (from Jul) Implement winLose flag.
+- E4 (from Jul) Investigate better logging (org.slf4j.Logger)
+- E5 (from Jul) Untrack a lot of the files that's not specific for bots.
+- E6 (from Jul) Memory use(512MB), CPU use? how to measure these.
+- E7 (from Jul) Java debug bp
+- Z  Achieve top50 in roborumble 1v1.
 
 July 2017
 - A1 Investigate proper rewarding for NN1.
